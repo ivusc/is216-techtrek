@@ -13,27 +13,43 @@ const TYPE_PARAMS = {
 
 function normaliseJob(job) {
   return {
-    id: job.id,
+    source: "adzuna",
+    externalId: job.id,
+    // ponytail: guessed from the title, Adzuna has no internship flag
+    type: /intern/i.test(job.title) ? "internship" : "job",
     title: job.title,
-    company: job.company?.display_name ?? null,
+    organisation: job.company?.display_name ?? null,
     location: job.location?.display_name ?? null,
     description: job.description,
     url: job.redirect_url,
-    salaryMin: job.salary_min ?? null,
-    salaryMax: job.salary_max ?? null,
+    minSalary: job.salary_min ?? null,
+    maxSalary: job.salary_max ?? null,
     contractTime: job.contract_time ?? null,
     contractType: job.contract_type ?? null,
     postedAt: job.created,
   };
 }
 
+// "May 18 - 19, 2026" | "May 15 - Jun 30, 2026" | "Mar 24, 2026 - Mar 24, 2030"
+// -> end of the last day, UTC (ponytail: Devpost's real cutoff time/timezone isn't in the data)
+function parseDeadline(dates) {
+  const [start, end] = dates.split(" - ");
+  if (!end) return null;
+  const endDay = /^\d/.test(end) ? `${start.match(/^\w+/)[0]} ${end}` : end;
+  const d = new Date(`${endDay} 23:59:59 UTC`);
+  return isNaN(d) ? null : d;
+}
+
 function normaliseHackathon(h) {
   return {
-    id: h.id,
+    source: "devpost",
+    externalId: String(h.id),
+    type: "hackathon",
     title: h.title,
-    organiser: h.organization_name,
+    organisation: h.organization_name,
     location: h.displayed_location,
     dates: h.submission_period_dates,
+    deadline: parseDeadline(h.submission_period_dates),
     // prizeText looks like '$<span data-currency-value>500</span>'
     prize: h.prizeText.replace(/<[^>]*>/g, "").trim(),
     themes: h.themes.map((t) => t.name),
@@ -122,7 +138,7 @@ async function fetchAll(req, res) {
   res.json({ jobs: jobs.value ?? null, hackathons: hackathons.value ?? null });
 }
 
-// POST /opportunity  body: Opportunity fields (source, type, organiser, url, ...)
+// POST /opportunity  body: Opportunity fields (source, type, organisation, url, ...)
 async function saveOpportunity(req, res) {
   const { _id, createdAt, updatedAt, ...data } = req.body ?? {};
 

@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const TEAM_TYPES = ["hackathon", "competition"];
 const SOURCE_TYPES = {
   adzuna: ["internship", "job"],
+  devpost: ["hackathon"],
   user: TEAM_TYPES,
 };
 
@@ -12,7 +13,7 @@ const opportunitySchema = new mongoose.Schema(
     externalId: {
       type: String,
       required: function () {
-        return this.source === "adzuna";
+        return this.source !== "user";
       },
     },
     type: {
@@ -20,7 +21,8 @@ const opportunitySchema = new mongoose.Schema(
       enum: Object.values(SOURCE_TYPES).flat(),
       required: true,
     },
-    organiser: { type: String, required: true, trim: true, maxlength: 200 },
+    title: { type: String, required: true, trim: true, maxlength: 200 },
+    organisation: { type: String, required: true, trim: true, maxlength: 200 },
     location: { type: String, trim: true, maxlength: 200 },
     description: {
       type: String,
