@@ -1,29 +1,23 @@
 {
-  "name": "techtrek-server",
+  "name": "@techtrek/server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "dev": "nodemon server.js ",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
+  "private": true,
+  "description": "TechTrek Express + Mongoose API.",
   "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.10.0",
-      "onFail": "download"
-    }
-  },
-  "packageManager": "pnpm@12.10.0",
   "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "echo \"(no server tests yet)\""
+  },
   "dependencies": {
     "axios": "^1.20.0",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
-    "mongoose": "^9.11.0",
+    "mongoose": "^9.11.0"
+  },
+  "devDependencies": {
     "nodemon": "^3.1.14"
   }
 }

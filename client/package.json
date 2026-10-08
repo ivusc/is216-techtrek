@@ -1,5 +1,5 @@
 {
-  "name": "-techtrek-client",
+  "name": "@techtrek/client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,12 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint:eslint": "eslint . --fix --cache"
   },
   "dependencies": {
     "pinia": "^4.0.3",
@@ -34,13 +34,9 @@
     "jsdom": "^30.0.1",
     "npm-run-all2": "^9.0.3",
     "oxlint": "~1.82.0",
-    "prettier": "3.9.6",
     "vite": "^8.2.2",
     "vite-plugin-vue-devtools": "^8.2.1",
     "vitest": "^4.1.11",
     "vue-eslint-parser": "^10.4.1"
-  },
-  "engines": {
-    "node": "^22.18.0 || >=24.12.0"
   }
 }
