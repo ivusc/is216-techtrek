@@ -1,10 +1,9 @@
 const mongoose = require("mongoose");
 
-const TEAM_TYPES = ["hackathon", "competition"];
 const SOURCE_TYPES = {
   adzuna: ["internship", "job"],
   devpost: ["hackathon"],
-  user: TEAM_TYPES,
+  user: ["hackathon", "competition"],
 };
 
 const opportunitySchema = new mongoose.Schema(

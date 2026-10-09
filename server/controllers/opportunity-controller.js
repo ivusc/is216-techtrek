@@ -90,7 +90,14 @@ async function getHackathons() {
   };
 }
 
-const isBadType = (type) => type && !TYPE_PARAMS[type];
+function handleError(res, err, fallback) {
+  if (err.name === "ValidationError")
+    return res.status(400).json({ error: err.message });
+  console.error(fallback, err.message);
+  res.status(500).json({ error: fallback });
+}
+
+const isBadType =(type) => type && !TYPE_PARAMS[type];
 const badTypeError = {
   error: `type must be one of: ${Object.keys(TYPE_PARAMS).join(", ")}`,
 };
@@ -103,8 +110,7 @@ async function fetchJobs(req, res) {
   try {
     res.json(await getJobs(req.query));
   } catch (err) {
-    console.error("Job API error:", err.message);
-    res.status(502).json({ error: "Failed to fetch jobs" });
+    handleError(res, err, 'Failed to fetch jobs.')
   }
 }
 
@@ -113,8 +119,7 @@ async function fetchHackathons(req, res) {
   try {
     res.json(await getHackathons());
   } catch (err) {
-    console.error("Hackathons API error:", err.message);
-    res.status(502).json({ error: "Failed to fetch hackathons" });
+    handleError(res, err, 'Failed to fetch hackathons.')
   }
 }
 
@@ -157,9 +162,7 @@ async function saveOpportunity(req, res) {
       );
     }
 
-    if (err.name === "ValidationError")
-      return res.status(400).json({ error: err.message });
-    res.status(500).json({ error: "Failed to save opportunities" });
+    handleError(res, err, "Failed to save opportunity.");
   }
 }
 
@@ -170,6 +173,7 @@ async function deleteOpportunity(req, res) {
 
   const deleted = await Opportunity.findByIdAndDelete(req.params.id);
   if (!deleted) return res.status(404).json({ error: "Opportunity not found" });
+  
   res.status(204).end();
 }
 
