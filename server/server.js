@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 
 const opportunityRouter = require('./routes/opportunity');
+const applicationRouter = require('./routes/application');
 
 const app = express();
 require('dotenv').config();
@@ -19,6 +20,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/opportunity', opportunityRouter);
+app.use('/application', applicationRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
