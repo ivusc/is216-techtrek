@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const STATUS_TYPES = ['saved', 'applied', 'interview', 'offer', 'rejected']
+const STATUS_TYPES = ['saved', 'applied', 'interview', 'offer', 'rejected'];
 
 const applicationSchema = new mongoose.Schema(
   {
@@ -17,4 +17,4 @@ const applicationSchema = new mongoose.Schema(
 
 applicationSchema.index({ userId: 1, opportunityId: 1 }, { unique: true });
 
-module.exports = mongoose.model("Application", applicationSchema);
+module.exports = mongoose.model('Application', applicationSchema);

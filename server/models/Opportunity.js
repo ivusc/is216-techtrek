@@ -1,9 +1,9 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const SOURCE_TYPES = {
-  adzuna: ["internship", "job"],
-  devpost: ["hackathon"],
-  user: ["hackathon", "competition"],
+  adzuna: ['internship', 'job'],
+  devpost: ['hackathon'],
+  user: ['hackathon', 'competition'],
 };
 
 const opportunitySchema = new mongoose.Schema(
@@ -12,7 +12,7 @@ const opportunitySchema = new mongoose.Schema(
     externalId: {
       type: String,
       required: function () {
-        return this.source !== "user";
+        return this.source !== 'user';
       },
     },
     type: {
@@ -28,7 +28,7 @@ const opportunitySchema = new mongoose.Schema(
       trim: true,
       maxlength: 5000,
       required: function () {
-        return this.source === "user";
+        return this.source === 'user';
       },
     },
     url: { type: String, required: true, trim: true },
@@ -37,7 +37,7 @@ const opportunitySchema = new mongoose.Schema(
     deadline: {
       type: Date,
       required: function () {
-        return this.source === "user";
+        return this.source === 'user';
       },
     },
     maxTeamSize: {
@@ -45,7 +45,7 @@ const opportunitySchema = new mongoose.Schema(
       min: 1,
       validate: {
         validator: Number.isInteger,
-        message: "maxTeamSize must be a whole number",
+        message: 'maxTeamSize must be a whole number',
       },
     },
     // postedBy: {
@@ -59,23 +59,12 @@ const opportunitySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-opportunitySchema.pre("validate", function () {
-  if (
-    this.source &&
-    this.type &&
-    !SOURCE_TYPES[this.source]?.includes(this.type)
-  ) {
-    this.invalidate(
-      "type",
-      `type '${this.type}' is not allowed for source '${this.source}'`,
-    );
+opportunitySchema.pre('validate', function () {
+  if (this.source && this.type && !SOURCE_TYPES[this.source]?.includes(this.type)) {
+    this.invalidate('type', `type '${this.type}' is not allowed for source '${this.source}'`);
   }
-  if (
-    this.minSalary != null &&
-    this.maxSalary != null &&
-    this.maxSalary < this.minSalary
-  ) {
-    this.invalidate("maxSalary", "maxSalary must be >= minSalary");
+  if (this.minSalary != null && this.maxSalary != null && this.maxSalary < this.minSalary) {
+    this.invalidate('maxSalary', 'maxSalary must be >= minSalary');
   }
 });
 
@@ -85,11 +74,11 @@ opportunitySchema.index(
   { source: 1, externalId: 1 },
   {
     unique: true,
-    partialFilterExpression: { externalId: { $type: "string" } },
+    partialFilterExpression: { externalId: { $type: 'string' } },
   },
 );
 
 // Feed: filter by type, sort by deadline
 opportunitySchema.index({ type: 1, deadline: 1 });
 
-module.exports = mongoose.model("Opportunity", opportunitySchema);
+module.exports = mongoose.model('Opportunity', opportunitySchema);
