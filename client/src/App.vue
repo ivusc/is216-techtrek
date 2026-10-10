@@ -1,11 +1,15 @@
-<script setup></script>
+<script setup>
+import SideBar from './components/SideBar.vue';
+
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <div class="d-flex">
+    <SideBar />
+    <main class="flex-grow-1 p-4">
+      <RouterView />
+    </main>
+  </div>
 </template>
 
 <style scoped></style>
