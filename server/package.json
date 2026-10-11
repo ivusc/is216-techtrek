@@ -1,0 +1,23 @@
+{
+  "name": "@techtrek/server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TechTrek Express + Mongoose API.",
+  "license": "ISC",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "echo \"(no server tests yet)\""
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "mongoose": "^9.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

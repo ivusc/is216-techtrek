@@ -1,0 +1,31 @@
+{
+  "name": "is216-techtrek",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TechTrek monorepo: Vue 3 client + Express/Mongoose API.",
+  "packageManager": "pnpm@12.10.0",
+  "engines": {
+    "node": "^22.18.0 || >=24.12.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^22.18.0",
+      "onFail": "download"
+    }
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --if-present run dev",
+    "dev:client": "pnpm --filter @techtrek/client run dev",
+    "dev:server": "pnpm --filter @techtrek/server run dev",
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test",
+    "test:e2e": "pnpm --filter @techtrek/client run test:e2e",
+    "lint": "pnpm -r --if-present run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.6"
+  }
+}

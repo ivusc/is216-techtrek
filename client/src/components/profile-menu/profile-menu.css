@@ -1,0 +1,81 @@
+.profile-menu {
+  --bs-dropdown-bg: var(--bs-body-bg);
+  --bs-dropdown-border-color: var(--bs-border-color);
+  --bs-dropdown-border-radius: 12px;
+  --bs-dropdown-padding-x: .375rem;
+  --bs-dropdown-padding-y: .375rem;
+  --bs-dropdown-item-padding-x: .75rem;
+  --bs-dropdown-item-padding-y: .5rem;
+  --bs-dropdown-item-border-radius: 8px;
+  --bs-dropdown-link-color: var(--bs-body-color);
+  --bs-dropdown-link-hover-color: var(--bs-primary);
+  --bs-dropdown-link-hover-bg: var(--bs-primary-bg-subtle);
+  --bs-dropdown-link-active-color: var(--bs-primary);
+  --bs-dropdown-link-active-bg: var(--bs-primary-bg-subtle);
+  --bs-dropdown-divider-bg: var(--bs-border-color);
+  --bs-dropdown-divider-margin-y: .375rem;
+  min-width: 220px;
+}
+
+.profile-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  font-weight: 500;
+  border-radius: var(--bs-dropdown-item-border-radius);
+}
+
+.profile-menu .dropdown-item:hover,
+.profile-menu .dropdown-item:focus {
+  background-color: var(--bs-info-bg-subtle);
+}
+
+.profile-menu .dropdown-item .bi {
+  font-size: 1.125rem;
+  color: var(--bs-secondary-color);
+}
+
+.profile-menu .sign-out .bi,
+.profile-menu .dropdown-item:hover .bi,
+.profile-menu .dropdown-item:focus .bi {
+  color: inherit;
+}
+
+.profile-menu .sign-out {
+  color: var(--bs-danger-text-emphasis);
+}
+
+.profile-menu .sign-out:hover,
+.profile-menu .sign-out:focus {
+  color: var(--bs-danger-text-emphasis);
+  background-color: var(--bs-danger-bg-subtle);
+}
+
+.profile-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bs-body-color);
+  background-color: var(--tt-peach);
+  border: 2px solid var(--bs-tertiary-bg);
+}
+
+/* Bootstrap toggles display, so transitions can't run; animate on .show instead.
+   Uses `translate` (not `transform`) so it doesn't fight Popper's inline transform. */
+.profile-menu.show {
+  animation: profile-menu-in .18s ease-out;
+}
+
+@keyframes profile-menu-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-menu.show {
+    animation: none;
+  }
+}
