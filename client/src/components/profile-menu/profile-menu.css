@@ -15,7 +15,6 @@
   --bs-dropdown-divider-bg: var(--bs-border-color);
   --bs-dropdown-divider-margin-y: .375rem;
   min-width: 220px;
-  box-shadow: var(--tt-shadow-md);
 }
 
 .profile-menu .dropdown-item {
@@ -24,6 +23,11 @@
   gap: .625rem;
   font-weight: 500;
   border-radius: var(--bs-dropdown-item-border-radius);
+}
+
+.profile-menu .dropdown-item:hover,
+.profile-menu .dropdown-item:focus {
+  background-color: var(--bs-info-bg-subtle);
 }
 
 .profile-menu .dropdown-item .bi {
@@ -55,4 +59,23 @@
   color: var(--bs-body-color);
   background-color: var(--tt-peach);
   border: 2px solid var(--bs-tertiary-bg);
+}
+
+/* Bootstrap toggles display, so transitions can't run; animate on .show instead.
+   Uses `translate` (not `transform`) so it doesn't fight Popper's inline transform. */
+.profile-menu.show {
+  animation: profile-menu-in .18s ease-out;
+}
+
+@keyframes profile-menu-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-menu.show {
+    animation: none;
+  }
 }
