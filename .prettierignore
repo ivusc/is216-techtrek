@@ -1,9 +1,0 @@
-# Generated or vendored — formatting these is noise, and reformatting the
-# lockfile would create enormous diffs on every install.
-pnpm-lock.yaml
-node_modules/
-dist/
-dist-ssr/
-coverage/
-test-results/
-playwright-report/
