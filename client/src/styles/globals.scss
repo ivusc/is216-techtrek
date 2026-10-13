@@ -3,6 +3,11 @@
 // TechTrek theme: Bootstrap 5.3 overrides generated from the Figma "🎨 Design System" page.
 // Source: figma.com/design/2o6lq5VUBR1h1QyCEDWGaN/techtrek (node 0:1).
 
+html,
+body {
+  overscroll-behavior: none;
+}
+
 
 // ─── 1. Brand tokens ──────────────────────────────────────────────────────
 $tt-primary:       #0081a7; // brand/primary

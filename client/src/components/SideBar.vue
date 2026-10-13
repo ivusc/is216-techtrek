@@ -17,7 +17,7 @@ const collapsed = ref(false)
 </script>
 
 <template>
-  <div class="d-flex flex-column min-vh-100 bg-primary text-white p-3" id="sidebar" :style="{ width: collapsed ? '80px' : '260px' }" style="transition: width .2s;">
+  <div class="d-flex flex-column vh-100 sticky-top flex-shrink-0 bg-primary text-white p-3" id="sidebar" :style="{ width: collapsed ? '80px' : '260px' }" style="transition: width .2s;">
     
     <div class="d-flex align-items-center justify-content-between" :class="{ 'flex-column gap-2': collapsed }">
       <RouterLink to="/" class="d-flex align-items-center text-decoration-none">
