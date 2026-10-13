@@ -1,82 +1,6 @@
-const axios = require('axios');
 const mongoose = require('mongoose');
 const Opportunity = require('../models/Opportunity');
-
-const RESULTS_PER_PAGE = 20;
-const CATEGORY = 'it-jobs';
-const TYPE_PARAMS = {
-  fulltime: { full_time: 1, what_exclude: 'intern internship' },
-  intern: { what_or: 'intern internship' },
-};
-
-function normaliseJob(job) {
-  return {
-    source: 'adzuna',
-    externalId: job.id,
-    type: /intern/i.test(job.title) ? 'internship' : 'job', //check if substring intern is inside job title
-    title: job.title,
-    organisation: job.company?.display_name ?? null,
-    location: job.location?.display_name ?? null,
-    description: job.description,
-    url: job.redirect_url,
-    minSalary: job.salary_min ?? null,
-    maxSalary: job.salary_max ?? null,
-    contractTime: job.contract_time ?? null,
-    contractType: job.contract_type ?? null,
-    postedAt: job.created,
-  };
-}
-
-function parseDeadline(dates) {
-  const [start, end] = dates.split(' - ');
-  if (!end) return null;
-  const endDay = /^\d/.test(end) ? `${start.match(/^\w+/)[0]} ${end}` : end;
-  const d = new Date(`${endDay} 23:59:59 UTC`); //set to end of day
-  return isNaN(d) ? null : d;
-}
-
-function normaliseHackathon(h) {
-  return {
-    source: 'devpost',
-    externalId: String(h.id),
-    type: 'hackathon',
-    title: h.title,
-    organisation: h.organization_name,
-    location: h.displayed_location,
-    dates: h.submission_period_dates,
-    deadline: parseDeadline(h.submission_period_dates),
-    prize: h.prizeText.replace(/<[^>]*>/g, '').trim(), //extract only the price
-    themes: h.themes.map((t) => t.name),
-    url: h.url,
-    thumbnail: h.thumbnail_url.startsWith('//') ? `https:${h.thumbnail_url}` : h.thumbnail_url,
-    registrations: h.registrations_count,
-    featured: h.featured,
-  };
-}
-
-async function getJobs({ type, page }) {
-  const response = await axios.get(`${process.env.JOB_API_URL}/jobs/sg/search/${page ?? 1}`, {
-    params: {
-      app_id: process.env.JOB_API_APP_ID,
-      app_key: process.env.JOB_API_KEY,
-      results_per_page: RESULTS_PER_PAGE,
-      category: CATEGORY,
-      ...TYPE_PARAMS[type],
-    },
-  });
-  return {
-    count: response.data.count,
-    jobs: response.data.results.map(normaliseJob),
-  };
-}
-
-async function getHackathons() {
-  const response = await axios.get(process.env.HACKATHONS_API_URL);
-  return {
-    count: response.data.hackathons.length,
-    hackathons: response.data.hackathons.map(normaliseHackathon),
-  };
-}
+const opportunityService = require('../service/opportunity-service');
 
 function handleError(res, err, fallback) {
   if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
@@ -84,9 +8,9 @@ function handleError(res, err, fallback) {
   res.status(500).json({ error: fallback });
 }
 
-const isBadType = (type) => type && !TYPE_PARAMS[type];
+const isBadType = (type) => type && !opportunityService.TYPE_PARAMS[type];
 const badTypeError = {
-  error: `type must be one of: ${Object.keys(TYPE_PARAMS).join(', ')}`,
+  error: `type must be one of: ${Object.keys(opportunityService.TYPE_PARAMS).join(', ')}`,
 };
 
 // GET /jobs?type=fulltime|intern&page=2
@@ -95,7 +19,7 @@ async function fetchJobs(req, res) {
   if (isBadType(req.query.type)) return res.status(400).json(badTypeError);
 
   try {
-    const jobs = await getJobs({ type: req.query.type, page: req.query.page });
+    const jobs = await opportunityService.getJobs({ type: req.query.type, page: req.query.page });
     res.json(jobs);
   } catch (err) {
     handleError(res, err, 'Failed to fetch jobs.');
@@ -105,7 +29,7 @@ async function fetchJobs(req, res) {
 // GET /hackathons
 async function fetchHackathons(req, res) {
   try {
-    const hackathons = await getHackathons();
+    const hackathons = await opportunityService.getHackathons();
     res.json(hackathons);
   } catch (err) {
     handleError(res, err, 'Failed to fetch hackathons.');
@@ -114,40 +38,52 @@ async function fetchHackathons(req, res) {
 
 // GET /all?type=fulltime|intern&page=2 (type and page only apply to jobs)
 async function fetchAll(req, res) {
-  if (isBadType(req.query.type)) return res.status(400).json(badTypeError);
+  const { type, page } = req.query;
 
-  const [jobs, hackathons] = await Promise.allSettled([getJobs(req.query), getHackathons()]);
-
-  for (const r of [jobs, hackathons]) {
-    if (r.status === 'rejected') console.error('Opportunities API error:', r.reason.message);
+  if (isBadType(type)) {
+    return res.status(400).json(badTypeError);
   }
-  
-  if (jobs.status === 'rejected' && hackathons.status === 'rejected') {
+
+  // Fetch both at the same time; one failing should not block the other
+  const [jobsResult, hackathonsResult] = await Promise.allSettled([
+    opportunityService.getJobs({ type, page }),
+    opportunityService.getHackathons(),
+  ]);
+
+  let jobs = null;
+  if (jobsResult.status === 'fulfilled') {
+    jobs = jobsResult.value;
+  } else {
+    console.error('Failed to fetch jobs:', jobsResult.reason.message);
+  }
+
+  let hackathons = null;
+  if (hackathonsResult.status === 'fulfilled') {
+    hackathons = hackathonsResult.value;
+  } else {
+    console.error('Failed to fetch hackathons:', hackathonsResult.reason.message);
+  }
+
+  if (jobs === null && hackathons === null) {
     return res.status(502).json({ error: 'Failed to fetch opportunities' });
   }
 
-  res.json({ jobs: jobs.value ?? null, hackathons: hackathons.value ?? null });
+  res.json({ jobs, hackathons });
 }
 
 // POST /opportunity  body: Opportunity fields (source, type, organisation, url, ...)
 async function saveOpportunity(req, res) {
-  const { _id, createdAt, updatedAt, ...data } = req.body ?? {};
+  const opportunity = req.body;
+
+  if (!opportunity) {
+    return res.status(400).json({ error: 'Opportunity is required' });
+  }
 
   try {
-    const opportunity = await Opportunity.create(data);
+    const savedOpportunity = await opportunityService.findOrCreateOpportunity(opportunity);
 
-    res.status(201).json(opportunity);
+    res.status(201).json(savedOpportunity);
   } catch (err) {
-    // return the existing listing already saved (unique source + externalId)
-    if (err.code === 11000) {
-      return res.json(
-        await Opportunity.findOne({
-          source: data.source,
-          externalId: data.externalId,
-        }),
-      );
-    }
-
     handleError(res, err, 'Failed to save opportunity.');
   }
 }

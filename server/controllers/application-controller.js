@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Application = require('../models/Application');
+const applicationService = require('../service/application-service');
 
 function handleError(res, err, fallback) {
   if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
@@ -8,23 +8,23 @@ function handleError(res, err, fallback) {
   res.status(500).json({ error: fallback });
 }
 
-// POST /application  body: { userId, opportunityId, status?, notes?, deadline?, interviewAt?, contactName? }
+// POST /application  body: { userId, opportunity, status?, notes?, deadline?, interviewAt?, contactName? }
+// `opportunity` = the full listing object from /jobs or /hackathons.
 async function createApplication(req, res) {
-  const { userId, opportunityId, status, notes, deadline, interviewAt, contactName } =
-    req.body ?? {};
-  if (!mongoose.isValidObjectId(userId) || !mongoose.isValidObjectId(opportunityId))
-    return res.status(400).json({ error: 'Valid userId and opportunityId required' });
+  const { userId, opportunity, status, notes, deadline, interviewAt, contactName } = req.body ?? {};
+
+  if (!mongoose.isValidObjectId(userId)) {
+    return res.status(400).json({ error: 'Valid userId required' });
+  }
+
+  if (!opportunity) {
+    return res.status(400).json({ error: 'Opportunity is required' });
+  }
 
   try {
-    const application = await Application.create({
-      userId,
-      opportunityId,
-      status,
-      notes,
-      deadline,
-      interviewAt,
-      contactName,
-    });
+    const applicationDetails = { status, notes, deadline, interviewAt, contactName };
+    const application = await applicationService.createApplication(userId, opportunity, applicationDetails);
+
     res.status(201).json(application);
   } catch (err) {
     handleError(res, err, 'Failed to create application');
@@ -38,8 +38,9 @@ async function getApplications(req, res) {
     return res.status(400).json({ error: 'Valid userId required' });
 
   try {
-    const filter = { userId, status: status && { status } };
-    res.json(await Application.find(filter).populate('opportunityId').sort('-updatedAt'));
+    const userApplications = await applicationService.getApplications(userId, status);
+
+    res.json(userApplications);
   } catch (err) {
     handleError(res, err, 'Failed to fetch applications');
   }
@@ -47,11 +48,12 @@ async function getApplications(req, res) {
 
 // GET /application/:id
 async function getApplication(req, res) {
-  if (!mongoose.isValidObjectId(req.params.id))
+  const { id: applicationId } = req.params;
+  if (!mongoose.isValidObjectId(applicationId))
     return res.status(400).json({ error: 'Invalid ID' });
 
   try {
-    const application = await Application.findById(req.params.id).populate('opportunityId');
+    const application = await applicationService.getApplicationById(applicationId)
     if (!application) return res.status(404).json({ error: 'Application not found' });
     res.json(application);
   } catch (err) {
@@ -61,19 +63,21 @@ async function getApplication(req, res) {
 
 // PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName
 async function updateApplication(req, res) {
-  if (!mongoose.isValidObjectId(req.params.id))
-    return res.status(400).json({ error: 'Invalid ID' });
-
-  // userId / opportunityId are fixed once created
+  const { id: applicationId } = req.params;
   const { status, notes, deadline, interviewAt, contactName } = req.body ?? {};
 
+  if (!mongoose.isValidObjectId(applicationId)) {
+    return res.status(400).json({ error: 'Invalid ID' });
+  }
+
   try {
-    const application = await Application.findByIdAndUpdate(
-      req.params.id,
-      { status, notes, deadline, interviewAt, contactName },
-      { returnDocument: 'after', runValidators: true },
-    );
-    if (!application) return res.status(404).json({ error: 'Application not found' });
+    const changes = { status, notes, deadline, interviewAt, contactName };
+    const application = await applicationService.updateApplication(applicationId, changes);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
     res.json(application);
   } catch (err) {
     handleError(res, err, 'Failed to update application');
@@ -82,12 +86,18 @@ async function updateApplication(req, res) {
 
 // DELETE /application/:id
 async function deleteApplication(req, res) {
-  if (!mongoose.isValidObjectId(req.params.id))
+  const { id: applicationId } = req.params;
+  if (!mongoose.isValidObjectId(applicationId)) {
     return res.status(400).json({ error: 'Invalid ID' });
+  }
 
   try {
-    const deleted = await Application.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Application not found' });
+    const deletedApplication = await applicationService.deleteApplication(applicationId);
+
+    if (!deletedApplication) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
     res.status(204).end();
   } catch (err) {
     handleError(res, err, 'Failed to delete application');
