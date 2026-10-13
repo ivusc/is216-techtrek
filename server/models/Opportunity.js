@@ -69,7 +69,6 @@ opportunitySchema.pre('validate', function () {
 });
 
 // Same Adzuna listing is stored once, however many users save it.
-// $type (not $exists) so user posts with no externalId are left out of the index.
 opportunitySchema.index(
   { source: 1, externalId: 1 },
   {
@@ -78,7 +77,6 @@ opportunitySchema.index(
   },
 );
 
-// Feed: filter by type, sort by deadline
 opportunitySchema.index({ type: 1, deadline: 1 });
 
 module.exports = mongoose.model('Opportunity', opportunitySchema);
