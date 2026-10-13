@@ -32,14 +32,13 @@ async function createApplication(req, res) {
 }
 
 // GET /application?userId=...&status=applied
-// ponytail: userId comes from the query until auth exists
 async function getApplications(req, res) {
   const { userId, status } = req.query;
   if (!mongoose.isValidObjectId(userId))
     return res.status(400).json({ error: 'Valid userId required' });
 
   try {
-    const filter = { userId, ...(status && { status }) };
+    const filter = { userId, status: status && { status } };
     res.json(await Application.find(filter).populate('opportunityId').sort('-updatedAt'));
   } catch (err) {
     handleError(res, err, 'Failed to fetch applications');

@@ -4,8 +4,6 @@ const Opportunity = require('../models/Opportunity');
 
 const RESULTS_PER_PAGE = 20;
 const CATEGORY = 'it-jobs';
-
-// Adzuna has no "intern" contract type, so internships are matched by keyword
 const TYPE_PARAMS = {
   fulltime: { full_time: 1, what_exclude: 'intern internship' },
   intern: { what_or: 'intern internship' },
@@ -15,8 +13,7 @@ function normaliseJob(job) {
   return {
     source: 'adzuna',
     externalId: job.id,
-    // ponytail: guessed from the title, Adzuna has no internship flag
-    type: /intern/i.test(job.title) ? 'internship' : 'job',
+    type: /intern/i.test(job.title) ? 'internship' : 'job', //check if substring intern is inside job title
     title: job.title,
     organisation: job.company?.display_name ?? null,
     location: job.location?.display_name ?? null,
@@ -30,13 +27,11 @@ function normaliseJob(job) {
   };
 }
 
-// "May 18 - 19, 2026" | "May 15 - Jun 30, 2026" | "Mar 24, 2026 - Mar 24, 2030"
-// -> end of the last day, UTC (ponytail: Devpost's real cutoff time/timezone isn't in the data)
 function parseDeadline(dates) {
   const [start, end] = dates.split(' - ');
   if (!end) return null;
   const endDay = /^\d/.test(end) ? `${start.match(/^\w+/)[0]} ${end}` : end;
-  const d = new Date(`${endDay} 23:59:59 UTC`);
+  const d = new Date(`${endDay} 23:59:59 UTC`); //set to end of day
   return isNaN(d) ? null : d;
 }
 
@@ -50,11 +45,9 @@ function normaliseHackathon(h) {
     location: h.displayed_location,
     dates: h.submission_period_dates,
     deadline: parseDeadline(h.submission_period_dates),
-    // prizeText looks like '$<span data-currency-value>500</span>'
-    prize: h.prizeText.replace(/<[^>]*>/g, '').trim(),
+    prize: h.prizeText.replace(/<[^>]*>/g, '').trim(), //extract only the price
     themes: h.themes.map((t) => t.name),
     url: h.url,
-    // some thumbnails are protocol-relative ('//cdn...')
     thumbnail: h.thumbnail_url.startsWith('//') ? `https:${h.thumbnail_url}` : h.thumbnail_url,
     registrations: h.registrations_count,
     featured: h.featured,
@@ -102,7 +95,8 @@ async function fetchJobs(req, res) {
   if (isBadType(req.query.type)) return res.status(400).json(badTypeError);
 
   try {
-    res.json(await getJobs(req.query));
+    const jobs = await getJobs({ type: req.query.type, page: req.query.page });
+    res.json(jobs);
   } catch (err) {
     handleError(res, err, 'Failed to fetch jobs.');
   }
@@ -111,7 +105,8 @@ async function fetchJobs(req, res) {
 // GET /hackathons
 async function fetchHackathons(req, res) {
   try {
-    res.json(await getHackathons());
+    const hackathons = await getHackathons();
+    res.json(hackathons);
   } catch (err) {
     handleError(res, err, 'Failed to fetch hackathons.');
   }
@@ -121,11 +116,12 @@ async function fetchHackathons(req, res) {
 async function fetchAll(req, res) {
   if (isBadType(req.query.type)) return res.status(400).json(badTypeError);
 
-  // allSettled so one API being down doesn't blank the other; a failed source comes back as null
   const [jobs, hackathons] = await Promise.allSettled([getJobs(req.query), getHackathons()]);
+
   for (const r of [jobs, hackathons]) {
     if (r.status === 'rejected') console.error('Opportunities API error:', r.reason.message);
   }
+  
   if (jobs.status === 'rejected' && hackathons.status === 'rejected') {
     return res.status(502).json({ error: 'Failed to fetch opportunities' });
   }
@@ -142,7 +138,7 @@ async function saveOpportunity(req, res) {
 
     res.status(201).json(opportunity);
   } catch (err) {
-    // listing already saved (unique source + externalId), so return the existing one
+    // return the existing listing already saved (unique source + externalId)
     if (err.code === 11000) {
       return res.json(
         await Opportunity.findOne({
