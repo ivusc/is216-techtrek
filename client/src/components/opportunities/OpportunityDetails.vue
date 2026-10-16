@@ -151,7 +151,8 @@ defineEmits(['close', 'toggle-save'])
         <i :class="saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark'"></i>
         {{ saved ? 'Saved' : 'Save' }}
       </button>
-      <!-- goes to the real listing on Adzuna / Devpost -->
+
+      <!-- link to real listing -->
       <a :href="item.url" target="_blank" class="btn btn-sm btn-tt-accent fw-semibold text-nowrap flex-grow-1">
         <i class="bi bi-box-arrow-up-right"></i> Apply on {{ getPlatform(item) }}
       </a>

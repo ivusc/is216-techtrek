@@ -259,7 +259,7 @@ const toggleSave = async (item) => {
 
 <template>
   <div class="p-2">
-    <OpportunityHeader v-model="search" />
+    <OpportunityHeader v-model="search" type="opportunities"/>
 
     <OpportunityTabs
       v-model:tab="activeTab"
