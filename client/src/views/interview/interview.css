@@ -1,0 +1,127 @@
+
+.container {
+  background-color: #fdfcdc;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 26px;
+  padding: 30px 40px;
+}
+
+.card {
+  background-color: white;
+  border: 1px solid #e5dfc7;
+  border-radius: 16px;
+  width: 270px;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.filter-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.filter-heading {
+  font-size: 16px;
+  font-weight: bold;
+  color: #82969e;
+  margin-top: 25px;
+  margin-bottom: 12px;
+}
+
+
+.interview-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.interview-card {
+  background-color: #068bad;
+  color: white;
+  min-height: 180px;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+
+.job-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.interview-date {
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+
+.practice-btn {
+  display: inline-block;
+  background-color: white;
+  color: #068bad;
+  padding: 8px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  margin-top: 15px;
+  font-weight: bold;
+}
+.question-bank {
+  margin-top: 28px;
+}
+
+.question-bank-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+.question-card {
+  background-color: white;
+  border: 1px solid #e5dfc7;
+  min-height: 90px;
+  padding: 20px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  position:relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.question-text {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.question-info {
+  font-size: 13px;
+  color: #82969e;
+  margin-bottom: 0;
+}
+
+.question-practice-btn {
+  background-color: #068bad;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  margin-left: 20px;
+}
+
+
+.high-score {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: #22c55e;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}

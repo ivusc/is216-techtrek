@@ -4,7 +4,7 @@ const cors = require('cors');
 
 const opportunityRouter = require('./routes/opportunity');
 const applicationRouter = require('./routes/application');
-
+const interviewRouter = require('./routes/interview')
 const app = express();
 require('dotenv').config();
 const PORT = process.env.PORT || 8000;
@@ -23,6 +23,8 @@ app.get('/', (req, res) => {
 
 app.use('/opportunity', opportunityRouter);
 app.use('/application', applicationRouter);
+app.use('/interview', interviewRouter);
+
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
