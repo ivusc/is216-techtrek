@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
-const { GoogleGenAI } = require('@google/genai');
 const InterviewAttempt = require('../models/interviewAttempt');
 const Application = require('../models/Application');
 const Opportunity = require('../models/Opportunity');
-const ai = new GoogleGenAI({
-  apiKey:process.env.GEMINI_API_KEY
-})
+
+const ai = require('../ai/gemini-config');
+const prompt = require('../ai/prompt');
+
 async function getInterviewDashboard(req, res) {
   try {
     const applications = await Application.find()
@@ -127,6 +127,7 @@ async function getQuestion(req, res) {
 async function generateQuestions(req, res) {
   try {
     const { applicationId } = req.body
+    
     if (!applicationId) {
       return res.status(400).json({
         error: 'applicationId is required'
@@ -147,37 +148,7 @@ async function generateQuestions(req, res) {
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
 
-      contents: `
-Generate exactly 5 interview questions for this opportunity.
-
-Organisation: ${opportunity.organisation}
-Role: ${opportunity.title}
-Description:
-${opportunity.description || 'No description provided'}
-
-Question types available:
-- Behavioural
-- Technical
-- System Design
-- Case
-
-Difficulty available:
-- Easy
-- Medium
-- Hard
-
-Return ONLY a JSON array that should be formatted like the example below. Change the values according to the question,type and difficulty these are just examples
-
-[
-  {
-    "question": "Question text",
-    "type": "Behavioural",
-    "difficulty": "Medium"
-  }
-]
-
-Generate a realistic mix of question types appropriate for the role.
-`,
+      contents: prompt(opportunity),
       config: {
         responseMimeType: 'application/json'
       }
@@ -187,11 +158,13 @@ Generate a realistic mix of question types appropriate for the role.
 
     try {
       questions = JSON.parse(response.text)
+      console.log(questions);
     } catch {
       return res.status(500).json({
         error: 'Invalid AI response'
       })
     }
+
     let nextQuestionId = 0
 
     const latestAttempt = await InterviewAttempt.findOne()
@@ -214,9 +187,9 @@ Generate a realistic mix of question types appropriate for the role.
     res.json({
       questions: questionsWithIds
     })
+
   } catch (error) {
     console.log(error)
-
     res.status(500).json({
       error: 'Failed to generate interview questions'
     })
