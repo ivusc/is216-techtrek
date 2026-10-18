@@ -12,11 +12,11 @@ export async function fetchJobs(page) {
   return response.data
 }
 
-export async function saveOpportunity(item) {
+export async function saveOpportunitService(item) {
   const response = await axios.post(BASE_URL, item)
   return response.data
 }
 
-export async function deleteOpportunity(id) {
+export async function deleteOpportunityService(id) {
   await axios.delete(BASE_URL + '/' + id)
 }

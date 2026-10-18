@@ -3,13 +3,14 @@ import { ref, computed, onMounted } from 'vue';
 import './tracker.css';
 import OpportunityHeader from '@/components/opportunities/OpportunityHeader.vue';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
-import KanbanColumn from '@/components/tracker/KanbanColumn.vue';
-import CalendarView from '@/components/tracker/CalendarView.vue';
+import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
+import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
 import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
 import { trackerStages } from '@/constants';
 import { isDueThisWeek, isOverdue } from '@/utils/application';
 import { storeToRefs } from 'pinia';
 import { useApplicationsStore } from '@/store/applications';
+import { buildIcsFile } from '@/utils/calendar';
 
 const applicationStore = useApplicationsStore();
 const { applications, status, isLoading } = storeToRefs(applicationStore);
@@ -81,8 +82,16 @@ function openAddForm(status) {
 
 // calendar view's "Export to Google Calendar (.ics)" button
 function exportCalendar() {
-  // TODO: download the deadlines and interviews as an .ics file
-  console.log('export calendar');
+  const text = buildIcsFile(filteredApplications.value)
+  const file = new Blob([text], { type: 'text/calendar' });
+  const url = URL.createObjectURL(file);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'techtrek-applications.ics';
+  link.click();
+
+  URL.revokeObjectURL(url);
 }
 
 // the application shown in the detail modal (null = modal is closed)

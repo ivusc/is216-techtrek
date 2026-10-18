@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import CalendarDay from '@/components/tracker/CalendarDay.vue'
+import CalendarDay from '@/components/tracker/calendar/CalendarDay.vue'
 import { toDayKey, getMonthGridDates } from '@/utils/calendar'
 
 const props = defineProps({

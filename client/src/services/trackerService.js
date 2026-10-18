@@ -14,6 +14,17 @@ export async function fetchAllApplications(){
   return response.data;
 }
 
+export async function createApplicationService(payload){
+  const response = await axios.post(BASE_URL,{
+    userId: USERID,
+    opportunity: payload,
+    status: 'saved',
+    notes: 'Saved via techtrek.'
+  });
+
+  return response.data;
+}
+
 export async function updateApplicationService(id, payload){
   const response = await axios.patch(`${BASE_URL}/${id}`,payload);
   return response.data;

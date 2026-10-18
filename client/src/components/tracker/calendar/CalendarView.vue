@@ -1,8 +1,8 @@
 <script setup>
 import { computed } from 'vue'
-import CalendarMonth from '@/components/tracker/CalendarMonth.vue'
-import CalendarThisWeek from '@/components/tracker/CalendarThisWeek.vue'
-import CalendarLegend from '@/components/tracker/CalendarLegend.vue'
+import CalendarMonth from '@/components/tracker/calendar/CalendarMonth.vue'
+import CalendarThisWeek from '@/components/tracker/calendar/CalendarThisWeek.vue'
+import CalendarLegend from '@/components/tracker/calendar/CalendarLegend.vue'
 import { groupEventsByDay } from '@/utils/calendar'
 
 const props = defineProps({

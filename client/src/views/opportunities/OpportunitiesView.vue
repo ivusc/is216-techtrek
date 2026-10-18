@@ -6,7 +6,7 @@ import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
-import { fetchAllOpportunities, fetchJobs, saveOpportunity, deleteOpportunity } from '@/services/opportunityService'
+import { fetchAllOpportunities, fetchJobs, deleteOpportunityService } from '@/services/opportunityService'
 import {
   getKey,
   getDaysLeft,
@@ -15,6 +15,7 @@ import {
   getPrizeAmount,
   isPaid
 } from '@/utils/opportunity'
+import { createApplicationService } from '@/services/trackerService'
 
 const jobs = ref([])
 const hackathons = ref([])
@@ -240,11 +241,10 @@ const toggleSave = async (item) => {
     const index = findSaved(item)
     if (index === -1) {
       // POST sends back the saved opportunity with its _id, keep the _id so we can delete it later
-      // TODO: after login is done, also POST /application with the userId and this _id
-      const saved = await saveOpportunity(item)
+      const saved = await createApplicationService(item)
       savedItems.value.push({ key: getKey(item), id: saved._id })
     } else {
-      await deleteOpportunity(savedItems.value[index].id)
+      await deleteOpportunityService(savedItems.value[index].id)
       savedItems.value.splice(index, 1) // remove it from the array
     }
   } catch (error) {
