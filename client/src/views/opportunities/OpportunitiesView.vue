@@ -6,7 +6,7 @@ import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
-import { fetchAllOpportunities, fetchJobsPage, saveOpportunity, deleteOpportunity } from '@/services/opportunityService'
+import { fetchAllOpportunities, fetchJobs, saveOpportunity, deleteOpportunity } from '@/services/opportunityService'
 import {
   getKey,
   getDaysLeft,
@@ -198,7 +198,7 @@ const loadMore = async () => {
     return
   }
   try {
-    const data = await fetchJobsPage(jobsPage.value + 1)
+    const data = await fetchJobs(jobsPage.value + 1)
     let added = 0
     for (const job of data.jobs) {
       // only add jobs we do not have yet

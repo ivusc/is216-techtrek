@@ -14,7 +14,12 @@ export async function fetchAllApplications(){
   return response.data;
 }
 
-export async function updateApplicationStatus(id, payload){
+export async function updateApplicationService(id, payload){
   const response = await axios.patch(`${BASE_URL}/${id}`,payload);
+  return response.data;
+}
+
+export async function deleteApplicationService(id){
+  const response = await axios.delete(`${BASE_URL}/${id}`);
   return response.data;
 }

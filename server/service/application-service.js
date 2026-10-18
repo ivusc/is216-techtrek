@@ -47,7 +47,7 @@ async function updateApplication(id, changes) {
       contactName: changes.contactName,
     },
     { returnDocument: 'after', runValidators: true },
-  );
+  ).populate('opportunityId');
   return updatedApplication;
 }
 
