@@ -8,10 +8,6 @@ const interviewAttemptSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true
   },
-  overallScore: {
-    type: Number,
-    required: true
-  },
   completedAt: {
     type: Date,
     default: Date.now

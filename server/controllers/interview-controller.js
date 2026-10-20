@@ -9,7 +9,11 @@ const prompt = require('../ai/prompt');
 async function getInterviewDashboard(req, res) {
   try {
     const applications = await Application.find()
-
+    //const user = req.session.user;
+    //const userId = user._id;
+  // const applications = await Application.find({
+  //   userId: userId
+  // });
     const applicationCards = []
     const titles = []
 
@@ -33,6 +37,9 @@ async function getInterviewDashboard(req, res) {
     }
 
     const interviewAttempts = await InterviewAttempt.find()
+    //     const interviewAttempts = await InterviewAttempt.find({
+    //   userId: userId
+    // });
 
     const allQuestions = []
     const questionScores = {}

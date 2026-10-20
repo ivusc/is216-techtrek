@@ -9,6 +9,9 @@ import './practicequizview.css'
 const applicationId = route.params.applicationId;
 const questionId = route.params.questionId
 const completedQuestions = ref([])
+const errorMessage = ref('')
+const feedbackLoading = ref(false)
+const submitted = ref(false)
 const practiceQuestions = ref([])
 const currentQuestionIndex = ref(0)
 const answer = ref('')
@@ -24,18 +27,28 @@ async function getQuestions() {
     )
   }
   else if (applicationId)  {
-    const response = await axios.post(
-      'http://localhost:8000/interview/questions',
-      {
-        applicationId
-      }
-    )
+    try {
+      errorMessage.value = ''
+      const response = await axios.post(
+        'http://localhost:8000/interview/questions',
+        {
+          applicationId
+        }
+      )
+      practiceQuestions.value = response.data.questions
+    } catch (error) {
+      console.error(error)
+      errorMessage.value =
+        'Unable to generate interview questions right now. Please try again later.'
+    }
 
     practiceQuestions.value = response.data.questions
   }
 }
 
 async function submitAnswer() {
+  feedbackLoading.value = true
+  submitted.value = true
   const response = await axios.post(
     'http://localhost:8000/interview/feedback',
     {
@@ -44,19 +57,18 @@ async function submitAnswer() {
       answer: answer.value
     }
   )
-
   feedback.value = response.data.feedback
-  if (currentQuestionIndex.value ===practiceQuestions.value.length - 1) {
-  await axios.post('http://localhost:8000/interview/attempt',{applicationId,
-      questions: completedQuestions.value})
-} else {
+  feedbackLoading.value = false
   completedQuestions.value.push({
    questionId:practiceQuestions.value[currentQuestionIndex.value].questionId,
    question: practiceQuestions.value[currentQuestionIndex.value].question,
    type: practiceQuestions.value[currentQuestionIndex.value].type,
    difficulty:practiceQuestions.value[currentQuestionIndex.value].difficulty,
    score:   feedback.value.score})
-}
+  if (currentQuestionIndex.value ===practiceQuestions.value.length - 1) {
+  await axios.post('http://localhost:8000/interview/attempt',{applicationId,
+      questions: completedQuestions.value})
+} 
 }
 
 function nextQuestion() {
@@ -65,12 +77,9 @@ function nextQuestion() {
   }
   answer.value = ''
   feedback.value = null
+  submitted.value = false
 }
 
-function retryQuestion() {
-  answer.value = ''
-  feedback.value = null
-}
 
 onMounted(() => {
   getQuestions()
@@ -78,25 +87,47 @@ onMounted(() => {
 </script>
 
 <template>
+  <div v-if="errorMessage" style = "text-align:center" class="error-message">
+  {{ errorMessage }}
+</div>
+  <div style = "text-align:center" v-if = "practiceQuestions.length === 0">Generating questions....</div>
   <div v-if="practiceQuestions.length > 0">
-
+    <div class="progress-bar-container">
+        <div class="progress-bar"
+            :style="{ width: `${((currentQuestionIndex + 1) / practiceQuestions.length) * 100}%` }">
+        </div>
+    </div>
     <p class="practice-info">
       Question {{ currentQuestionIndex + 1 }} of {{ practiceQuestions.length }}
     </p>
 
     <div class="practice-layout">
-      <QuestionCard :question="practiceQuestions[currentQuestionIndex]" @submit="submitAnswer"
-      >
-        <textarea v-model="answer" class="answer-box" placeholder="Type your answer here..."
-        />
+      <div class="question-container">
+  <QuestionCard
+    :question="practiceQuestions[currentQuestionIndex]"
+  />
+  <textarea
+    v-model="answer"
+    class="answer-box"
+    placeholder="Type your answer here..."
+  />
 
-      </QuestionCard>
-
-      <FeedbackCard v-if="feedback" :feedback="feedback" :isLastQuestion="currentQuestionIndex === practiceQuestions.length - 1" @retry="retryQuestion" @next="nextQuestion"
+  <div class="submit">
+    <button 
+      class="submit-btn"
+      @click="submitAnswer"
+      :disabled="submitted"
+    >
+        {{ submitted ? 'Answer Submitted' : 'Submit for Feedback' }}
+    </button>
+     </div>
+  </div>
+      <div style = "text-align:center" v-if = "feedbackLoading">Generating feedback....</div>
+      <FeedbackCard v-else-if="feedback" :feedback="feedback" :isLastQuestion="currentQuestionIndex === practiceQuestions.length - 1"  @next="nextQuestion"
       />
 
     </div>
+    </div>
 
-  </div>
 </template>
 

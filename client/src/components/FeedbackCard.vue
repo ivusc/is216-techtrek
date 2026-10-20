@@ -210,25 +210,43 @@ const emit = defineEmits(['next'])
   height: 100px;
   min-width: 100px;
   border-radius: 50%;
-  border: 9px solid #00b1b9;
-  border-left-color: #f3f0d6;
+  background: conic-gradient(
+    #00b1b9 calc(v-bind('feedback.score') * 10%),
+    #f3f0d6 0
+  );
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+  border: none;
+}
+
+.score-circle::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: white;
 }
 
 .score-number {
   font-size: 29px;
   font-weight: 700;
   line-height: 1.2;
+  position: relative;
+  z-index: 1;
 }
 
 .score-label {
   font-size: 10px;
   color: #78909c;
   margin-top: 2px;
+  position: relative;
+  z-index: 1;
 }
+
+
 
 .score-summary {
   flex: 1;

@@ -92,7 +92,7 @@ return questions.value.filter(q =>
       class="practice-btn"
       :to="`/practice/${application.applicationId}`"
     >
-      Practice Interview
+      ➝ Start 5 question-session
     </RouterLink>
     
       </div>
@@ -125,7 +125,6 @@ return questions.value.filter(q =>
 >
   Practice Again
 </RouterLink>
-<!--  change to  :to="`/practice/question/${question.questionId}`" after mongodb is implemented -->
   </div>
 </div>
   </div>
