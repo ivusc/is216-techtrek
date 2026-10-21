@@ -116,7 +116,7 @@ return questions.value.filter(q =>
         </span>
 
         <span class="tag difficulty-tag">
-          {{ question.difficulty }}
+          {{ question.difficulty }} 
         </span>
         <span class="tag high-score-tag"
         :class="questionScores[question.questionId].highScore < 5 ? 'fail' : 'pass'">
@@ -127,7 +127,7 @@ return questions.value.filter(q =>
 
     <RouterLink
   class="question-practice-btn"
-  :to="`/practice/question/${question.questionId}`"
+  :to="`/practice/question/${question.applicationId}/${question.questionId}`"
 >
   Practice Again
 </RouterLink>

@@ -19,12 +19,9 @@ const feedback = ref(null)
 async function getQuestions() {
   if (questionId) {
     const response = await axios.get(
-  `http://localhost:8000/interview/question/${questionId}`
+  `http://localhost:8000/interview/question/${applicationId}/${questionId}`
    )  
     practiceQuestions.value = [response.data]
-    const question = questions.find(
-      q => q.id === Number(questionId)
-    )
   }
   else if (applicationId)  {
     try {
@@ -41,15 +38,15 @@ async function getQuestions() {
       errorMessage.value =
         'Unable to generate interview questions right now. Please try again later.'
     }
-
-    practiceQuestions.value = response.data.questions
   }
 }
 
 async function submitAnswer() {
   feedbackLoading.value = true
   submitted.value = true
-  const response = await axios.post(
+  errorMessage.value = ''
+  try {
+    const response = await axios.post(
     'http://localhost:8000/interview/feedback',
     {
       applicationId,
@@ -65,6 +62,12 @@ async function submitAnswer() {
    type: practiceQuestions.value[currentQuestionIndex.value].type,
    difficulty:practiceQuestions.value[currentQuestionIndex.value].difficulty,
    score:   feedback.value.score})
+  } catch (error) {
+    console.error(error)
+    feedbackLoading.value = false
+    errorMessage.value = "AI was unable to generate feedback right now please try again later"
+  }
+  
   if (currentQuestionIndex.value ===practiceQuestions.value.length - 1) {
   await axios.post('http://localhost:8000/interview/attempt',{applicationId,
       questions: completedQuestions.value})

@@ -47,16 +47,23 @@ async function getInterviewDashboard(req, res) {
     for (const attempt of interviewAttempts) {
       for (const q of attempt.questions) {
         let found = false
-
         for (const existingQuestion of allQuestions) {
           if (existingQuestion.question === q.question) {
             found = true
             break
           }
         }
-
         if (!found) {
-          allQuestions.push(q)
+          const data = await getOpportunityFromApplication(attempt.applicationId)
+          allQuestions.push({
+            questionId: q.questionId,
+            question: q.question,
+            type: q.type,
+            difficulty: q.difficulty,
+            score: q.score,
+            applicationId: attempt.applicationId,
+            title:data.opportunity.title,
+          })
         }
 
         if (!questionScores[q.questionId]) {
@@ -113,6 +120,7 @@ async function getQuestion(req, res) {
     const interviewAttempt = await InterviewAttempt.findOne({
       'questions.questionId': questionId
     })
+    const applicationId = interviewAttempt.applicationId
     if (!interviewAttempt) {
       return res.status(404).json({
         error: 'Question not found'
