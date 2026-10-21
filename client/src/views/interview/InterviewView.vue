@@ -110,13 +110,19 @@ return questions.value.filter(q =>
       <p class="question-text">
         {{ question.question }}
       </p>
-<!-- to display the high score for the question  -->
-      <!-- <span class="high-score">
+      <div class="question-tags">
+        <span class="tag type-tag">
+          {{ question.type }}
+        </span>
+
+        <span class="tag difficulty-tag">
+          {{ question.difficulty }}
+        </span>
+        <span class="tag high-score-tag"
+        :class="questionScores[question.questionId].highScore < 5 ? 'fail' : 'pass'">
       {{ questionScores[question.questionId]?.highScore }}/10
-    </span> -->
-      <p class="question-info">
-        {{ question.type }} · {{ question.title }} · {{ question.difficulty }}
-      </p>
+    </span>
+      </div>
     </div>
 
     <RouterLink

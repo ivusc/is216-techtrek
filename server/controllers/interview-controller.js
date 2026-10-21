@@ -22,7 +22,7 @@ async function getInterviewDashboard(req, res) {
         application.opportunityId
       )
 
-      if (opportunity && !titles.includes(opportunity.title)) {
+      if (opportunity && !titles.includes(opportunity.title) && opportunity.type == "internship") {
         titles.push(opportunity.title)
 
         applicationCards.push({
