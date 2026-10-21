@@ -85,7 +85,7 @@ return questions.value.filter(q =>
     <p class="interview-date">
       Applied: {{ application.createdAt.substring(0, 10) }}
     </p>
-    <p class="interview-date">
+    <p v-if = "application.deadline" class="interview-date">
       Deadline: {{ application.deadline.substring(0,10) }}
     </p>
     <RouterLink

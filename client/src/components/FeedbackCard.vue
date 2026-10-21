@@ -146,7 +146,7 @@ const emit = defineEmits(['next'])
 
       <RouterLink
         v-else
-        to="/interview-prep"
+        to="/interview"
         class="submit-btn"
       >
         Back to Applications
