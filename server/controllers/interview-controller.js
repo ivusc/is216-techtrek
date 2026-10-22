@@ -30,7 +30,7 @@ async function getInterviewDashboard(req, res) {
           title: opportunity.title,
           company: opportunity.organisation,
           createdAt: application.createdAt,
-          deadline: application.deadline,
+          interviewAt:application.interviewAt,
           status: application.status
         })
       }
@@ -159,11 +159,22 @@ async function generateQuestions(req, res) {
     }
 
     const opportunity = data.opportunity
-
+    const previousAttempts = await InterviewAttempt.find({
+      applicationId: applicationId
+    });
+    //will also find by userId after that is implemented
+    const existingQuestions = [];
+    for (const attempt of previousAttempts) {
+      for (const q of attempt.questions) {
+        if (q.question && !existingQuestions.includes(q.question)) {
+          existingQuestions.push(q.question);
+        }
+      }
+    }
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
 
-      contents: prompt(opportunity),
+      contents: prompt(opportunity,existingQuestions),
       config: {
         responseMimeType: 'application/json'
       }

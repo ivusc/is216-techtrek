@@ -1,31 +1,26 @@
-const prompt = (opportunity) => `Generate exactly 5 interview questions for this opportunity.
+const prompt = (opportunity, existingQuestions) => `
+Generate exactly 5 interview questions for the following role.
 
 Organisation: ${opportunity.organisation}
 Role: ${opportunity.title}
-Description:
-${opportunity.description || 'No description provided'}
+Description: ${opportunity.description || "Not provided"}
 
-Question types available:
-- Behavioural
-- Technical
-- System Design
-- Case
+Avoid questions similar to these previous questions:${existingQuestions.length > 0? existingQuestions.join("\n"): "None"}
 
-Difficulty available:
-- Easy
-- Medium
-- Hard
+Use a suitable mix of these types:
+Behavioural, Technical, System Design, Case.
 
-Return ONLY a JSON array that should be formatted like the example below. Change the values according to the question,type and difficulty these are just examples
+Choose a difficulty of Easy, Medium, or Hard for each question.
+Make the questions relevant to the role and avoid repetition.
 
+Return only a JSON array with this structure:
 [
   {
     "question": "Question text",
-    "type": "Behavioural",
+    "type": "Technical",
     "difficulty": "Medium"
   }
 ]
+`;
 
-Generate a realistic mix of question types appropriate for the role.`
-
-module.exports = prompt
+module.exports = prompt;

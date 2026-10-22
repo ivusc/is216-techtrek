@@ -2,10 +2,12 @@ const mongoose = require('mongoose');
 const interviewAttemptSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
   applicationId: {
     type: mongoose.Schema.Types.ObjectId,
+    ref: 'Application',
     required: true
   },
   completedAt: {

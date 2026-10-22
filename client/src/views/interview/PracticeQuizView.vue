@@ -40,7 +40,7 @@ async function getQuestions() {
     } catch (error) {
       console.error(error)
       errorMessage.value =
-        'Unable to generate interview questions right now. Please try again later.'
+        'Unable to generate interview questions right now. The AI service may be experiencing high demand.Please try again later.'
     }
   }
 }
@@ -69,7 +69,7 @@ async function submitAnswer() {
   } catch (error) {
     console.error(error)
     feedbackLoading.value = false
-    errorMessage.value = "AI was unable to generate feedback right now please try again later"
+    errorMessage.value = "AI was unable to generate feedback because it may currently be experiencing high demand.Please try again later"
   }
   
   if (currentQuestionIndex.value ===practiceQuestions.value.length - 1 && completedQuestions.length !=0) {
@@ -97,7 +97,7 @@ onMounted(() => {
   <div v-if="errorMessage"  class="error-message">
   {{ errorMessage }}
 </div>
-  <div style = "text-align:center" v-if = "practiceQuestions.length === 0">Generating questions....</div>
+  <div style = "text-align:center" v-if = "practiceQuestions.length === 0 && !errorMessage">Generating questions....</div>
   <div v-if="practiceQuestions.length > 0">
     <div class="progress-bar-container">
         <div class="progress-bar"
