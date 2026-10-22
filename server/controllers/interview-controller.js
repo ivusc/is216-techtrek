@@ -42,8 +42,9 @@ async function getInterviewDashboard(req, res) {
     // });
 
     const allQuestions = []
+    let highestScore = 0
+    let averageScore =0
     const questionScores = {}
-
     for (const attempt of interviewAttempts) {
       for (const q of attempt.questions) {
         let found = false
@@ -65,14 +66,24 @@ async function getInterviewDashboard(req, res) {
             title:data.opportunity.title,
           })
         }
-
         if (!questionScores[q.questionId]) {
           questionScores[q.questionId] = {
             highScore: q.score
           }
+          if (q.score > highestScore) {
+            highestScore = q.score
+          }
         } else if (q.score > questionScores[q.questionId].highScore) {
           questionScores[q.questionId].highScore = q.score
+          if (q.score > highestScore) {
+            highestScore = q.score
+          }
         }
+        let totalHighScore = 0
+        for (const questionId in questionScores) {
+          totalHighScore += questionScores[questionId].highScore
+        }
+        averageScore =Object.keys(questionScores).length > 0? (totalHighScore / Object.keys(questionScores).length).toFixed(1): 0
       }
     }
 
@@ -81,7 +92,9 @@ async function getInterviewDashboard(req, res) {
       interviewAttempts,
       titles,
       allQuestions,
-      questionScores
+      questionScores,
+      highestScore,
+      averageScore,
     })
   } catch (error) {
     console.log(error)
@@ -172,7 +185,7 @@ async function generateQuestions(req, res) {
       }
     }
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash-lite',
 
       contents: prompt(opportunity,existingQuestions),
       config: {
@@ -190,7 +203,13 @@ async function generateQuestions(req, res) {
         error: 'Invalid AI response'
       })
     }
-
+    if (
+      !Array.isArray(questions) || questions.length !== 5
+    ) {
+      return res.status(500).json({
+        error: 'AI failed to generate 5 valid questions'
+      })
+    }
     let nextQuestionId = 0
 
     const latestAttempt = await InterviewAttempt.findOne()
@@ -247,7 +266,7 @@ async function generateFeedback(req, res) {
     const opportunity = data.opportunity
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash-lite',
 
       contents: `
 You are evaluating a candidate's interview answer.
@@ -318,7 +337,6 @@ Return JSON in this format:
         error: 'Invalid AI response'
       })
     }
-
     res.json({
       feedback
     })
@@ -338,6 +356,11 @@ async function saveAttempt(req, res) {
     const application = await Application.findOne({
       _id: applicationId
     })
+    if (!questions ||!Array.isArray(questions) ||questions.length === 0) {
+      return res.status(400).json({
+        error: 'No questions to save'
+      })
+    }
 
     if (!application) {
       return res.status(404).json({

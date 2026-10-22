@@ -202,3 +202,51 @@
     margin-top: 10px;
   }
 }
+.stats-container {
+    display: flex;
+    margin-top:20px;
+    gap: 24px;
+    width: 100%;
+}
+
+.stat-card {
+    background:white;
+    display:grid;
+    grid-template-columns:1fr 2fr;
+    width: 300px;
+   height: 130px;
+    align-items: center;
+    gap: 20px;
+
+    padding: 24px;
+    border-radius: 20px;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.stat-value{
+  font-weight:bold;
+  font-size:24px;
+}
+.stat-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fce8dd;
+    border-radius: 4px;
+    font-size: 32px;
+    font-weight: 600;
+    height:50px;
+    width:70px;
+    border-radius:16px;
+}
+.stat-card:nth-child(odd) .stat-icon {
+    background-color: #fce8dd;
+}
+
+.stat-card:nth-child(even) .stat-icon {
+    background-color: #e8f4f8;
+}

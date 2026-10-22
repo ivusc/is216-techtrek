@@ -6,6 +6,8 @@ const questionTypes = ['Behavioural','Technical','System Design','Case']
 const selectedTitle = ref('')
 const selectedDifficulty = ref('')
 const selectedTypes = ref([])
+const averageScore = ref(0);
+const highestScore = ref(0);
 import axios from 'axios'
 const applicationCards = ref([])
 const titles = ref([])
@@ -23,6 +25,8 @@ const loadData = async () => {
     titles.value = response.data.titles
     questions.value = response.data.allQuestions
     questionScores.value = response.data.questionScores
+    averageScore.value = response.data.averageScore
+    highestScore.value = response.data.highestScore
   } catch (error) {
     console.error(error)
     errorMessage.value = 'Failed to load interview dashboard.'
@@ -56,7 +60,7 @@ return questions.value.filter(q =>
   </div>
   <div v-else>
     <h1>Interview Prep</h1>
-  <p style = "text-align:center;">Practice by role and question type.Gemini gives instant feedback on every answer</p>
+  <p >Practice by role and question type.Gemini gives instant feedback on every answer</p>
   <div class = "container">  
   <div>
     <div class="card" style = "background-color:white">
@@ -102,6 +106,32 @@ return questions.value.filter(q =>
       </div>
       
     </div>
+    <div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-icon">↝</div>
+
+        <div class="stat-content">
+            <div class="stat-value">{{ averageScore }}</div>
+            <div class="stat-label">Average score</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ highestScore }}</div>
+            <div class="stat-label">Highest score</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">🗹</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ questions.length }}</div>
+            <div class="stat-label">Questions answered</div>
+        </div>
+    </div>
+</div>
     <div class="question-bank">
   <p class="question-bank-title">Question Bank</p>
 

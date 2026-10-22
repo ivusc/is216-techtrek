@@ -69,10 +69,11 @@ async function submitAnswer() {
   } catch (error) {
     console.error(error)
     feedbackLoading.value = false
+    submitted.value = false
     errorMessage.value = "AI was unable to generate feedback because it may currently be experiencing high demand.Please try again later"
   }
   
-  if (currentQuestionIndex.value ===practiceQuestions.value.length - 1 && completedQuestions.length !=0) {
+  if (currentQuestionIndex.value ===practiceQuestions.value.length - 1 && completedQuestions.value.length !=0) {
   await axios.post('http://localhost:8000/interview/attempt',{applicationId,
       questions: completedQuestions.value})
 } 
