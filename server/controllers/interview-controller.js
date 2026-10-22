@@ -21,8 +21,8 @@ async function getInterviewDashboard(req, res) {
       const opportunity = await Opportunity.findById(
         application.opportunityId
       )
-
-      if (opportunity && !titles.includes(opportunity.title) && opportunity.type == "internship") {
+      // add && (application.status = "applied" || application.status == 'interview') to condition once more application data is loaded
+      if (opportunity && !titles.includes(opportunity.title) && opportunity.type == "internship" ) {
         titles.push(opportunity.title)
 
         applicationCards.push({

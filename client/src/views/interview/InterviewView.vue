@@ -12,6 +12,7 @@ const titles = ref([])
 const questions = ref([])
 const questionScores = ref({})
 const isLoading = ref(true)  
+const errorMessage = ref('')
 const loadData = async () => {
   isLoading.value = true
   try {
@@ -24,7 +25,7 @@ const loadData = async () => {
     questionScores.value = response.data.questionScores
   } catch (error) {
     console.error(error)
-    status.value = 'Failed to load interview dashboard.'
+    errorMessage.value = 'Failed to load interview dashboard.'
   }
   isLoading.value = false
 }
@@ -47,6 +48,9 @@ return questions.value.filter(q =>
 })
 </script>
 <template>
+  <div v-if = "errorMessage" class = "error-message">
+    {{ errorMessage }}
+  </div>
   <div v-if = "isLoading" style = "text-align:center;">
     Loading content....
   </div>
@@ -85,8 +89,8 @@ return questions.value.filter(q =>
     <p class="interview-date">
       Applied: {{ application.createdAt.substring(0, 10) }}
     </p>
-    <p v-if = "application.deadline" class="interview-date">
-      Deadline: {{ application.deadline.substring(0,10) }}
+    <p v-if = "application.interviewAt" class="interview-date">
+      Interview date: {{ application.interviewAt.substring(0,10) }}
     </p>
     <RouterLink
       class="practice-btn"

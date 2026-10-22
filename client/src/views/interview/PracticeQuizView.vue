@@ -18,10 +18,14 @@ const answer = ref('')
 const feedback = ref(null)
 async function getQuestions() {
   if (questionId) {
-    const response = await axios.get(
+    try {
+      const response = await axios.get(
   `http://localhost:8000/interview/question/${applicationId}/${questionId}`
    )  
     practiceQuestions.value = [response.data]
+    } catch (error) {
+      errorMessage.value = 'Unable to retrieve this question right now. Please try again later'
+    }
   }
   else if (applicationId)  {
     try {
@@ -68,7 +72,7 @@ async function submitAnswer() {
     errorMessage.value = "AI was unable to generate feedback right now please try again later"
   }
   
-  if (currentQuestionIndex.value ===practiceQuestions.value.length - 1) {
+  if (currentQuestionIndex.value ===practiceQuestions.value.length - 1 && completedQuestions.length !=0) {
   await axios.post('http://localhost:8000/interview/attempt',{applicationId,
       questions: completedQuestions.value})
 } 
@@ -90,7 +94,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="errorMessage" style = "text-align:center" class="error-message">
+  <div v-if="errorMessage"  class="error-message">
   {{ errorMessage }}
 </div>
   <div style = "text-align:center" v-if = "practiceQuestions.length === 0">Generating questions....</div>
