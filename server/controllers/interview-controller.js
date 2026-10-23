@@ -210,15 +210,19 @@ async function generateQuestions(req, res) {
         error: 'AI failed to generate 5 valid questions'
       })
     }
-    let nextQuestionId = 0
+    const interviewAttempts = await InterviewAttempt.find()
+    //after user is implemented it will find by userId
+    let maxQuestionId = 0
 
-    const latestAttempt = await InterviewAttempt.findOne()
-      .sort({ createdAt: -1 })
-      //find the last interview attempt entry to determine questionId for the newly generated ones
-    if (latestAttempt && latestAttempt.questions.length > 0) {
-      const lastQuestion =latestAttempt.questions[latestAttempt.questions.length - 1]
-      nextQuestionId = lastQuestion.questionId + 1
+    for (const attempt of interviewAttempts) {
+      for (const q of attempt.questions) {
+        if (q.questionId > maxQuestionId) {
+          maxQuestionId = q.questionId
+        }
+      }
     }
+
+    const nextQuestionId = maxQuestionId + 1
     const questionsWithIds = []
     for (let i = 0; i < questions.length; i++) {
       questionsWithIds.push({
