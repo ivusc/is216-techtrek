@@ -8,18 +8,34 @@ function handleError(res, err, fallback) {
   res.status(500).json({ error: fallback });
 }
 
-const isBadType = (type) => type && !opportunityService.TYPE_PARAMS[type];
-const badTypeError = {
-  error: `type must be one of: ${Object.keys(opportunityService.TYPE_PARAMS).join(', ')}`,
-};
+// Returns an error message if type or field is not a known preset, otherwise null
+function validateJobFilters({ type, field }) {
+  const { JOB_TYPES, JOB_FIELDS } = opportunityService;
 
-// GET /jobs?type=fulltime|intern&page=2
-//type - omit type for all IT jobs; page - omit for first page
+  if (type && !Object.hasOwn(JOB_TYPES, type)) {
+    return `type must be one of: ${Object.keys(JOB_TYPES).join(', ')}`;
+  }
+
+  if (field && !Object.hasOwn(JOB_FIELDS, field)) {
+    return `field must be one of: ${Object.keys(JOB_FIELDS).join(', ')}`;
+  }
+
+  return null;
+}
+
+// GET /jobs?type=fulltime|intern&field=frontend|backend|data|ai|devops|cybersecurity|mobile&page=2
+// type - omit for all IT jobs; field - omit for every tech field; page - omit for first page
 async function fetchJobs(req, res) {
-  if (isBadType(req.query.type)) return res.status(400).json(badTypeError);
+  const { type, field, page } = req.query;
+
+  const filterError = validateJobFilters({ type, field });
+
+  if (filterError) {
+    return res.status(400).json({ error: filterError });
+  }
 
   try {
-    const jobs = await opportunityService.getJobs({ type: req.query.type, page: req.query.page });
+    const jobs = await opportunityService.getJobs({ type, field, page });
     res.json(jobs);
   } catch (err) {
     handleError(res, err, 'Failed to fetch jobs.');
@@ -36,17 +52,18 @@ async function fetchHackathons(req, res) {
   }
 }
 
-// GET /all?type=fulltime|intern&page=2 (type and page only apply to jobs)
+// GET /all?type=fulltime|intern&field=frontend&page=2 (type, field and page only apply to jobs)
 async function fetchAll(req, res) {
-  const { type, page } = req.query;
+  const { type, field, page } = req.query;
 
-  if (isBadType(type)) {
-    return res.status(400).json(badTypeError);
+  const filterError = validateJobFilters({ type, field });
+  if (filterError) {
+    return res.status(400).json({ error: filterError });
   }
 
   // Fetch both at the same time; one failing should not block the other
   const [jobsResult, hackathonsResult] = await Promise.allSettled([
-    opportunityService.getJobs({ type, page }),
+    opportunityService.getJobs({ type, field, page }),
     opportunityService.getHackathons(),
   ]);
 

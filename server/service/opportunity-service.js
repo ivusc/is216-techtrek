@@ -3,20 +3,31 @@ const Opportunity = require('../models/Opportunity');
 
 const RESULTS_PER_PAGE = 20;
 const CATEGORY = 'it-jobs';
-const TYPE_PARAMS = {
+const JOB_TYPES = {
   fulltime: { full_time: 1, what_exclude: 'intern internship' },
-  intern: { what_or: 'intern internship' },
+  intern: { title_only: 'intern' },
 };
 
+// `what_or` = job matches if any of these keywords appear in the listing
+const JOB_FIELDS = {
+  frontend: { what_or: 'frontend react vue angular' },
+  backend: { what_or: 'backend django springboot golang nodejs' },
+  data: { what_or: 'analytics sql tableau etl pyspark' },
+  ai: { what_or: 'ai llm pytorch tensorflow nlp' },
+  devops: { what_or: 'devops kubernetes terraform sre' },
+  cybersecurity: { what_or: 'cybersecurity siem soc pentest' },
+  mobile: { what_or: 'android ios flutter kotlin swift' },
+};
 
-async function getJobs({ type, page }) {
+async function getJobs({ type, field, page }) {
   const response = await axios.get(`${process.env.JOB_API_URL}/jobs/sg/search/${page ?? 1}`, {
     params: {
       app_id: process.env.JOB_API_APP_ID,
       app_key: process.env.JOB_API_KEY,
       results_per_page: RESULTS_PER_PAGE,
       category: CATEGORY,
-      ...TYPE_PARAMS[type],
+      ...JOB_TYPES[type],
+      ...JOB_FIELDS[field],
     },
   });
   return {
@@ -119,7 +130,8 @@ async function findOrCreateOpportunity(payload) {
 module.exports = { 
   RESULTS_PER_PAGE,
   CATEGORY,
-  TYPE_PARAMS,
+  JOB_TYPES,
+  JOB_FIELDS,
   getJobs,
   getHackathons,
   normaliseJob,
