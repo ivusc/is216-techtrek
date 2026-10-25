@@ -3,8 +3,8 @@ const route = useRoute()
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
-import FeedbackCard from '@/components/FeedbackCard.vue'
-import QuestionCard from '@/components/QuestionCard.vue'
+import FeedbackCard from '@/components/interviews/FeedbackCard.vue'
+import QuestionCard from '@/components/interviews/QuestionCard.vue'
 import './practicequizview.css'
 const applicationId = route.params.applicationId;
 const questionId = route.params.questionId
