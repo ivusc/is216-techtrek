@@ -1,6 +1,8 @@
 <script setup>
 import {ref,computed,onMounted} from 'vue'
 import './interview.css'
+import OpportunityHeader from '@/components/opportunities/OpportunityHeader.vue'
+const search = ref ("")
 const difficulties = ['Easy','Medium','Hard']
 const questionTypes = ['Behavioural','Technical','System Design','Case']
 const selectedTitle = ref('')
@@ -36,19 +38,14 @@ const loadData = async () => {
 
 onMounted(loadData)
 const filteredQuestions = computed(() => {
-  if (
-  selectedTitle.value === '' &&
-  selectedDifficulty.value === '' &&
-  selectedTypes.value.length === 0
-) {
-  return questions.value
-}
-
-return questions.value.filter(q =>
-  (selectedTitle.value === '' || q.title === selectedTitle.value) &&
-  (selectedTypes.value.length === 0 || selectedTypes.value.includes(q.type)) &&
-  (selectedDifficulty.value === '' || q.difficulty === selectedDifficulty.value)
-)
+  return questions.value.filter(q =>
+    (search.value === '' ||
+      q.question.toLowerCase().includes(search.value.toLowerCase()) ||
+      q.title.toLowerCase().includes(search.value.toLowerCase())) &&
+    (selectedTitle.value === '' || q.title === selectedTitle.value) &&
+    (selectedTypes.value.length === 0 || selectedTypes.value.includes(q.type)) &&
+    (selectedDifficulty.value === '' || q.difficulty === selectedDifficulty.value)
+  )
 })
 </script>
 <template>
@@ -59,8 +56,7 @@ return questions.value.filter(q =>
     Loading content....
   </div>
   <div v-else>
-    <h1>Interview Prep</h1>
-  <p >Practice by role and question type.Gemini gives instant feedback on every answer</p>
+     <OpportunityHeader v-model="search" title="Interview prep" subtitle= "Practice by role and question type.Gemini gives instant feedback on every answer" type="questions" />
   <div class = "container">  
   <div>
     <div class="card" style = "background-color:white">
