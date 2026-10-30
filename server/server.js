@@ -5,6 +5,7 @@ const session = require('express-session');
 
 const opportunityRouter = require('./routes/opportunity');
 const applicationRouter = require('./routes/application');
+const userRouter = require('./routes/user');
 
 const app = express();
 require('dotenv').config();
@@ -34,6 +35,7 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
+app.use('/',userRouter)
 app.use('/opportunity', opportunityRouter);
 app.use('/application', applicationRouter);
 

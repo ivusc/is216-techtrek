@@ -114,3 +114,13 @@ async function logout(req,res) {
     return res.status(200);
   })
 }
+
+
+module.exports = {
+  createUser,
+  login,
+  me,
+  updateUser,
+  deleteUser,
+  logout
+}
