@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import './tracker.css';
-import OpportunityHeader from '@/components/opportunities/OpportunityHeader.vue';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
 import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
 import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
@@ -11,6 +10,7 @@ import { isDueThisWeek, isOverdue } from '@/utils/application';
 import { storeToRefs } from 'pinia';
 import { useApplicationsStore } from '@/store/applications';
 import { buildIcsFile } from '@/utils/calendar';
+import PageHeader from '@/components/PageHeader.vue';
 
 const applicationStore = useApplicationsStore();
 const { applications, status, isLoading } = storeToRefs(applicationStore);
@@ -120,7 +120,7 @@ async function deleteSelected() {
 
 <template>
   <div class="p-2">
-    <OpportunityHeader v-model="search" title="Application tracker" :subtitle="viewMode === 'board'
+    <PageHeader v-model="search" title="Application tracker" :subtitle="viewMode === 'board'
       ? 'Drag cards between stages. Deadlines sync to your calendar.'
       : 'Every deadline, interview and hackathon in one month view.'" type="applications" />
 
