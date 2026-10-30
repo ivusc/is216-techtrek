@@ -6,7 +6,8 @@ import SideBar from './components/SideBar.vue';
 <template>
   <div class="d-flex">
     <SideBar />
-    <main class="flex-grow-1 p-4">
+    <!-- min-width 0 lets wide content (the tracker board) scroll inside main instead of widening the page -->
+    <main class="flex-grow-1 p-4" style="min-width: 0">
       <RouterView />
     </main>
   </div>

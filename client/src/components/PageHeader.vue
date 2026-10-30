@@ -1,7 +1,6 @@
 <script setup>
-// page title, search box, notifications and profile
-// v-model on this component = the search text
 const search = defineModel({ type: String, required: true })
+
 defineProps({
   title: { type: String, default: 'Discover' },
   subtitle: { type: String, default: 'Internships, jobs and hackathons — pulled live from Adzuna and Devpost.' },
