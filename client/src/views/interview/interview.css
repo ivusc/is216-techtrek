@@ -8,7 +8,7 @@
   padding: 30px 40px;
 }
 
-.card {
+.filter-card {
   background-color: white;
   border: 1px solid #e5dfc7;
   border-radius: 16px;
@@ -184,7 +184,7 @@
     padding: 20px;
   }
 
-  .card {
+  .filter-card {
     width: 100%;
   }
 
