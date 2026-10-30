@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import './opportunities.css'
-import OpportunityHeader from '@/components/opportunities/OpportunityHeader.vue'
 import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
@@ -15,6 +14,7 @@ import {
   getPrizeAmount,
   isPaid
 } from '@/utils/opportunity'
+import PageHeader from '@/components/PageHeader.vue'
 import { createApplicationService } from '@/services/trackerService'
 
 const jobs = ref([])
@@ -259,7 +259,7 @@ const toggleSave = async (item) => {
 
 <template>
   <div class="p-2">
-    <OpportunityHeader v-model="search" type="opportunities"/>
+    <PageHeader v-model="search" />
 
     <OpportunityTabs
       v-model:tab="activeTab"

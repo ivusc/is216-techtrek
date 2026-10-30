@@ -21,7 +21,7 @@ defineProps({
           v-model="search"
           type="text"
           class="form-control rounded-pill ps-5"
-          :placeholder="'Search for ' + type"
+          :placeholder="`Search ${type}...`"
         >
       </div>
       <button class="btn bg-white border p-0 size-36 flex-shrink-0"><i class="bi bi-bell"></i></button>

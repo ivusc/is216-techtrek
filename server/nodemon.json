@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/nodemon.json",
+  "watch": ["."],
+  "ext": "js,json,env",
+  "ignore": ["node_modules/**"],
+  "legacyWatch": true,
+  "pollingInterval": 300
+}
