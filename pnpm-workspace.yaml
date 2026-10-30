@@ -11,4 +11,6 @@ packages:
   - client
   - server
 allowBuilds:
+  '@google/genai': true
   '@parcel/watcher': true
+  protobufjs: true

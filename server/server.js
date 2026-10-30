@@ -6,7 +6,7 @@ const session = require('express-session');
 const opportunityRouter = require('./routes/opportunity');
 const applicationRouter = require('./routes/application');
 const userRouter = require('./routes/user');
-
+const interviewRouter = require('./routes/interview')
 const app = express();
 require('dotenv').config();
 const PORT = process.env.PORT || 8000;
@@ -31,6 +31,8 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch(err => console.log('Connection error: ', err));
 
+
+
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
@@ -38,6 +40,8 @@ app.get('/', (req, res) => {
 app.use('/',userRouter)
 app.use('/opportunity', opportunityRouter);
 app.use('/application', applicationRouter);
+app.use('/interview', interviewRouter);
+
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
