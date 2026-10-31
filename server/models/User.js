@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       minlength: [8, 'Password must be at least 8 characters long!'],
-      maxlength: [32, 'Password exceeds 32 characters!']
+      maxlength: [70, 'Password exceeds 70 characters!']
     },
     skills : {
       type : [String],
