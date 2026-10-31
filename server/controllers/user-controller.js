@@ -1,12 +1,18 @@
 const userService = require('../service/user/user-service');
 const { DatabaseError, IllegalArguementError } = require('../service/user/user-service-errors');
+const bycrpt = require('bcryptjs');
 
 async function createUser(req, res) {
   const userName = req.body.userName;
   const password = req.body.password;
+  if (typeof userName == "undefined" || typeof password == "undefined") {
+    res.status(400).json({error : "UserName or Password was empty"});
+  }
 
   try {
-    userService.createUser(userName, password);
+    const cleanedUserName = userName.trim().toLowerCase();
+    await userService.createUser(cleanedUserName, password);
+    res.status(201).json({});
   } catch (err) {
     if (err instanceof DatabaseError) {
       res.status(500).json({error: err.message});
@@ -20,30 +26,39 @@ async function createUser(req, res) {
 
 async function login(req, res) {
   const {userName, password} = req.body;
+  if (typeof userName == "undefined" || typeof password == "undefined") {
+    res.status(400).json({error : "UserName or Password was empty"});
+    return;
+  }
+
   let profile;
   try {
-    profile = userService.findUserByUserName(userName);
+    const cleanedUserName = userName.trim().toLowerCase();
+    profile = await userService.findUserByUserName(cleanedUserName);
   } catch (err) {
     if (err instanceof DatabaseError) {
       res.status(500).json({error : err.message});
+      return;
     } else {
       res.status(500).json({error : "Something unexpected went wrong"});
+      return;
     }
   }
 
   if (profile == null) return res.status(404).json({error : "User not found."});
 
-  const isCorrectPassword = await bcrypt.compare(password, profile.password);
+  const isCorrectPassword = await bycrpt.compare(password, profile.password);
 
   if (!isCorrectPassword) return res.status(401).json({error : "Wrong password."});
 
   req.session.user = {
+    _id : profile._id,
     userName : profile.userName,
     skills : profile.skills,
     linkedinUrl : profile.linkedinUrl,
     githubUrl : profile.githubUrl
   };
-  return res.status(200);
+  return res.status(200).json({message : "Alls good!"});
 }
 
 async function me(req, res) {

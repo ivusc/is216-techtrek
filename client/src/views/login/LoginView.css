@@ -1,0 +1,13 @@
+.form-field {
+  display:flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+label {
+  font-weight: bold;
+}
+
+.errors {
+  color: #b8433a;
+}
