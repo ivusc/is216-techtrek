@@ -13,19 +13,14 @@ const SALT_ROUNDS = 12;
  * @returns {void}
  */
 async function createUser(userName,password) {
-  let cleanedUserName;
-  let cleanedPassword;
-  try {
-    cleanedUserName, cleanedPassword = validateUserNameAndPassword(userName, password)
-  } catch (err) {
-    throw err;
-  }
+  const {cleanedUserName, cleanedPassword}= await validateUserNameAndPassword(userName, password);
 
-  const encryptedPassword = await bycrpt.hash(cleanedPassword, SALT_ROUNDS);
+
+  const encryptedPassword = await bycrpt.hash(password, SALT_ROUNDS);
   try {
-    const result = User.create({
+    await User.create({
       userName: cleanedUserName,
-      password: cleanedPassword
+      password: encryptedPassword
     })
   } catch (err) {
     throw new DatabaseError("Database could not create new user.")
@@ -46,12 +41,9 @@ async function validateUserNameAndPassword(userName, password) {
   const cleanedPassword = password.trim();
   if (cleanedPassword.length == 0) throw new IllegalArguementError("Password cannot be blank or only contain spaces!")
 
-  try {
-    const result = findUserByUserName(userName);
-    if (result != null) throw new IllegalArguementError("Username already exists.");
-  } catch (err) {
-    throw err;
-  }
+  const result = await findUserByUserName(cleanedUserName);
+  if (result != null) throw new IllegalArguementError("Username already exists.");
+
 
   return {cleanedUserName, cleanedPassword};
 }
