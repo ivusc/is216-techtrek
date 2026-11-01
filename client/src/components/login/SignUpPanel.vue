@@ -48,7 +48,7 @@ async function submitForm() {
     await axios.post("http://localhost:8000/register", body);
     authStore.username = cleanEmail;
     authStore.isLoggedIn = true;
-    router.push("/opportunities");
+    router.push("/home");
   } catch (err) {
     switch (err.status) {
       case 400 :

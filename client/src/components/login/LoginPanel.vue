@@ -35,7 +35,7 @@ async function submitForm() {
     }
     authStore.username = cleanEmail;
     authStore.isLoggedIn = true;
-    router.push("/opportunities");
+    router.push("/home");
   } catch (err) {
     switch (err.status) {
       case 404 :
