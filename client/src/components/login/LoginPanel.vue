@@ -3,6 +3,9 @@ import '@/views/login/LoginView.css';
 import { onMounted, ref } from 'vue';
 import axios from 'axios';
 import router from '@/router';
+import { useAuthStore } from '@/store/auth';
+
+const authStore = useAuthStore();
 const email = ref("");
 const password = ref("");
 const rememberUser = ref(false);
@@ -15,8 +18,9 @@ async function submitForm() {
     return;
   }
 
+  const cleanEmail = email.value.trim().toLowerCase();
   const body = {
-    userName : email.value.trim().toLowerCase(),
+    userName : cleanEmail,
     password : password.value,
   };
 
@@ -29,6 +33,8 @@ async function submitForm() {
     } else {
       localStorage.removeItem("email");
     }
+    authStore.username = cleanEmail;
+    authStore.isLoggedIn = true;
     router.push("/opportunities");
   } catch (err) {
     switch (err.status) {
