@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router';
 import ProfileMenu from './profile-menu/ProfileMenu.vue';
 
 const appRoutes = [
-  { label: 'Home', location: '/', icon: 'bi-house' },
+  { label: 'Home', location: '/home', icon: 'bi-house' },
   { label: 'Opportunities', location: '/opportunities', icon: 'bi-compass' },
   { label: 'Tracker', location: '/tracker', icon: 'bi-clipboard-data' },
   { label: 'Teams', location: '/teams', icon: 'bi-people' },
@@ -18,13 +18,13 @@ const collapsed = ref(false)
 
 <template>
   <div class="d-flex flex-column vh-100 sticky-top flex-shrink-0 bg-primary text-white p-3" id="sidebar" :style="{ width: collapsed ? '80px' : '260px' }" style="transition: width .2s;">
-    
+
     <div class="d-flex align-items-center justify-content-between" :class="{ 'flex-column gap-2': collapsed }">
       <RouterLink to="/" class="d-flex align-items-center text-decoration-none">
         <i class="bi bi-bootstrap-fill text-white fs-3" :class="{ 'me-2': !collapsed }"></i>
         <span v-show="!collapsed" class="fs-2 fw-bold text-white">TechTrek</span>
       </RouterLink>
-      
+
       <button class="btn btn-sm text-white fw-bold border-0" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'" @click="collapsed = !collapsed">
         <i class="bi fs-3" :class="collapsed ? 'bi-chevron-bar-right' : 'bi-chevron-bar-left'"></i>
       </button>
@@ -41,6 +41,6 @@ const collapsed = ref(false)
     </ul>
 
     <ProfileMenu />
-  
+
   </div>
 </template>
