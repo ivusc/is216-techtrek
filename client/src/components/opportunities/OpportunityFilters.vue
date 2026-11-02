@@ -1,5 +1,4 @@
 <script setup>
-// location filter, "Paid only" toggle, Clear all and Sort by
 const location = defineModel('location', { type: String, required: true })
 const paidOnly = defineModel('paidOnly', { type: Boolean, required: true })
 const sortBy = defineModel('sortBy', { type: String, required: true })

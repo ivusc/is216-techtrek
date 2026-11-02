@@ -1,6 +1,6 @@
 <script setup>
 defineProps({
-  counts: { type: Object, required: true } // { all: 12, jobs: 8, hackathons: 4 }
+  counts: { type: Object, required: true }
 })
 
 const activeTab = defineModel('tab', { type: String, required: true })

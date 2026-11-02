@@ -1,12 +1,11 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import './opportunities.css'
-import OpportunityHeader from '@/components/opportunities/OpportunityHeader.vue'
 import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
-import { fetchAllOpportunities, fetchJobsPage, saveOpportunity, deleteOpportunity } from '@/services/opportunityService'
+import { fetchAllOpportunities, fetchJobs, deleteOpportunityService } from '@/services/opportunityService'
 import {
   getKey,
   getDaysLeft,
@@ -15,6 +14,8 @@ import {
   getPrizeAmount,
   isPaid
 } from '@/utils/opportunity'
+import PageHeader from '@/components/PageHeader.vue'
+import { createApplicationService } from '@/services/trackerService'
 
 const jobs = ref([])
 const hackathons = ref([])
@@ -198,7 +199,7 @@ const loadMore = async () => {
     return
   }
   try {
-    const data = await fetchJobsPage(jobsPage.value + 1)
+    const data = await fetchJobs(jobsPage.value + 1)
     let added = 0
     for (const job of data.jobs) {
       // only add jobs we do not have yet
@@ -240,11 +241,10 @@ const toggleSave = async (item) => {
     const index = findSaved(item)
     if (index === -1) {
       // POST sends back the saved opportunity with its _id, keep the _id so we can delete it later
-      // TODO: after login is done, also POST /application with the userId and this _id
-      const saved = await saveOpportunity(item)
+      const saved = await createApplicationService(item)
       savedItems.value.push({ key: getKey(item), id: saved._id })
     } else {
-      await deleteOpportunity(savedItems.value[index].id)
+      await deleteOpportunityService(savedItems.value[index].id)
       savedItems.value.splice(index, 1) // remove it from the array
     }
   } catch (error) {
@@ -259,7 +259,7 @@ const toggleSave = async (item) => {
 
 <template>
   <div class="p-2">
-    <OpportunityHeader v-model="search" />
+    <PageHeader v-model="search" />
 
     <OpportunityTabs
       v-model:tab="activeTab"

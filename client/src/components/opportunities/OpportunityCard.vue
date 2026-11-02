@@ -19,29 +19,37 @@ defineEmits(['details', 'toggle-save'])
 </script>
 
 <template>
-  <div class="card p-3">
-    <!-- avatar, organisation + location -->
-    <div class="d-flex align-items-center gap-2 mb-3">
+  <div class="opp-card card shadow-sm">
+    <!-- avatar, organisation + location, bookmark -->
+    <div class="d-flex align-items-center gap-3">
       <div
-        class="avatar rounded-1 d-flex justify-content-center align-items-center small fw-semibold"
-        :class="item.type === 'hackathon' ? 'bg-tt-peach text-body' : 'bg-primary-subtle text-body-secondary'"
+        class="opp-logo rounded-3 d-flex justify-content-center align-items-center fw-semibold flex-shrink-0"
+        :class="item.type === 'hackathon' ? 'bg-tt-peach text-body' : 'bg-primary-subtle text-primary'"
       >
         {{ item.organisation?.slice(0, 2).toUpperCase() }}
       </div>
       <div class="flex-grow-1 min-w-0">
-        <p class="text-caption fw-semibold mb-0">{{ item.organisation }}</p>
+        <p class="small fw-semibold text-truncate mb-0">{{ item.organisation }}</p>
         <p class="text-caption text-body-tertiary text-truncate mb-0">
-          <i :class="getLocationGroup(item) === 'Online' ? 'bi bi-globe2' : 'bi bi-geo-alt'"></i>
+          <i :class="getLocationGroup(item) === 'Online' ? 'bi bi-globe2' : 'bi bi-globe'"></i>
           {{ item.location }}
         </p>
       </div>
+      <button
+        class="btn btn-link p-0 opp-save text-body-secondary"
+        :class="{ 'text-primary': saved }"
+        :aria-label="saved ? 'Remove from saved' : 'Save'"
+        @click="$emit('toggle-save')"
+      >
+        <i :class="saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark'"></i>
+      </button>
     </div>
 
     <!-- title -->
-    <h3 class="h4 fw-medium mb-2">{{ item.title }}</h3>
+    <h3 class="opp-title mb-0">{{ item.title }}</h3>
 
     <!-- tags -->
-    <div class="d-flex flex-wrap gap-1 mb-2">
+    <div class="d-flex flex-wrap gap-2">
       <span class="badge rounded-pill fw-medium" :class="typeBadge[item.type]">
         {{ item.type[0].toUpperCase() + item.type.slice(1) }}
       </span>
@@ -54,7 +62,7 @@ defineEmits(['details', 'toggle-save'])
     </div>
 
     <!-- deadline (hackathons) or posted date (jobs), then prize or salary -->
-    <div class="d-flex flex-wrap gap-3 text-caption text-body-secondary pb-3 mb-3 border-bottom">
+    <div class="d-flex flex-wrap gap-3 small fw-medium text-body-secondary">
       <span v-if="item.deadline">
         <i class="bi bi-clock me-1"></i>
         {{ item.type === 'hackathon' ? 'Register by' : 'Closes' }} {{ formatDate(item.deadline) }}
@@ -71,26 +79,48 @@ defineEmits(['details', 'toggle-save'])
       </span>
     </div>
 
-    <!-- source + buttons (if the card is too narrow, "via ..." goes above the buttons) -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <p class="text-caption text-body-tertiary text-nowrap mb-0">via {{ getPlatform(item) }}</p>
-      <div class="d-flex align-items-center gap-1 ms-auto">
-        <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
-        <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">
-          Details
-        </button>
-        <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
-          Find team
-        </RouterLink>
-        <button
-          class="btn btn-sm fw-semibold text-nowrap"
-          :class="saved ? 'btn-light' : 'btn-primary'"
-          @click="$emit('toggle-save')"
-        >
-          <i :class="saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark'"></i>
-          {{ saved ? 'Saved' : 'Save' }}
-        </button>
-      </div>
+    <hr class="my-0 border-secondary-subtle opacity-100" />
+
+    <!-- source + buttons -->
+    <div class="d-flex align-items-center flex-wrap gap-2">
+      <p class="opp-via text-caption text-body-tertiary text-truncate mb-0">via {{ getPlatform(item) }}</p>
+      <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
+      <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
+      <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+        Find team
+      </RouterLink>
+      <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
+        <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
+        {{ saved ? 'Tracked' : 'Track' }}
+      </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.opp-card {
+  padding: 20px;
+  gap: 14px;
+}
+.opp-logo {
+  width: 44px;
+  height: 44px;
+  font-family: var(--bs-heading-font-family, inherit);
+}
+.opp-title {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.25px;
+}
+.opp-via {
+  flex: 1 1 0;
+  min-width: 3.5rem;
+}
+.opp-save {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  line-height: 1;
+}
+</style>
