@@ -17,7 +17,6 @@ import RequestsPanel from '@/components/teams/RequestsPanel.vue'
 import JoinRequestModal from '@/components/teams/JoinRequestModal.vue'
 import CreateTeamModal from '@/components/teams/CreateTeamModal.vue'
 import EditSkillsModal from '@/components/teams/EditSkillsModal.vue'
-import { useAuthStore } from '@/store/auth'
 import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
 
 const auth = useAuthStore()
