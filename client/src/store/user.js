@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import axios from 'axios';
+import serverAPI from '@/services/serverAPI';
 
 export const useUserStore = defineStore('user', () => {
   const isLoggedIn = ref(false);
@@ -12,11 +12,15 @@ export const useUserStore = defineStore('user', () => {
   const githubUrl = ref(null);
 
   async function setInfo() {
-    const response = await axios.get("http://localhost:8000/me");
+    const response = await serverAPI.get("/me");
     if (!response.data.isAuthenticated) {
       throw new Error("Backend says this user is not authenticated?");
     }
-    (_id.value, username.value, skills.value, linkedinUrl.value, githubUrl.value = response.data.user);
+    _id.value = response.data.user._id;
+    username.value = response.data.user.userName;
+    skills.value = response.data.user.skills;
+    linkedinUrl.value = response.data.user.linkedinUrl;
+    githubUrl.value = response.data.user.githubUrl;
   };
 
   return {

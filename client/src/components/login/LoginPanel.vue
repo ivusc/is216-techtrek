@@ -1,11 +1,11 @@
 <script setup>
 import '@/views/login/LoginView.css';
 import { onMounted, ref } from 'vue';
-import axios from 'axios';
 import router from '@/router';
 import { useUserStore } from '@/store/user';
+import serverAPI from '@/services/serverAPI';
 
-const authStore = useUserStore();
+const userStore = useUserStore();
 const email = ref('');
 const password = ref('');
 const rememberUser = ref(false);
@@ -25,7 +25,7 @@ async function submitForm() {
   };
 
   try {
-    await axios.post('http://localhost:8000/login', body);
+    await serverAPI.post('/login', body);
 
     if (rememberUser.value) {
       localStorage.setItem('email', email.value);
@@ -33,8 +33,8 @@ async function submitForm() {
     } else {
       localStorage.removeItem('email');
     }
-    authStore.username = cleanEmail;
-    authStore.isLoggedIn = true;
+    userStore.isLoggedIn = true;
+    await userStore.setInfo();
     router.push('/home');
   } catch (err) {
     switch (err.status) {

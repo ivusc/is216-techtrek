@@ -1,11 +1,11 @@
 <script setup>
 import '@/views/login/LoginView.css';
 import { ref } from 'vue';
-import axios from 'axios';
 import router from '@/router';
 import { useUserStore } from '@/store/user';
+import serverAPI from '@/services/serverAPI';
 
-const authStore = useUserStore();
+const userStore = useUserStore();
 const email = ref('');
 const password = ref('');
 const reEnteredPassword = ref('');
@@ -46,9 +46,9 @@ async function submitForm() {
     password: password.value,
   };
   try {
-    await axios.post('http://localhost:8000/register', body);
-    authStore.isLoggedIn = true;
-    authStore.setInfo;
+    await serverAPI.post('/register', body);
+    userStore.isLoggedIn = true;
+    await userStore.setInfo();
     router.push('/home');
   } catch (err) {
     switch (err.status) {
