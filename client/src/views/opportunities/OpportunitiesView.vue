@@ -1,13 +1,12 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import './opportunities.css'
 import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
-import { fetchAllOpportunities, fetchJobs, deleteOpportunityService } from '@/services/opportunityService'
 import {
-  getKey,
   getDaysLeft,
   getLocationGroup,
   getMonthlySalary,
@@ -15,16 +14,14 @@ import {
   isPaid
 } from '@/utils/opportunity'
 import PageHeader from '@/components/PageHeader.vue'
-import { createApplicationService } from '@/services/trackerService'
+import { useOpportunityStore } from '@/store/opportunity'
 
-const jobs = ref([])
-const hackathons = ref([])
+// the store holds the fetched opportunities and does all the server calls
+const opportunityStore = useOpportunityStore()
+const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, savedItems } = storeToRefs(opportunityStore)
 
 const activeTab = ref('all')
 
-const status = ref('') // error message
-const isLoading = ref(true) // loading messsage 
-const lastUpdated = ref('') // last updated time
 const search = ref('')
 const locationFilter = ref('')
 const paidOnly = ref(false)
@@ -33,46 +30,11 @@ const viewMode = ref('grid')
 
 const PAGE_SIZE = 9
 const visibleCount = ref(PAGE_SIZE)
-const jobsPage = ref(1)
-const hasMoreJobs = ref(true)
 
 // the opportunity shown in the details panel (null = panel is closed)
 const selectedItem = ref(null)
 
-// saved opportunities: {key: card key, id: _id saved in the database}
-const savedItems = ref([])
-const isSaving = ref(false)
-
-// gets all jobs n hackathons from our express server and puts them into the jobs 
-const loadData = async () => {
-  isLoading.value = true
-  status.value = ''
-  try {
-    const data = await fetchAllOpportunities()
-
-    // the server sends null for a source that failed, so check before using it
-    if (data.jobs != null) {
-      jobs.value = data.jobs.jobs
-    } else {
-      status.value = 'Jobs could not be loaded right now.'
-    }
-
-    if (data.hackathons != null) {
-      hackathons.value = data.hackathons.hackathons
-    } else {
-      status.value = 'Hackathons could not be loaded right now.'
-    }
-
-    lastUpdated.value = new Date().toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })
-  } catch (error) {
-    console.error(error)
-    status.value = 'There was an error: ' + error.message
-  }
-
-  isLoading.value = false
-}
-
-onMounted(loadData)
+onMounted(opportunityStore.fetchOpportunities)
 
 // displayedItems: the items of the tab that is selected (same as before)
 const displayedItems = computed(() => {
@@ -198,61 +160,8 @@ const loadMore = async () => {
     visibleCount.value += PAGE_SIZE
     return
   }
-  try {
-    const data = await fetchJobs(jobsPage.value + 1)
-    let added = 0
-    for (const job of data.jobs) {
-      // only add jobs we do not have yet
-      let alreadyHave = false
-      for (const existing of jobs.value) {
-        if (existing.externalId === job.externalId) {
-          alreadyHave = true
-        }
-      }
-      if (!alreadyHave) {
-        jobs.value.push(job)
-        added++
-      }
-    }
-    jobsPage.value++
-    if (added === 0) {
-      hasMoreJobs.value = false
-    }
-    visibleCount.value += PAGE_SIZE
-  } catch (error) {
-    console.error(error)
-    hasMoreJobs.value = false
-  }
-}
-
-// position of the card in savedItems, -1 if it is not saved
-function findSaved(item) {
-  return savedItems.value.findIndex((saved) => saved.key === getKey(item))
-}
-
-// click once to save (to the database)  click again to unsave (delete it)
-const toggleSave = async (item) => {
-  if (isSaving.value) {
-    return // a request is still running
-  }
-  isSaving.value = true
-
-  try {
-    const index = findSaved(item)
-    if (index === -1) {
-      // POST sends back the saved opportunity with its _id, keep the _id so we can delete it later
-      const saved = await createApplicationService(item)
-      savedItems.value.push({ key: getKey(item), id: saved._id })
-    } else {
-      await deleteOpportunityService(savedItems.value[index].id)
-      savedItems.value.splice(index, 1) // remove it from the array
-    }
-  } catch (error) {
-    console.error(error)
-    status.value = 'Could not update "' + item.title + '": ' + error.message
-  }
-
-  isSaving.value = false
+  await opportunityStore.fetchMoreJobs()
+  visibleCount.value += PAGE_SIZE
 }
 
 </script>
@@ -283,7 +192,7 @@ const toggleSave = async (item) => {
 
     <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2">
       {{ status }}
-      <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="loadData">Retry</button>
+      <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="opportunityStore.fetchOpportunities">Retry</button>
     </div>
 
     <p v-if="isLoading" class="text-center text-body-secondary py-5">Loading opportunities...</p>
@@ -294,7 +203,7 @@ const toggleSave = async (item) => {
       :view-mode="viewMode"
       :saved-items="savedItems"
       @details="openDetails"
-      @toggle-save="toggleSave"
+      @toggle-save="opportunityStore.toggleSave"
     />
 
     <div v-if="!isLoading && filteredItems.length > 0 && canLoadMore" class="text-center mt-4">
@@ -304,9 +213,9 @@ const toggleSave = async (item) => {
     <OpportunityDetails
       v-if="selectedItem"
       :item="selectedItem"
-      :saved="findSaved(selectedItem) !== -1"
+      :saved="opportunityStore.isSaved(selectedItem)"
       @close="closeDetails"
-      @toggle-save="toggleSave(selectedItem)"
+      @toggle-save="opportunityStore.toggleSave(selectedItem)"
     />
   </div>
 </template>

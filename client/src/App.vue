@@ -6,11 +6,17 @@ import SideBar from './components/SideBar.vue';
 <template>
   <div class="d-flex">
     <SideBar />
-    <!-- min-width 0 lets wide content (the tracker board) scroll inside main instead of widening the page -->
-    <main class="flex-grow-1 p-4" style="min-width: 0">
+    <main class="app-main flex-grow-1 p-3 p-md-4" style="min-width: 0">
       <RouterView />
     </main>
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+/* below lg, leave room so the bottom tab bar doesn't cover the end of the page */
+@media (max-width: 991.98px) {
+  .app-main {
+    padding-bottom: 96px !important;
+  }
+}
+</style>

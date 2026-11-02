@@ -84,15 +84,18 @@ defineEmits(['details', 'toggle-save'])
     <!-- source + buttons -->
     <div class="d-flex align-items-center flex-wrap gap-2">
       <p class="opp-via text-caption text-body-tertiary text-truncate mb-0">via {{ getPlatform(item) }}</p>
-      <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
-      <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
-      <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
-        Find team
-      </RouterLink>
-      <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
-        <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
-        {{ saved ? 'Tracked' : 'Track' }}
-      </button>
+      <!-- the buttons wrap together onto their own row when the card is too narrow (hackathons on phones) -->
+      <div class="d-flex gap-2 ms-auto">
+        <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
+        <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
+        <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+          Find team
+        </RouterLink>
+        <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
+          <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
+          {{ saved ? 'Tracked' : 'Track' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -101,8 +104,7 @@ defineEmits(['details', 'toggle-save'])
 .opp-card {
   padding: 20px;
   gap: 14px;
-}
-.opp-logo {
+}.opp-logo {
   width: 44px;
   height: 44px;
   font-family: var(--bs-heading-font-family, inherit);
