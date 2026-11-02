@@ -3,6 +3,9 @@ import '@/views/login/LoginView.css';
 import { ref } from 'vue';
 import axios from 'axios';
 import router from '@/router';
+import { useAuthStore } from '@/store/auth';
+
+const authStore = useAuthStore();
 const email = ref("");
 const password = ref("");
 const reEnteredPassword = ref("");
@@ -36,13 +39,16 @@ async function submitForm() {
     errorMessage.value = "Your password should be at least 1 uppercase letter.";
     return;
   }
+  const cleanEmail = email.value.trim().toLowerCase();
   const body = {
-    userName : email.value.trim().toLowerCase(),
+    userName : cleanEmail,
     password : password.value
   }
   try {
     await axios.post("http://localhost:8000/register", body);
-    router.push("/opportunities");
+    authStore.username = cleanEmail;
+    authStore.isLoggedIn = true;
+    router.push("/home");
   } catch (err) {
     switch (err.status) {
       case 400 :
