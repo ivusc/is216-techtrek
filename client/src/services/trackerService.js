@@ -26,6 +26,22 @@ export async function createApplicationService(payload){
   return response.data;
 }
 
+// tracker's "Add application" form: details = { status, deadline, notes }
+export async function addApplicationService(opportunity, details){
+  const response = await axios.post(BASE_URL, {
+    userId: USERID,
+    opportunity,
+    ...details
+  });
+  return response.data;
+}
+
+// one application with its opportunity filled in (POST only sends back the opportunity's id)
+export async function fetchApplicationService(id){
+  const response = await axios.get(`${BASE_URL}/${id}`);
+  return response.data;
+}
+
 export async function updateApplicationService(id, payload){
   const response = await axios.patch(`${BASE_URL}/${id}`,payload);
   return response.data;

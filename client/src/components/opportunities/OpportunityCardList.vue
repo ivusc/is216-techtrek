@@ -17,8 +17,8 @@ defineEmits(['details', 'toggle-save'])
 </script>
 
 <template>
-  <!-- 3 cards per row on a laptop, fewer on smaller screens, 1 per row in list view -->
-  <div class="row row-cols-1 g-3 align-items-start" :class="{ 'row-cols-md-2 row-cols-xl-3': viewMode === 'grid' }">
+  <!-- 3 cards per row on a laptop, fewer on smaller screens, 1 per row in list view; cards in a row share one height -->
+  <div class="row row-cols-1 g-3" :class="{ 'row-cols-md-2 row-cols-xl-3': viewMode === 'grid' }">
     <div v-for="item in items" :key="getKey(item)" class="col">
       <OpportunityCard
         :item="item"

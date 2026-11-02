@@ -36,6 +36,9 @@ const infoBoxes = computed(() => {
     moneyValue = item.prize
   } else if (getMonthlySalary(item) > 0) {
     moneyValue = 'S$' + getMonthlySalary(item).toLocaleString()
+    if (item.salaryIsPredicted) {
+      moneyValue += ' (estimated by Adzuna)'
+    }
   }
 
   let timeValue = 'Not listed'
@@ -79,7 +82,7 @@ const infoBoxes = computed(() => {
     <div class="details-body">
       <!-- header: label + open listing + close -->
       <div class="d-flex align-items-center gap-2">
-        <span class="text-overline text-uppercase text-body-tertiary flex-grow-1">Opportunity details</span>
+        <span class="text-overline text-body-tertiary flex-grow-1">Details</span>
         <a
           :href="item.url"
           target="_blank"
@@ -137,7 +140,7 @@ const infoBoxes = computed(() => {
           </span>
           <div class="min-w-0">
             <span class="d-block text-caption text-body-tertiary">{{ box.label }}</span>
-            <span class="d-block small fw-semibold">{{ box.value }}</span>
+            <span class="small fw-semibold">{{ box.value }}</span>
           </div>
         </div>
       </div>

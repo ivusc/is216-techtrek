@@ -40,17 +40,26 @@ export function getPrizeAmount(item) {
   return Number(item.prize.replace(/[^0-9.]/g, ''))
 }
 
-//  "Paid only" filter (only hackathon with prize money, or job with a salary)
+//  "Paid only" filter
 export function isPaid(item) {
   if (item.type === 'hackathon') {
     return getPrizeAmount(item) > 0
   }
-  return getMonthlySalary(item) > 0
+  return getMonthlySalary(item) > 0 && !item.salaryIsPredicted
+}
+
+// true once the deadline has passed (items without a deadline never close)
+export function isClosed(item) {
+  const days = getDaysLeft(item)
+  return days !== null && days < 0
 }
 
 export function getUrgentText(item) {
   const days = getDaysLeft(item)
-  if (days === null || days < 0 || days > 7) {
+  if (days !== null && days < 0) {
+    return 'Closed'
+  }
+  if (days === null || days > 7) {
     return ''
   }
   if (days === 0) {

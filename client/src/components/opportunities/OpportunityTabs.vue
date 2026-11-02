@@ -1,5 +1,6 @@
 <script setup>
 defineProps({
+  // { jobs, hackathons }; a tab without a count (Overview) shows no badge
   counts: { type: Object, required: true }
 })
 
@@ -8,7 +9,7 @@ const viewMode = defineModel('viewMode', { type: String, required: true })
 
 // shortLabel is used for the chips on phones
 const tabs = [
-  { id: 'all', label: 'All', shortLabel: 'All' },
+  { id: 'overview', label: 'Overview', shortLabel: 'Overview' },
   { id: 'jobs', label: 'Jobs & internships', shortLabel: 'Jobs' },
   { id: 'hackathons', label: 'Hackathons', shortLabel: 'Hackathons' }
 ]
@@ -26,7 +27,7 @@ const tabs = [
       :aria-pressed="activeTab === tab.id"
       @click="activeTab = tab.id"
     >
-      {{ tab.shortLabel }} · {{ counts[tab.id] }}
+      {{ tab.shortLabel }}<span v-if="counts[tab.id] !== undefined"> · {{ counts[tab.id] }}</span>
     </button>
   </nav>
 
@@ -43,6 +44,7 @@ const tabs = [
         {{ tab.label }}
         <!-- the count is highlighted on the active tab -->
         <span
+          v-if="counts[tab.id] !== undefined"
           class="badge rounded-pill fw-medium"
           :class="activeTab === tab.id ? 'bg-primary-subtle text-primary-emphasis' : 'bg-body-secondary text-body-secondary'"
         >

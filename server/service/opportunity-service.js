@@ -11,7 +11,8 @@ const JOB_TYPES = {
 // `what_or` = job matches if any of these keywords appear in the listing
 const JOB_FIELDS = {
   frontend: { what_or: 'frontend react vue angular' },
-  backend: { what_or: 'backend django springboot golang nodejs' },
+  fullstack: { what_or: 'fullstack full-stack frontend react vue angular backend django springboot golang nodejs .net' },
+  backend: { what_or: 'backend django springboot golang nodejs .net' },
   data: { what_or: 'analytics sql tableau etl pyspark' },
   ai: { what_or: 'ai llm pytorch tensorflow nlp' },
   devops: { what_or: 'devops kubernetes terraform sre' },
@@ -44,18 +45,28 @@ async function getHackathons() {
   };
 }
 
+function removeOrganisationFromTitle(title, organisation) {
+  const dashIndex = Math.max(title.lastIndexOf(' - '), title.lastIndexOf(' - '));
+  if (!organisation || dashIndex === -1) return title;
+
+  const ending = title.slice(dashIndex + 3).trim().toLowerCase();
+  return ending.startsWith(organisation.trim().toLowerCase()) ? title.slice(0, dashIndex).trim() : title;
+}
+
 function normaliseJob(job) {
+  const organisation = job.company?.display_name?.trim() ?? null;
   return {
     source: 'adzuna',
     externalId: job.id,
     type: /intern/i.test(job.title) ? 'internship' : 'job', //check if substring intern is inside job title
-    title: job.title,
-    organisation: job.company?.display_name ?? null,
+    title: removeOrganisationFromTitle(job.title, organisation),
+    organisation,
     location: job.location?.display_name ?? null,
     description: job.description,
     url: job.redirect_url,
     minSalary: job.salary_min ?? null,
     maxSalary: job.salary_max ?? null,
+    salaryIsPredicted: String(job.salary_is_predicted) === '1', // Adzuna estimated the salary, the listing did not give one
     contractTime: job.contract_time ?? null,
     contractType: job.contract_type ?? null,
     postedAt: job.created,

@@ -11,15 +11,18 @@ import { ref } from 'vue';
 export const useOpportunityStore = defineStore('opportunity', () => {
   const jobs = ref([]);
   const hackathons = ref([]);
-  const isLoading = ref(true); // true until the first fetch finishes, so the page shows its loading message
-  const isSaving = ref(false); // tracking / untracking a card
-  const status = ref(''); // error message, empty when there is no error
+  const isLoading = ref(true);
+  const isSaving = ref(false);
+  const status = ref(''); 
   const lastUpdated = ref(''); // time of the last successful fetch
 
-  const jobsPage = ref(1); // last page of jobs fetched from the server
+  const jobsPage = ref(1);
   const hasMoreJobs = ref(true);
 
-  // tracked opportunities: { key: card key, id: _id of the application saved in the database }
+  // job filters, '' = any
+  const jobType = ref(''); // fulltime | intern
+  const jobField = ref(''); // frontend | backend | fullstack | data | ai | devops | cybersecurity | mobile
+
   const savedItems = ref([]);
 
   // gets all jobs and hackathons from our express server
@@ -28,7 +31,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchAllOpportunities();
+      const data = await fetchAllOpportunities({ type: jobType.value, field: jobField.value });
 
       // the server sends null for a source that failed, so check before using it
       if (data.jobs != null) {
@@ -62,7 +65,6 @@ export const useOpportunityStore = defineStore('opportunity', () => {
 
     const items = [];
     for (const application of applications) {
-      // the server fills in opportunityId with the full opportunity, which is null if it was deleted
       const opportunity = application.opportunityId;
       if (opportunity != null) {
         items.push({ key: getKey(opportunity), id: application._id });
@@ -72,10 +74,28 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     savedItems.value = items;
   }
 
+  // gets the first page of jobs again after the job filters change, hackathons stay as they are
+  async function reloadJobs() {
+    isLoading.value = true;
+    status.value = '';
+
+    try {
+      const data = await fetchJobs(1, { type: jobType.value, field: jobField.value });
+      jobs.value = data.jobs;
+      jobsPage.value = 1;
+      hasMoreJobs.value = data.jobs.length > 0;
+    } catch (error) {
+      console.error(error);
+      status.value = 'Jobs could not be loaded right now.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // gets the next page of jobs and adds the ones we do not have yet
   async function fetchMoreJobs() {
     try {
-      const data = await fetchJobs(jobsPage.value + 1);
+      const data = await fetchJobs(jobsPage.value + 1, { type: jobType.value, field: jobField.value });
 
       let addedCount = 0;
       
@@ -109,7 +129,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
   // click once to track (creates an application), click again to untrack (deletes that application)
   async function toggleSave(item) {
     if (isSaving.value) {
-      return; // a request is still running
+      return;
     }
 
     isSaving.value = true;
@@ -141,8 +161,11 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status,
     lastUpdated,
     hasMoreJobs,
+    jobType,
+    jobField,
     savedItems,
     fetchOpportunities,
+    reloadJobs,
     fetchMoreJobs,
     isSaved,
     toggleSave,

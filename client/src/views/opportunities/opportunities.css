@@ -122,6 +122,14 @@
   border-width: 1.5px;
 }
 
+.line-clamp- {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+}
+
+
 @keyframes slide-in {
   from {
     transform: translateX(100%);
