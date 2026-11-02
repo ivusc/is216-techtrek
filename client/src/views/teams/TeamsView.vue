@@ -5,9 +5,10 @@ const api = axios.create({
   baseURL: 'http://localhost:8000/teams'
 })
 import './teams.css'
-import {getErrorMessage,createTeam,fetchProfile,updateSkills,fetchTeams,fetchMyTeams,fetchEvents,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest} 
+import {getErrorMessage,createTeam,fetchProfile,updateSkills,fetchTeams,fetchMyTeams,fetchEvents,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
 from '@/services/teamService'
 import {fetchAllOpportunities} from '@/services/opportunityService'
+import { useUserStore } from '@/store/user';
 import TeamsHeader from '@/components/teams/TeamsHeader.vue'
 import TeamsTabs from '@/components/teams/TeamsTabs.vue'
 import TeamFilters from '@/components/teams/TeamFilters.vue'
@@ -19,7 +20,7 @@ import CreateTeamModal from '@/components/teams/CreateTeamModal.vue'
 import EditSkillsModal from '@/components/teams/EditSkillsModal.vue'
 import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
 
-const auth = useAuthStore()
+const auth = useUserStore()
 
 const profile = ref(null)
 const teams = ref([])
@@ -51,7 +52,7 @@ const userIdInput = ref('')
 let skillFilterReady = false
 
 const loadAll = async (showLoading = true) => {
-  if (auth.userId === '') {
+  if (auth._id === null) {
     isLoading.value = false
     return
   }
@@ -62,7 +63,7 @@ const loadAll = async (showLoading = true) => {
 
   status.value = ''
 
-  const userId = auth.userId
+  const userId = auth._id
 
   try {
     const { data } = await api.get('/me', {
@@ -246,7 +247,7 @@ const submitJoin = async (request) => {
   isBusy.value = true
   modalError.value = ''
   try {
-    await sendRequest(auth.userId, joinTarget.value._id, request)
+    await sendRequest(auth._id, joinTarget.value._id, request)
     joinTarget.value = null
     await loadAll(false)
   } catch (error) {
@@ -279,9 +280,9 @@ const submitTeam = async (post) => {
   modalError.value = ''
   try {
     if (editingTeam.value) {
-      await updateTeam(auth.userId, editingTeam.value._id, post)
+      await updateTeam(auth._id, editingTeam.value._id, post)
     } else {
-      await createTeam(auth.userId, post)
+      await createTeam(auth._id, post)
       activeTab.value = 'mine'
     }
     closeCreate()
@@ -297,7 +298,7 @@ const removeTeam = async () => {
   isBusy.value = true
   modalError.value = ''
   try {
-    await deleteTeam(auth.userId, editingTeam.value._id)
+    await deleteTeam(auth._id, editingTeam.value._id)
     closeCreate()
     await loadAll(false)
   } catch (error) {
@@ -310,7 +311,7 @@ const removeTeam = async () => {
 const answer = async (request, newStatus) => {
   busyRequestId.value = request._id
   try {
-    await answerRequest(auth.userId, request._id, newStatus)
+    await answerRequest(auth._id, request._id, newStatus)
     await loadAll(false)
   } catch (error) {
     console.error(error)
@@ -322,7 +323,7 @@ const answer = async (request, newStatus) => {
 const withdraw = async (request) => {
   busyRequestId.value = request._id
   try {
-    await withdrawRequest(auth.userId, request._id)
+    await withdrawRequest(auth._id, request._id)
     await loadAll(false)
   } catch (error) {
     console.error(error)
@@ -335,7 +336,7 @@ const saveSkills = async (skills) => {
   isBusy.value = true
   modalError.value = ''
   try {
-    await updateSkills(auth.userId, skills)
+    await updateSkills(auth._id, skills)
     showSkills.value = false
     skillFilterReady = false
     await loadAll(false)
@@ -353,7 +354,7 @@ function openSkills() {
 
 function useUserId() {
   if (userIdInput.value.trim() !== '') {
-    auth.setUserId(userIdInput.value.trim())
+    auth._id = userIdInput.value.trim()
     loadAll()
   }
 }
@@ -362,7 +363,7 @@ function useUserId() {
 <template>
   <div class="p-2">
 
-    <div v-if="auth.userId === ''" class="card p-4 mx-auto mt-5" style="max-width: 480px">
+    <div v-if="!auth._id" class="card p-4 mx-auto mt-5" style="max-width: 480px">
       <h2 class="h3 mb-2">Choose a user</h2>
       <p class="small text-body-secondary">
         The Teams page needs to know who you are. Paste the <code>_id</code> of a user from the <code>users</code> collection
