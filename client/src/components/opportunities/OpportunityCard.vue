@@ -19,7 +19,7 @@ defineEmits(['details', 'toggle-save'])
 </script>
 
 <template>
-  <div class="opp-card card shadow-sm">
+  <div class="opp-card card shadow-sm h-100">
     <!-- avatar, organisation + location, bookmark -->
     <div class="d-flex align-items-center gap-3">
       <div
@@ -45,54 +45,61 @@ defineEmits(['details', 'toggle-save'])
       </button>
     </div>
 
-    <!-- title -->
-    <h3 class="opp-title mb-0">{{ item.title }}</h3>
+    <div class="d-flex flex-column gap-2" role="button" @click="$emit('details')">
+      <!-- title -->
+      <h3 class="opp-title mb-0">{{ item.title }}</h3>
 
-    <!-- tags -->
-    <div class="d-flex flex-wrap gap-2">
-      <span class="badge rounded-pill fw-medium" :class="typeBadge[item.type]">
-        {{ item.type[0].toUpperCase() + item.type.slice(1) }}
-      </span>
-      <span v-if="item.themes && item.themes.length > 0" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">
-        {{ item.themes[0] }}
-      </span>
-      <span v-if="getUrgentText(item) !== ''" class="badge rounded-pill fw-medium bg-danger-subtle text-danger-emphasis">
-        {{ getUrgentText(item) }}
-      </span>
+      <!-- tags -->
+      <div class="d-flex flex-wrap gap-2">
+        <span class="badge rounded-pill fw-medium" :class="typeBadge[item.type]">
+          {{ item.type[0].toUpperCase() + item.type.slice(1) }}
+        </span>
+        <span v-if="item.themes && item.themes.length > 0" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">
+          {{ item.themes[0] }}
+        </span>
+        <span v-if="getUrgentText(item) !== ''" class="badge rounded-pill fw-medium bg-danger-subtle text-danger-emphasis">
+          {{ getUrgentText(item) }}
+        </span>
+      </div>
+
+      <!-- deadline (hackathons) or posted date (jobs), then prize or salary -->
+      <div class="d-flex flex-wrap gap-3 small fw-medium text-body-secondary">
+        <span v-if="item.deadline">
+          <i class="bi bi-clock me-1"></i>
+          {{ item.type === 'hackathon' ? 'Register by' : 'Closes' }} {{ formatDate(item.deadline) }}
+        </span>
+        <span v-else>
+          <i class="bi bi-clock me-1"></i> {{ getPostedText(item) }}
+        </span>
+
+        <span v-if="item.type === 'hackathon' && getPrizeAmount(item) > 0">
+          <i class="bi bi-trophy me-1"></i> {{ item.prize }} prizes
+        </span>
+        <span v-else-if="getMonthlySalary(item) > 0">
+          <i class="bi bi-currency-dollar me-1"></i> S${{ getMonthlySalary(item).toLocaleString() }}/mo
+          <span v-if="item.salaryIsPredicted" class="text-body-tertiary" title="Estimated by Adzuna, not given in the listing">est.</span>
+        </span>
+      </div>
     </div>
 
-    <!-- deadline (hackathons) or posted date (jobs), then prize or salary -->
-    <div class="d-flex flex-wrap gap-3 small fw-medium text-body-secondary">
-      <span v-if="item.deadline">
-        <i class="bi bi-clock me-1"></i>
-        {{ item.type === 'hackathon' ? 'Register by' : 'Closes' }} {{ formatDate(item.deadline) }}
-      </span>
-      <span v-else>
-        <i class="bi bi-clock me-1"></i> {{ getPostedText(item) }}
-      </span>
-
-      <span v-if="item.type === 'hackathon' && getPrizeAmount(item) > 0">
-        <i class="bi bi-trophy me-1"></i> {{ item.prize }} prizes
-      </span>
-      <span v-else-if="getMonthlySalary(item) > 0">
-        <i class="bi bi-currency-dollar me-1"></i> S${{ getMonthlySalary(item).toLocaleString() }}/mo
-      </span>
-    </div>
-
-    <hr class="my-0 border-secondary-subtle opacity-100" />
+    <!-- mt-auto keeps the footer at the bottom when the card is stretched to the row height -->
+    <hr class="mt-auto mb-0 border-secondary-subtle opacity-100" />
 
     <!-- source + buttons -->
     <div class="d-flex align-items-center flex-wrap gap-2">
       <p class="opp-via text-caption text-body-tertiary text-truncate mb-0">via {{ getPlatform(item) }}</p>
-      <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
-      <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
-      <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
-        Find team
-      </RouterLink>
-      <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
-        <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
-        {{ saved ? 'Tracked' : 'Track' }}
-      </button>
+      <!-- the buttons wrap together onto their own row when the card is too narrow (hackathons on phones) -->
+      <div class="d-flex gap-2 ms-auto">
+        <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
+        <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
+        <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+          Find team
+        </RouterLink>
+        <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
+          <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
+          {{ saved ? 'Tracked' : 'Track' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -101,8 +108,7 @@ defineEmits(['details', 'toggle-save'])
 .opp-card {
   padding: 20px;
   gap: 14px;
-}
-.opp-logo {
+}.opp-logo {
   width: 44px;
   height: 44px;
   font-family: var(--bs-heading-font-family, inherit);

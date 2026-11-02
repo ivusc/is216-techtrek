@@ -23,7 +23,7 @@ function validateJobFilters({ type, field }) {
   return null;
 }
 
-// GET /jobs?type=fulltime|intern&field=frontend|backend|data|ai|devops|cybersecurity|mobile&page=2
+// GET /jobs?type=fulltime|intern&field=frontend|backend|fullstack|data|ai|devops|cybersecurity|mobile&page=2
 // type - omit for all IT jobs; field - omit for every tech field; page - omit for first page
 async function fetchJobs(req, res) {
   const { type, field, page } = req.query;

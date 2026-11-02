@@ -5,6 +5,7 @@ import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
 import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
 import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
 import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
+import AddApplicationModal from '@/components/tracker/AddApplicationModal.vue';
 import { trackerStages } from '@/constants';
 import { isDueThisWeek, isOverdue } from '@/utils/application';
 import { storeToRefs } from 'pinia';
@@ -13,7 +14,7 @@ import { buildIcsFile } from '@/utils/calendar';
 import PageHeader from '@/components/PageHeader.vue';
 
 const applicationStore = useApplicationsStore();
-const { applications, status, isLoading } = storeToRefs(applicationStore);
+const { applications, status, isLoading, isSaving } = storeToRefs(applicationStore);
 const { fetchApplications, updateApplicationStatus, updateApplication, deleteApplication } = applicationStore;
 
 const search = ref('');
@@ -24,9 +25,15 @@ const hideRejected = ref(false);
 
 onMounted(fetchApplications);
 
+function clearFilters() {
+  search.value = '';
+  typeFilter.value = '';
+  deadlineFilter.value = '';
+  hideRejected.value = false;
+}
+
 console.log(applications)
 
-// applications that pass the search box and the toolbar filters
 const filteredApplications = computed(() => {
   const keyword = search.value.trim().toLowerCase();
 
@@ -74,10 +81,22 @@ async function moveApplication(applicationId, newStatus) {
   await updateApplicationStatus(applicationId, newStatus);
 }
 
-// "Add application", a column's + button or its "Add" button (status = the column, or 'saved' from the toolbar)
-function openAddForm(status) {
-  // TODO: open the add application form with this status selected
-  console.log('add application to', status);
+// stage the add form starts in (null = form is closed)
+const addFormStatus = ref(null);
+
+// "Add application", a column's + button or its "Add" button (stage = the column, or 'saved' from the toolbar)
+function openAddForm(stage) {
+  status.value = null;
+  addFormStatus.value = stage;
+}
+
+function closeAddForm() {
+  addFormStatus.value = null;
+}
+
+async function addNewApplication(opportunity, details) {
+  const added = await applicationStore.addApplication(opportunity, details);
+  if (added) closeAddForm();
 }
 
 // calendar view's "Export to Google Calendar (.ics)" button
@@ -119,7 +138,7 @@ async function deleteSelected() {
 </script>
 
 <template>
-  <div class="p-2">
+  <div class="p-2 h-100 d-flex flex-column overflow-hidden">
     <PageHeader v-model="search" title="Application tracker" :subtitle="viewMode === 'board'
       ? 'Drag cards between stages. Deadlines sync to your calendar.'
       : 'Every deadline, interview and hackathon in one month view.'" type="applications" />
@@ -130,18 +149,21 @@ async function deleteSelected() {
       <p>Loading...</p>
     </div>
 
-    <div v-else>
+    <div v-else class="d-flex flex-column flex-grow-1 min-h-0">
       <TrackerToolbar v-model:view-mode="viewMode" v-model:type="typeFilter" v-model:deadline="deadlineFilter"
         v-model:hide-rejected="hideRejected" :total="filteredApplications.length" :due-this-week="dueThisWeekCount"
-        @add="openAddForm('saved')" />
+        @add="openAddForm('saved')" @clear="clearFilters" />
 
-      <div v-if="viewMode === 'board'" class="kanban-board d-flex gap-3 align-items-start pb-2">
+      <div v-if="viewMode === 'board'" class="kanban-board d-flex gap-3 pb-2 flex-grow-1 min-h-0">
         <KanbanColumn v-for="stage in visibleStages" :key="stage.status" :stage="stage"
           :applications="applicationsInStage(stage.status)" @add="openAddForm(stage.status)" @open="openDetails"
           @move="moveApplication" />
       </div>
 
-      <CalendarView v-else :applications="filteredApplications" @open="openDetails" @export="exportCalendar" />
+      <CalendarView v-else class="flex-grow-1 min-h-0 overflow-auto" :applications="filteredApplications" @open="openDetails" @export="exportCalendar" />
+
+      <AddApplicationModal v-if="addFormStatus" :status="addFormStatus" :is-saving="isSaving" :error="status ?? ''"
+        @close="closeAddForm" @add="addNewApplication" />
 
       <!-- Details Modal -->
       <ApplicationDetailModal v-if="selectedApplication" :key="selectedApplication._id"

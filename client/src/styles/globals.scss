@@ -179,3 +179,15 @@ h4, .h4 { line-height: 22px; font-weight: 600; }
 .text-stat     { font-family: $headings-font-family; font-size: 2rem; font-weight: 800; line-height: 38px; letter-spacing: -1px; }
 .text-caption  { font-size: .75rem; font-weight: 500; line-height: 16px; }
 .text-overline { font-size: .6875rem; font-weight: 600; line-height: 16px; letter-spacing: .08em; } // TODO [B]: confirm tracking (Figma shows 8, read here as 8%)
+
+// Line clamp helpers (.line-clamp-1 … .line-clamp-5).
+// Not done via $utilities: the utilities API can only set one property per class.
+@for $i from 1 through 5 {
+  .line-clamp-#{$i} {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $i;
+    line-clamp: $i;
+    overflow: hidden;
+  }
+}

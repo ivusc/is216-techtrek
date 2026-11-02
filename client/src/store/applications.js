@@ -1,5 +1,7 @@
 import {
+  addApplicationService,
   deleteApplicationService,
+  fetchApplicationService,
   fetchAllApplications,
   updateApplicationService,
 } from '@/services/trackerService';
@@ -28,6 +30,25 @@ export const useApplicationsStore = defineStore('applications', () => {
       status.value = 'There was an error: ' + error.message;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // "Add application" form; returns true when it worked so the form can close
+  async function addApplication(opportunity, details) {
+    isSaving.value = true;
+    status.value = null;
+
+    try {
+      const created = await addApplicationService(opportunity, details);
+      applications.value.push(await fetchApplicationService(created._id));
+      return true;
+    } catch (error) {
+      console.error(error);
+      // the server sends { error } for things like a missing title
+      status.value = 'Could not add the application: ' + (error.response?.data?.error ?? error.message);
+      return false;
+    } finally {
+      isSaving.value = false;
     }
   }
 
@@ -94,6 +115,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     isSaving,
     status,
     fetchApplications,
+    addApplication,
     updateApplicationStatus,
     updateApplication,
     deleteApplication,

@@ -4,7 +4,12 @@ const SOURCE_TYPES = {
   adzuna: ['internship', 'job'],
   devpost: ['hackathon'],
   user: ['hackathon', 'competition'],
+  // added by hand from the tracker's "Add application" form, for things found outside TechTrek
+  manual: ['job', 'internship', 'hackathon', 'competition'],
 };
+
+// sources that have no id in an outside API
+const SOURCES_WITHOUT_EXTERNAL_ID = ['user', 'manual'];
 
 const opportunitySchema = new mongoose.Schema(
   {
@@ -12,7 +17,7 @@ const opportunitySchema = new mongoose.Schema(
     externalId: {
       type: String,
       required: function () {
-        return this.source !== 'user';
+        return !SOURCES_WITHOUT_EXTERNAL_ID.includes(this.source);
       },
     },
     type: {
@@ -31,7 +36,14 @@ const opportunitySchema = new mongoose.Schema(
         return this.source === 'user';
       },
     },
-    url: { type: String, required: true, trim: true },
+    // the link is optional when adding by hand
+    url: {
+      type: String,
+      trim: true,
+      required: function () {
+        return this.source !== 'manual';
+      },
+    },
     minSalary: { type: Number, min: 0 },
     maxSalary: { type: Number, min: 0 },
     deadline: {

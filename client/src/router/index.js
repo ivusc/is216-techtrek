@@ -17,6 +17,7 @@ const router = createRouter({
     { path: '/opportunities', component: OpportunitiesView },
     { path: '/tracker', component: TrackerView },
     { path: '/teams', component: TeamsView },
+    { path: '/login', component: LoginView},
     { path: '/interview', component: InterviewView },
     {path: '/practice/:applicationId',component: PracticeQuizView},
     {path: '/practice/question/:applicationId/:questionId',component: PracticeQuizView},

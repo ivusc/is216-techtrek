@@ -116,7 +116,7 @@ onMounted(() => dialog.value.focus())
             </div>
           </div>
 
-          <div>
+          <div v-if="opportunity.url">
             <span class="form-label d-block small fw-semibold mb-1">Application link</span>
             <a
               :href="opportunity.url"

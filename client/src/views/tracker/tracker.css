@@ -1,19 +1,21 @@
-/* sizes from the Figma "05 · Tracker — Board" frame that Bootstrap utilities can't express */
-
 .kanban-column {
   flex: 1 0 0;
   min-width: 210px;
-  min-height: 700px;
+  overflow-y: auto; /* the column scrolls when its cards overflow */
   padding: 10px;
   gap: 10px;
   border-radius: 14px;
 }
 
-/* 5 columns don't fit below a laptop width, so the board scrolls sideways */
-@media (max-width: 992px) {
-  .kanban-board {
-    overflow-x: auto;
-  }
+/* cards keep their height instead of shrinking when the column is full */
+.kanban-column > * {
+  flex-shrink: 0;
+}
+
+/* the board only scrolls sideways when 5 columns don't fit; columns scroll vertically */
+.kanban-board {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .status-dot {
@@ -68,8 +70,6 @@
   line-height: 1;
 }
 
-/* ─── application detail modal (Figma "06 · Tracker — Application detail modal") ─── */
-
 .application-modal {
   max-width: 680px;
 }
@@ -117,6 +117,11 @@
   padding-left: 14px;
 }
 
+.field-lg::placeholder,
+.notes-field ::placeholder {
+  opacity: 0.45;
+}
+
 .notes-field {
   display: flex;
   flex-direction: column;
@@ -141,8 +146,6 @@
   width: 8px;
   height: 8px;
 }
-
-/* ─── calendar view (Figma "07 · Tracker — Calendar") ─── */
 
 .calendar-month {
   min-width: 0; /* lets the card shrink so the grid can scroll inside it */
@@ -308,4 +311,9 @@
   padding: 14px;
   border-radius: 12px;
   color: var(--bs-primary);
+}
+
+/* lets flex children shrink below their content so they can scroll */
+.min-h-0 {
+  min-height: 0;
 }
