@@ -1,6 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+const api = axios.create({
+  baseURL: 'http://localhost:8000/teams'
+})
 import './teams.css'
+import {getErrorMessage,createTeam,fetchProfile,updateSkills,fetchTeams,fetchMyTeams,fetchEvents,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest} 
+from '@/services/teamService'
+import {fetchAllOpportunities} from '@/services/opportunityService'
 import TeamsHeader from '@/components/teams/TeamsHeader.vue'
 import TeamsTabs from '@/components/teams/TeamsTabs.vue'
 import TeamFilters from '@/components/teams/TeamFilters.vue'
@@ -11,22 +18,6 @@ import JoinRequestModal from '@/components/teams/JoinRequestModal.vue'
 import CreateTeamModal from '@/components/teams/CreateTeamModal.vue'
 import EditSkillsModal from '@/components/teams/EditSkillsModal.vue'
 import { useAuthStore } from '@/store/auth'
-import {
-  fetchProfile,
-  updateSkills,
-  fetchTeams,
-  fetchMyTeams,
-  fetchEvents,
-  createTeam,
-  updateTeam,
-  deleteTeam,
-  sendRequest,
-  fetchIncomingRequests,
-  fetchSentRequests,
-  answerRequest,
-  withdrawRequest,
-  getErrorMessage
-} from '@/services/teamService'
 import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
 
 const auth = useAuthStore()
@@ -65,38 +56,76 @@ const loadAll = async (showLoading = true) => {
     isLoading.value = false
     return
   }
+
   if (showLoading) {
     isLoading.value = true
   }
+
   status.value = ''
 
-  try {
-    const userId = auth.userId
-    const [profileData, teamData, myTeamData, incomingData, sentData] = await Promise.all([
-      fetchProfile(userId),
-      fetchTeams(userId),
-      fetchMyTeams(userId),
-      fetchIncomingRequests(userId),
-      fetchSentRequests(userId)
-    ])
-    profile.value = profileData
-    teams.value = teamData
-    myTeams.value = myTeamData
-    incoming.value = incomingData
-    sent.value = sentData
+  const userId = auth.userId
 
+  try {
+    const { data } = await api.get('/me', {
+      params: { userId }
+    })
+    profile.value = data
+  } catch (error) {
+    console.error('Profile load failed:', error)
+    profile.value = null
+  }
+
+  try {
+    const { data } = await api.get('/', {
+      params: { userId }
+    })
+    teams.value = data
+  } catch (error) {
+    console.error('Teams load failed:', error)
+    teams.value = []
+  }
+
+  try {
+    const { data } = await api.get('/mine', {
+      params: { userId }
+    })
+    myTeams.value = data
+  } catch (error) {
+    console.error('My teams load failed:', error)
+    myTeams.value = []
+  }
+
+  try {
+    const { data } = await api.get('/requests/incoming', {
+      params: { userId }
+    })
+    incoming.value = data
+  } catch (error) {
+    console.error('Incoming requests load failed:', error)
+    incoming.value = []
+  }
+
+  try {
+    const { data } = await api.get('/requests/sent', {
+      params: { userId }
+    })
+    sent.value = data
+  } catch (error) {
+    console.error('Sent requests load failed:', error)
+    sent.value = []
+  }
+
+  try {
     if (!skillFilterReady) {
       skillFilter.value = matchedSkills.value
       skillFilterReady = true
     }
   } catch (error) {
     console.error(error)
-    status.value = 'Could not load teams: ' + getErrorMessage(error)
   }
 
   isLoading.value = false
 }
-
 onMounted(loadAll)
 
 const mySkills = computed(() => profile.value?.skills ?? [])
@@ -231,7 +260,8 @@ const submitJoin = async (request) => {
 const openCreate = async (team = null) => {
   modalError.value = ''
   try {
-    events.value = await fetchEvents()
+    const data = await fetchAllOpportunities()
+    events.value = data.hackathons.hackathons
   } catch (error) {
     console.error(error)
     events.value = []

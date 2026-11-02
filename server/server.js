@@ -7,6 +7,7 @@ const opportunityRouter = require('./routes/opportunity');
 const applicationRouter = require('./routes/application');
 const userRouter = require('./routes/user');
 const interviewRouter = require('./routes/interview')
+const teamRouter = require('./routes/teams')
 const app = express();
 require('dotenv').config();
 const PORT = process.env.PORT || 8000;
@@ -41,6 +42,7 @@ app.use('/',userRouter)
 app.use('/opportunity', opportunityRouter);
 app.use('/application', applicationRouter);
 app.use('/interview', interviewRouter);
+app.use('/teams',teamRouter)
 
 
 app.listen(PORT, () => {

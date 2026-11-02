@@ -124,7 +124,6 @@ const showDelete = isEditing && props.team.status !== 'draft'
         <option v-for="event in events" :key="event._id" :value="event._id">
           {{ event.title }}<template v-if="event.deadline"> · closes {{ formatDate(event.deadline) }}</template>
         </option>
-        <option value="other">Other event (type it in)</option>
       </select>
 
       <div v-if="eventChoice === 'other'" class="row g-2 mt-1">
