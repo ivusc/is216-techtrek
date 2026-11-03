@@ -20,7 +20,7 @@ defineEmits(['bell'])
       <p class="text-body-secondary mb-0">Find teammates for hackathons and competitions — or advertise your open slots.</p>
     </div>
 
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 min-w-0">
       <div class="team-search position-relative">
         <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"></i>
         <input
