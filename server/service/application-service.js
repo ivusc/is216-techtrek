@@ -18,8 +18,9 @@ async function createApplication(userId, opportunity, details) {
   return application;
 }
 
-async function getApplicationById(id) {
-  const application = await Application.findById(id).populate('opportunityId');
+// userId makes sure people can only see, change or delete their own applications
+async function getApplicationById(id, userId) {
+  const application = await Application.findOne({ _id: id, userId: userId }).populate('opportunityId');
   return application;
 }
 
@@ -36,9 +37,9 @@ async function getApplications(userId, status) {
   return applications;
 }
 
-async function updateApplication(id, changes) {
-  const updatedApplication = await Application.findByIdAndUpdate(
-    id,
+async function updateApplication(id, userId, changes) {
+  const updatedApplication = await Application.findOneAndUpdate(
+    { _id: id, userId: userId },
     {
       status: changes.status,
       notes: changes.notes,
@@ -51,8 +52,8 @@ async function updateApplication(id, changes) {
   return updatedApplication;
 }
 
-async function deleteApplication(id) {
-  const deletedApplication = await Application.findByIdAndDelete(id);
+async function deleteApplication(id, userId) {
+  const deletedApplication = await Application.findOneAndDelete({ _id: id, userId: userId });
   return deletedApplication;
 }
 

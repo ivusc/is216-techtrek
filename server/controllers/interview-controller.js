@@ -8,12 +8,8 @@ const prompt = require('../ai/prompt');
 
 async function getInterviewDashboard(req, res) {
   try {
-    const applications = await Application.find()
-    //const user = req.session.user;
-    //const userId = user._id;
-  // const applications = await Application.find({
-  //   userId: userId
-  // });
+    const userId = req.session.user._id
+    const applications = await Application.find({ userId: userId })
     const applicationCards = []
     const titles = []
 
@@ -36,10 +32,7 @@ async function getInterviewDashboard(req, res) {
       }
     }
 
-    const interviewAttempts = await InterviewAttempt.find()
-    //     const interviewAttempts = await InterviewAttempt.find({
-    //   userId: userId
-    // });
+    const interviewAttempts = await InterviewAttempt.find({ userId: userId })
 
     const allQuestions = []
     let highestScore = 0
@@ -55,7 +48,9 @@ async function getInterviewDashboard(req, res) {
           }
         }
         if (!found) {
-          const data = await getOpportunityFromApplication(attempt.applicationId)
+          const data = await getOpportunityFromApplication(attempt.applicationId, userId)
+          // skip questions whose application was deleted
+          if (!data) continue
           allQuestions.push({
             questionId: q.questionId,
             question: q.question,
@@ -105,9 +100,14 @@ async function getInterviewDashboard(req, res) {
   }
 }
 //helper function to get the opportunity from the applicationId
-async function getOpportunityFromApplication(applicationId) {
+//only finds applications that belong to userId
+async function getOpportunityFromApplication(applicationId, userId) {
+  if (!mongoose.isValidObjectId(applicationId)) {
+    return null
+  }
   const application = await Application.findOne({
-    _id: applicationId
+    _id: applicationId,
+    userId: userId
   })
 
   if (!application) {
@@ -131,9 +131,9 @@ async function getQuestion(req, res) {
   try {
     const  questionId  = req.params.questionId
     const interviewAttempt = await InterviewAttempt.findOne({
+      userId: req.session.user._id,
       'questions.questionId': questionId
     })
-    const applicationId = interviewAttempt.applicationId
     if (!interviewAttempt) {
       return res.status(404).json({
         error: 'Question not found'
@@ -161,8 +161,10 @@ async function generateQuestions(req, res) {
         error: 'applicationId is required'
       })
     }
+    const userId = req.session.user._id
     const data = await getOpportunityFromApplication(
-      applicationId
+      applicationId,
+      userId
     )
 
     if (!data) {
@@ -173,9 +175,9 @@ async function generateQuestions(req, res) {
 
     const opportunity = data.opportunity
     const previousAttempts = await InterviewAttempt.find({
+      userId: userId,
       applicationId: applicationId
     });
-    //will also find by userId after that is implemented
     const existingQuestions = [];
     for (const attempt of previousAttempts) {
       for (const q of attempt.questions) {
@@ -210,8 +212,8 @@ async function generateQuestions(req, res) {
         error: 'AI failed to generate 5 valid questions'
       })
     }
+    // question ids are shared by every user, so look at all attempts to find the next free id
     const interviewAttempts = await InterviewAttempt.find()
-    //after user is implemented it will find by userId
     let maxQuestionId = 0
 
     for (const attempt of interviewAttempts) {
@@ -259,7 +261,8 @@ async function generateFeedback(req, res) {
       })
     }
     const data = await getOpportunityFromApplication(
-      applicationId
+      applicationId,
+      req.session.user._id
     )
     if (!data) {
       return res.status(404).json({
@@ -357,8 +360,14 @@ async function saveAttempt(req, res) {
   try {
     const {applicationId, questions} = req.body
 
+    if (!mongoose.isValidObjectId(applicationId)) {
+      return res.status(400).json({
+        error: 'Invalid applicationId'
+      })
+    }
     const application = await Application.findOne({
-      _id: applicationId
+      _id: applicationId,
+      userId: req.session.user._id
     })
     if (!questions ||!Array.isArray(questions) ||questions.length === 0) {
       return res.status(400).json({

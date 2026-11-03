@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const teamsController = require('../controllers/teams-controller');
+const { requireSameUser } = require('../middleware/auth');
+
+// every teams route acts for the logged-in user only
+router.use(requireSameUser);
 
 router.get('/', teamsController.getTeams);
 router.get('/mine', teamsController.getMyTeams);

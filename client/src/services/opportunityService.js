@@ -1,15 +1,15 @@
-import axios from 'axios'
+import serverAPI from './serverAPI'
 
-const BASE_URL = (import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8000') + '/opportunity'
+const BASE_URL = '/opportunity'
 
 // filters: { type, field } for jobs, empty values are left out
 export async function fetchAllOpportunities(filters) {
-  const response = await axios.get(BASE_URL + '/all', { params: cleanFilters(filters) })
+  const response = await serverAPI.get(BASE_URL + '/all', { params: cleanFilters(filters) })
   return response.data
 }
 
 export async function fetchJobs(page, filters) {
-  const response = await axios.get(BASE_URL + '/jobs', { params: { page, ...cleanFilters(filters) } })
+  const response = await serverAPI.get(BASE_URL + '/jobs', { params: { page, ...cleanFilters(filters) } })
   return response.data
 }
 
@@ -22,10 +22,10 @@ function cleanFilters(filters = {}) {
 }
 
 export async function saveOpportunitService(item) {
-  const response = await axios.post(BASE_URL, item)
+  const response = await serverAPI.post(BASE_URL, item)
   return response.data
 }
 
 export async function deleteOpportunityService(id) {
-  await axios.delete(BASE_URL + '/' + id)
+  await serverAPI.delete(BASE_URL + '/' + id)
 }

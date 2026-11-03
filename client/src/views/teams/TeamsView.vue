@@ -1,11 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
-const api = axios.create({
-  baseURL: 'http://localhost:8000/teams'
-})
 import './teams.css'
-import {getErrorMessage,createTeam,fetchProfile,updateSkills,fetchTeams,fetchMyTeams,fetchEvents,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
+import {getErrorMessage,createTeam,fetchProfile,updateSkills,fetchTeams,fetchMyTeams,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
 from '@/services/teamService'
 import {fetchAllOpportunities} from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
@@ -47,16 +43,9 @@ const isBusy = ref(false)
 const modalError = ref('')
 const busyRequestId = ref('')
 
-const userIdInput = ref('')
-
 let skillFilterReady = false
 
 const loadAll = async (showLoading = true) => {
-  if (auth._id === null) {
-    isLoading.value = false
-    return
-  }
-
   if (showLoading) {
     isLoading.value = true
   }
@@ -66,50 +55,35 @@ const loadAll = async (showLoading = true) => {
   const userId = auth._id
 
   try {
-    const { data } = await api.get('/me', {
-      params: { userId }
-    })
-    profile.value = data
+    profile.value = await fetchProfile(userId)
   } catch (error) {
     console.error('Profile load failed:', error)
     profile.value = null
   }
 
   try {
-    const { data } = await api.get('/', {
-      params: { userId }
-    })
-    teams.value = data
+    teams.value = await fetchTeams(userId)
   } catch (error) {
     console.error('Teams load failed:', error)
     teams.value = []
   }
 
   try {
-    const { data } = await api.get('/mine', {
-      params: { userId }
-    })
-    myTeams.value = data
+    myTeams.value = await fetchMyTeams(userId)
   } catch (error) {
     console.error('My teams load failed:', error)
     myTeams.value = []
   }
 
   try {
-    const { data } = await api.get('/requests/incoming', {
-      params: { userId }
-    })
-    incoming.value = data
+    incoming.value = await fetchIncomingRequests(userId)
   } catch (error) {
     console.error('Incoming requests load failed:', error)
     incoming.value = []
   }
 
   try {
-    const { data } = await api.get('/requests/sent', {
-      params: { userId }
-    })
-    sent.value = data
+    sent.value = await fetchSentRequests(userId)
   } catch (error) {
     console.error('Sent requests load failed:', error)
     sent.value = []
@@ -351,29 +325,12 @@ function openSkills() {
   modalError.value = ''
   showSkills.value = true
 }
-
-function useUserId() {
-  if (userIdInput.value.trim() !== '') {
-    auth._id = userIdInput.value.trim()
-    loadAll()
-  }
-}
 </script>
 
 <template>
   <div class="p-2">
 
-    <div v-if="!auth._id" class="card p-4 mx-auto mt-5" style="max-width: 480px">
-      <h2 class="h3 mb-2">Choose a user</h2>
-      <p class="small text-body-secondary">
-        The Teams page needs to know who you are. Paste the <code>_id</code> of a user from the <code>users</code> collection
-        (the seed script prints one). This box goes away once login is connected.
-      </p>
-      <input v-model="userIdInput" type="text" class="form-control mb-2" placeholder="User _id" aria-label="User id" @keydown.enter="useUserId">
-      <button class="btn btn-primary fw-semibold" @click="useUserId">Use this user</button>
-    </div>
-
-    <template v-else>
+    <template v-if="auth._id">
       <TeamsHeader v-model="search" :user-name="myName" :has-new-requests="pendingIncoming > 0" @bell="activeTab = 'requests'" />
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />

@@ -1,23 +1,15 @@
-import axios from 'axios'
+import serverAPI from './serverAPI'
 
-const BASE_URL = (import.meta.env.VITE_SERVER_URL ?? 'http://localhost:8000') + '/application'
-
-//TODO: CHANGE THIS TO DYNAMIC USERID
-const USERID = '665f1c2e8b3a4d0012a1b2c4';
+// the server works out the user from the login session, so no userId is sent
+const BASE_URL = '/application'
 
 export async function fetchAllApplications(){
-  const response = await axios.get(BASE_URL, {
-    params: {
-      userId: USERID
-    }
-  });
-  console.log(response.data)
+  const response = await serverAPI.get(BASE_URL);
   return response.data;
 }
 
 export async function createApplicationService(payload){
-  const response = await axios.post(BASE_URL,{
-    userId: USERID,
+  const response = await serverAPI.post(BASE_URL,{
     opportunity: payload,
     status: 'saved',
     notes: 'Saved via techtrek.'
@@ -28,8 +20,7 @@ export async function createApplicationService(payload){
 
 // tracker's "Add application" form: details = { status, deadline, notes }
 export async function addApplicationService(opportunity, details){
-  const response = await axios.post(BASE_URL, {
-    userId: USERID,
+  const response = await serverAPI.post(BASE_URL, {
     opportunity,
     ...details
   });
@@ -38,16 +29,16 @@ export async function addApplicationService(opportunity, details){
 
 // one application with its opportunity filled in (POST only sends back the opportunity's id)
 export async function fetchApplicationService(id){
-  const response = await axios.get(`${BASE_URL}/${id}`);
+  const response = await serverAPI.get(`${BASE_URL}/${id}`);
   return response.data;
 }
 
 export async function updateApplicationService(id, payload){
-  const response = await axios.patch(`${BASE_URL}/${id}`,payload);
+  const response = await serverAPI.patch(`${BASE_URL}/${id}`,payload);
   return response.data;
 }
 
 export async function deleteApplicationService(id){
-  const response = await axios.delete(`${BASE_URL}/${id}`);
+  const response = await serverAPI.delete(`${BASE_URL}/${id}`);
   return response.data;
 }
