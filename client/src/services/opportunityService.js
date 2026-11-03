@@ -20,12 +20,3 @@ function cleanFilters(filters = {}) {
   if (filters.field) params.field = filters.field
   return params
 }
-
-export async function saveOpportunitService(item) {
-  const response = await serverAPI.post(BASE_URL, item)
-  return response.data
-}
-
-export async function deleteOpportunityService(id) {
-  await serverAPI.delete(BASE_URL + '/' + id)
-}

@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 
 process.env.SECRET = 'test-secret';
 process.env.GEMINI_API_KEY = 'test-key';
+process.env.JOB_API_URL = 'https://adzuna.test';
+process.env.JOB_API_APP_ID = 'app';
+process.env.JOB_API_KEY = 'key';
+process.env.HACKATHONS_API_URL = 'https://devpost.test/api/hackathons';
 
 beforeAll(async () => {
   await mongoose.connect(inject('mongoUri'), { dbName: `test_${process.env.VITEST_POOL_ID}` });
