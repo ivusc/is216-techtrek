@@ -10,6 +10,7 @@ export const useUserStore = defineStore('user', () => {
   // getters
   const _id = computed(() => user.value?._id ?? null);
   const username = computed(() => user.value?.userName ?? null);
+  const displayName = computed(() => user.value?.displayName ?? null);
   const skills = computed(() => user.value?.skills ?? []);
   const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
   const githubUrl = computed(() => user.value?.githubUrl ?? null);
@@ -60,9 +61,19 @@ export const useUserStore = defineStore('user', () => {
     setUser(await userService.updateMe(changes));
   }
 
+  async function changePassword(currentPassword, newPassword) {
+    await userService.changePassword(currentPassword, newPassword);
+  }
+
+  async function deleteMe(password) {
+    await userService.deleteMe(password);
+    clearSession();
+  }
+
   return {
     user,
     username,
+    displayName,
     _id,
     skills,
     linkedinUrl,
@@ -75,5 +86,7 @@ export const useUserStore = defineStore('user', () => {
     logout,
     clearSession,
     updateMe,
+    changePassword,
+    deleteMe,
   };
 });

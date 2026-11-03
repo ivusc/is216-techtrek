@@ -27,3 +27,11 @@ export async function updateMe(changes) {
   const response = await serverAPI.patch('/me', changes);
   return response.data.user;
 }
+
+export async function changePassword(currentPassword, newPassword) {
+  await serverAPI.patch('/me/password', { currentPassword, newPassword });
+}
+
+export async function deleteMe(password) {
+  await serverAPI.delete('/me', { data: { password } });
+}
