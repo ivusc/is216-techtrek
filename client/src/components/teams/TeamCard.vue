@@ -9,11 +9,13 @@ import {
   sameSkill
 } from '@/utils/team'
 import TeamAvatar from './TeamAvatar.vue'
+import SuggestedTeammates from './SuggestedTeammates.vue'
 
 const props = defineProps({
   team: { type: Object, required: true },
   mode: { type: String, default: 'browse' },
-  mySkills: { type: Array, default: () => [] }
+  mySkills: { type: Array, default: () => [] },
+  matches: { type: Array, default: null }
 })
 
 defineEmits(['request', 'edit', 'view-requests'])
@@ -67,6 +69,8 @@ function isUrgent() {
       <span v-if="team.status === 'draft'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Draft</span>
       <span v-else-if="team.status === 'closed'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Team full</span>
     </div>
+
+    <SuggestedTeammates v-if="mode === 'mine' && team.isLeader && matches" :matches="matches" class="mb-3" />
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 mt-auto border-top">
       <div class="d-flex align-items-center gap-2">

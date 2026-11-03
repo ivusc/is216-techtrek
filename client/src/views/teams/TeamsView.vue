@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import './teams.css'
-import {getErrorMessage,createTeam,fetchTeams,fetchMyTeams,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
+import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
 from '@/services/teamService'
 import {fetchAllOpportunities} from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
@@ -22,6 +22,7 @@ const teams = ref([])
 const myTeams = ref([])
 const incoming = ref([])
 const sent = ref([])
+const matchesByTeam = ref({})
 const events = ref([])
 
 const activeTab = ref('browse')
@@ -64,6 +65,18 @@ const loadAll = async (showLoading = true) => {
     console.error('My teams load failed:', error)
     myTeams.value = []
   }
+
+  const suggestable = ledTeams.value.filter((team) => team.status === 'open' && team.skills.length > 0)
+  const results = await Promise.allSettled(suggestable.map((team) => fetchMatches(team._id)))
+  const loaded = {}
+  suggestable.forEach((team, index) => {
+    if (results[index].status === 'fulfilled') {
+      loaded[team._id] = results[index].value
+    } else {
+      console.error('Team matches load failed:', results[index].reason)
+    }
+  })
+  matchesByTeam.value = loaded
 
   try {
     incoming.value = await fetchIncomingRequests()
@@ -376,6 +389,7 @@ function openSkills() {
                 :team="team"
                 mode="mine"
                 :my-skills="mySkills"
+                :matches="matchesByTeam[team._id]"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
               />
