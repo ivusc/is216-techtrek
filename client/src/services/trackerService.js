@@ -27,12 +27,6 @@ export async function addApplicationService(opportunity, details){
   return response.data;
 }
 
-// one application with its opportunity filled in (POST only sends back the opportunity's id)
-export async function fetchApplicationService(id){
-  const response = await serverAPI.get(`${BASE_URL}/${id}`);
-  return response.data;
-}
-
 export async function updateApplicationService(id, payload){
   const response = await serverAPI.patch(`${BASE_URL}/${id}`,payload);
   return response.data;

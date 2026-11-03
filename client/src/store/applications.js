@@ -1,7 +1,6 @@
 import {
   addApplicationService,
   deleteApplicationService,
-  fetchApplicationService,
   fetchAllApplications,
   updateApplicationService,
 } from '@/services/trackerService';
@@ -39,8 +38,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     status.value = null;
 
     try {
-      const created = await addApplicationService(opportunity, details);
-      applications.value.push(await fetchApplicationService(created._id));
+      applications.value.push(await addApplicationService(opportunity, details));
       return true;
     } catch (error) {
       console.error(error);
@@ -53,14 +51,16 @@ export const useApplicationsStore = defineStore('applications', () => {
   }
 
   async function updateApplicationStatus(id, newStatus) {
-    status.value = null;
-
     const application = applications.value.find((item) => item._id === id);
-    if (!application || application.status === newStatus) {
+    if (!application) {
       status.value = 'Unable to find application.';
       return;
     }
+    if (application.status === newStatus) {
+      return;
+    }
 
+    status.value = null;
     isSaving.value = true;
     try {
       await updateApplicationService(id, { status: newStatus });
