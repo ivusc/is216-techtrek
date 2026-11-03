@@ -36,11 +36,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: { values: FACULTIES, message: 'Please pick an SMU school.' },
     },
-    // false until the first-time setup (name, school, skills) is done
-    onboarded: {
-      type: Boolean,
-      default: false,
-    },
+    // false from sign up until the first-time setup (name, school, skills) is done;
+    // accounts made before onboarding existed have no value and skip it
+    onboarded: Boolean,
     course: {
       type: String,
       trim: true,
