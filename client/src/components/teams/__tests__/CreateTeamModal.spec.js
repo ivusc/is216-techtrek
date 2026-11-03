@@ -210,3 +210,125 @@ describe('CreateTeamModal open slots', () => {
     expect(submitted(wrapper)).toMatchObject({ status: 'open', openSlots: 1 });
   });
 });
+
+function buttonTexts(wrapper) {
+  return wrapper.findAll('.modal-footer button').map((candidate) => candidate.text());
+}
+
+describe('CreateTeamModal', () => {
+  it.each([
+    ['a name', { name: '   ' }, LISTINGS, 'Give your team a name.'],
+    ['a pitch', { pitch: '  ' }, LISTINGS, 'Write a short pitch for your team.'],
+    ['an event name', {}, [], 'Type in the name of the hackathon or competition.'],
+  ])('asks for %s before posting', async (label, values, events, message) => {
+    const wrapper = mountModal({ events });
+
+    await fill(wrapper, values);
+    await button(wrapper, 'Publish post').trigger('click');
+
+    expect(wrapper.text()).toContain(message);
+    expect(wrapper.emitted('submit')).toBeUndefined();
+  });
+
+  it('shows the server error', () => {
+    const wrapper = mountModal({ error: 'Invalid slots configuration' });
+
+    expect(wrapper.text()).toContain('Invalid slots configuration');
+  });
+
+  it('starts on Other with its inputs when there are no listings', () => {
+    const wrapper = mountModal({ events: [] });
+
+    expect(optionTexts(wrapper, '#post-event')).toEqual(['Other event (type it in)']);
+    expect(wrapper.find('#post-event').element.value).toBe('other');
+    expect(wrapper.find('[aria-label="Event name"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Event location"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Closing date"]').exists()).toBe(true);
+  });
+
+  it('emits a draft or a published post', async () => {
+    const wrapper = mountModal({ suggestions: ['Figma'] });
+
+    await fill(wrapper);
+    await wrapper.find('#post-size').setValue(4);
+    await wrapper.find('#post-slots').setValue(3);
+    await wrapper.find('.text-caption button').trigger('click');
+    await wrapper.find('[aria-label="Accept requests automatically"]').setValue(true);
+    await button(wrapper, 'Save draft').trigger('click');
+    await button(wrapper, 'Publish post').trigger('click');
+
+    const post = {
+      name: 'Byte Me',
+      teamSize: 4,
+      openSlots: 3,
+      pitch: 'We ship.',
+      skills: ['Figma'],
+      autoAccept: true,
+      opportunityId: null,
+      eventName: 'Build for Good',
+      eventLocation: 'Singapore',
+      closesAt: '2026-11-30T23:59:59.000Z',
+    };
+    expect(wrapper.emitted('submit')).toEqual([
+      [{ ...post, status: 'draft' }],
+      [{ ...post, status: 'open' }],
+    ]);
+  });
+
+  it('sends the typed event when there is none to pick', async () => {
+    const wrapper = mountModal({ events: [] });
+
+    await fill(wrapper);
+    await wrapper.find('[aria-label="Event name"]').setValue('Hack&Roll');
+    await wrapper.find('[aria-label="Event location"]').setValue('NUS');
+    await wrapper.find('[aria-label="Closing date"]').setValue('2026-11-20');
+    await button(wrapper, 'Publish post').trigger('click');
+
+    expect(eventPart(submitted(wrapper))).toStrictEqual({
+      opportunityId: null,
+      eventName: 'Hack&Roll',
+      eventLocation: 'NUS',
+      closesAt: '2026-11-20',
+    });
+  });
+
+  it('keeps open slots within the team size', async () => {
+    const wrapper = mountModal();
+
+    await wrapper.find('#post-size').setValue(6);
+    await wrapper.find('#post-slots').setValue(5);
+    await wrapper.find('#post-size').setValue(3);
+
+    expect(optionTexts(wrapper, '#post-slots')).toEqual(['1', '2']);
+    expect(wrapper.find('#post-slots').element.value).toBe('2');
+  });
+
+  it('offers delete only when editing a published post', async () => {
+    expect(buttonTexts(mountModal())).toEqual(['Save draft', 'Cancel', 'Publish post']);
+    expect(buttonTexts(mountModal({ team: ledTeam({ status: 'draft' }) }))).toEqual([
+      'Save draft',
+      'Cancel',
+      'Publish post',
+    ]);
+
+    const wrapper = mountModal({ team: ledTeam() });
+    expect(buttonTexts(wrapper)).toEqual(['Delete post', 'Cancel', 'Save changes']);
+    expect(wrapper.find('h2').text()).toBe('Edit team post');
+
+    await button(wrapper, 'Delete post').trigger('click');
+    expect(wrapper.emitted('remove')).toHaveLength(1);
+  });
+
+  it('fills the fields from the post being edited', () => {
+    const wrapper = mountModal({ team: ledTeam() });
+
+    expect(wrapper.find('#post-name').element.value).toBe('Night Owls');
+    expect(wrapper.find('#post-size').element.value).toBe('4');
+    expect(wrapper.find('#post-slots').element.value).toBe('2');
+    expect(wrapper.find('#post-pitch').element.value).toBe('We ship a working demo every weekend.');
+    expect(wrapper.findAll('.skill-input .badge').map((chip) => chip.text())).toEqual([
+      'Vue.js',
+      'Figma',
+    ]);
+  });
+});
