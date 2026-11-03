@@ -16,6 +16,7 @@ router.put(
   userController.uploadAvatar,
 );
 router.delete('/me/avatar', requireLogin, userController.removeAvatar);
+router.get('/users/:id/avatar', requireLogin, userController.getAvatar);
 router.delete('/me', requireLogin, userController.deleteUser);
 
 router.use((err, req, res, next) => {

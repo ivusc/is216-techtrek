@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const userService = require('../service/user/user-service');
 const {
   DatabaseError,
@@ -6,7 +7,7 @@ const {
 } = require('../service/user/user-service-errors');
 const bycrpt = require('bcryptjs');
 const { startSession, isSessionExpired, endSession } = require('../middleware/session');
-const { sniffImageType } = require('../service/avatar');
+const { sniffImageType, extensionOf } = require('../service/avatar');
 
 const EDITABLE_FIELDS = [
   'displayName',
@@ -152,6 +153,27 @@ async function removeAvatar(req, res) {
   }
 }
 
+async function getAvatar(req, res) {
+  let avatar = null;
+  if (mongoose.isValidObjectId(req.params.id)) {
+    try {
+      avatar = await userService.findAvatar(req.params.id);
+    } catch (err) {
+      return handleUserError(res, err);
+    }
+  }
+  if (!avatar) return res.status(404).json({ error: 'No photo.' });
+
+  res.set({
+    'Content-Type': avatar.contentType,
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'Content-Disposition': `inline; filename="avatar.${extensionOf(avatar.contentType)}"`,
+    'Cache-Control': 'private, max-age=86400',
+  });
+  return res.send(avatar.data);
+}
+
 // DELETE /me  deletes the logged-in user's account, then logs them out
 async function deleteUser(req, res) {
   const { password } = req.body ?? {};
@@ -186,6 +208,7 @@ module.exports = {
   changePassword,
   uploadAvatar,
   removeAvatar,
+  getAvatar,
   deleteUser,
   logout,
 };

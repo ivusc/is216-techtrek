@@ -4,9 +4,9 @@ const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
 const { cleanSkills } = require('../service/skills');
 
-const PROFILE_FIELDS = 'userName displayName year course skills githubUrl linkedinUrl';
+const PROFILE_FIELDS = 'userName displayName year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
-const MATCH_FIELDS = 'displayName year course skills githubUrl linkedinUrl';
+const MATCH_FIELDS = 'displayName year course skills githubUrl linkedinUrl avatar.updatedAt';
 const MAX_MATCHES = 20;
 
 // --- Helper Functions ---
@@ -57,6 +57,7 @@ function formatRequest(request) {
         displayName: user?.displayName,
         year: user?.year,
         course: user?.course,
+        avatar: user?.avatar,
         skills: [],
       };
 
