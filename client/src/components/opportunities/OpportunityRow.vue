@@ -123,7 +123,7 @@ defineEmits(['details', 'toggle-save'])
 }
 
 /* narrower screens: meta and buttons drop under the title */
-@media (max-width: 991.98px) {
+@container opportunity-list (max-width: 979.98px) {
   .opp-row {
     grid-template-columns: 44px minmax(0, 1fr);
     grid-template-areas: 'logo main' '. meta' 'actions actions';
