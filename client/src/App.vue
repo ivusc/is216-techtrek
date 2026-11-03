@@ -8,7 +8,7 @@ const authStore = useUserStore();
 <template>
   <div class="d-flex vh-100">
     <SideBar v-if="authStore.isLoggedIn" />
-    <main class="app-main flex-grow-1 p-3 p-md-4" style="min-width: 0">
+    <main class="app-main flex-grow-1 overflow-y-auto p-3 p-md-4" style="min-width: 0">
       <RouterView />
     </main>
   </div>

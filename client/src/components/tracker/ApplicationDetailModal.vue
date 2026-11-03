@@ -22,14 +22,64 @@ const form = reactive({
   deadline: toDateTimeInputValue(getApplicationDeadline(props.application)).slice(0, 10)
 })
 
-// TODO: no checklist field in the Application model yet, so ticks are not saved
-const checklist = ref([
-  { label: 'Tailor resume to the JD', done: false },
-  { label: 'Research ' + opportunity.value.organisation, done: false },
-  { label: 'Practise 5 technical questions', done: false }
-])
+// ── prep checklist: tick, add, rename and delete steps; saved with "Save changes" like the rest of the form
+
+// id is only for v-for and editing here, it is not sent to the server
+let nextId = 0
+function makeItem(label, done = false) {
+  return { id: nextId++, label, done }
+}
+
+// the saved steps, or the default steps for an application whose checklist was never saved
+// (an emptied checklist is [] and stays empty)
+const checklist = ref(
+  props.application.checklist != null
+    ? props.application.checklist.map((item) => makeItem(item.label, item.done))
+    : []
+)
 
 const doneCount = computed(() => checklist.value.filter((item) => item.done).length)
+
+const MAX_LABEL_LENGTH = 200 // same limit as the server
+
+const newStep = ref('')
+function addStep() {
+  const label = newStep.value.trim()
+  if (label === '') {
+    return
+  }
+  checklist.value.push(makeItem(label))
+  newStep.value = ''
+}
+
+// the step being renamed (null = none) and the text in its box
+const editingId = ref(null)
+const editingLabel = ref('')
+
+function startEditing(item) {
+  editingId.value = item.id
+  editingLabel.value = item.label
+}
+
+// Enter or leaving the box keeps the new name; an empty name keeps the old one
+function finishEditing(item) {
+  if (editingId.value !== item.id) {
+    return // already finished by Enter, this is the blur that follows
+  }
+  const label = editingLabel.value.trim()
+  if (label !== '') {
+    item.label = label
+  }
+  editingId.value = null
+}
+
+function cancelEditing() {
+  editingId.value = null
+}
+
+function deleteStep(item) {
+  checklist.value = checklist.value.filter((step) => step.id !== item.id)
+}
 
 // no status history is stored, so the timeline is: saved (createdAt) -> current stage (updatedAt)
 const activity = computed(() => {
@@ -46,10 +96,14 @@ function save() {
     status: form.status,
     notes: form.notes,
     // empty input = clear the date
+    checklist: checklist.value.map((item) => ({ label: item.label, done: item.done })),
     interviewAt: form.interviewAt ? new Date(form.interviewAt).toISOString() : null,
     deadline: form.deadline ? new Date(form.deadline + 'T23:59:59').toISOString() : null
   })
 }
+
+// v-focus: puts the cursor in the rename box as soon as it appears
+const vFocus = { mounted: (el) => el.focus() }
 
 // focus the dialog so Esc works straight away
 const dialog = ref(null)
@@ -146,19 +200,58 @@ onMounted(() => dialog.value.focus())
           <div>
             <div class="d-flex align-items-center mb-2">
               <span class="small fw-semibold flex-grow-1">Prep checklist</span>
-              <span class="text-caption text-body-tertiary">{{ doneCount }} of {{ checklist.length }} done</span>
+              <span v-if="checklist.length > 0" class="text-caption text-body-tertiary">{{ doneCount }} of {{ checklist.length }} done</span>
             </div>
-            <div v-for="(item, index) in checklist" :key="item.label" class="form-check d-flex align-items-center gap-2" :class="{ 'mb-2': index < checklist.length - 1 }">
-              <input :id="'checklist-' + index" v-model="item.done" class="form-check-input mt-0" type="checkbox">
-              <label :for="'checklist-' + index" class="form-check-label">{{ item.label }}</label>
-              <RouterLink
-                v-if="index === checklist.length - 1"
-                to="/interview"
-                class="small fw-semibold text-decoration-none ms-1"
+
+            <p v-if="checklist.length === 0" class="small text-body-tertiary mb-2">No steps yet. Add one below.</p>
+
+            <div v-for="item in checklist" :key="item.id" class="checklist-row form-check d-flex align-items-center gap-2 mb-2">
+              <input :id="'checklist-' + item.id" v-model="item.done" class="form-check-input mt-0 flex-shrink-0" type="checkbox">
+
+              <!-- renaming: Enter or clicking away keeps it, Esc cancels (without closing the modal) -->
+              <input
+                v-if="editingId === item.id"
+                v-model="editingLabel"
+                v-focus
+                class="form-control form-control-sm flex-grow-1"
+                :maxlength="MAX_LABEL_LENGTH"
+                :aria-label="'Rename ' + item.label"
+                @keydown.enter.prevent="finishEditing(item)"
+                @keydown.esc.stop="cancelEditing"
+                @blur="finishEditing(item)"
               >
-                Open Interview Prep →
-              </RouterLink>
+              <label v-else :for="'checklist-' + item.id" class="form-check-label flex-grow-1">
+                {{ item.label }}
+              </label>
+
+              <template v-if="editingId !== item.id">
+                <button class="btn btn-sm btn-link text-body-tertiary p-1 checklist-action" type="button" :aria-label="'Rename ' + item.label" @click="startEditing(item)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-link text-body-tertiary p-1 checklist-action" type="button" :aria-label="'Delete ' + item.label" @click="deleteStep(item)">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </template>
             </div>
+
+            <!-- Esc only clears the box here, it does not close the modal -->
+            <form class="d-flex gap-2 mt-1" @submit.prevent="addStep">
+              <input
+                v-model="newStep"
+                class="form-control form-control-sm"
+                placeholder="Add a step, e.g. Ask Sam for a referral"
+                :maxlength="MAX_LABEL_LENGTH"
+                aria-label="New checklist step"
+                @keydown.esc.stop="newStep = ''"
+              >
+              <button class="btn btn-sm btn-outline-primary fw-semibold text-nowrap" type="submit" :disabled="newStep.trim() === ''">
+                <i class="bi bi-plus-lg"></i> Add
+              </button>
+            </form>
+
+            <RouterLink to="/interview" class="d-inline-block small fw-semibold text-decoration-none mt-2">
+              Open Interview Prep →
+            </RouterLink>
           </div>
 
           <div>

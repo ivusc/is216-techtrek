@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import OpportunityCard from './OpportunityCard.vue'
+import OpportunityRow from './OpportunityRow.vue'
 import { getKey } from '@/utils/opportunity'
 
 const props = defineProps({
@@ -17,8 +18,20 @@ defineEmits(['details', 'toggle-save'])
 </script>
 
 <template>
-  <!-- 3 cards per row on a laptop, fewer on smaller screens, 1 per row in list view; cards in a row share one height -->
-  <div class="row row-cols-1 g-3" :class="{ 'row-cols-md-2 row-cols-xl-3': viewMode === 'grid' }">
+  <!-- list view: one card holding a row per item -->
+  <div v-if="viewMode === 'list'" class="card shadow-sm overflow-hidden" :class="{ 'd-none': items.length === 0 }">
+    <OpportunityRow
+      v-for="item in items"
+      :key="getKey(item)"
+      :item="item"
+      :saved="savedKeys.includes(getKey(item))"
+      @details="$emit('details', item)"
+      @toggle-save="$emit('toggle-save', item)"
+    />
+  </div>
+
+  <!-- grid view: 3 cards per row on a laptop, fewer on smaller screens; cards in a row share one height -->
+  <div v-else class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
     <div v-for="item in items" :key="getKey(item)" class="col">
       <OpportunityCard
         :item="item"

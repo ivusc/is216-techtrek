@@ -138,6 +138,17 @@
   box-shadow: 0 0 0 1px var(--bs-primary);
 }
 
+/* checklist rename / delete buttons: faint until the row is hovered or focused (always shown on touch screens) */
+.checklist-action {
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.checklist-row:hover .checklist-action,
+.checklist-action:focus-visible {
+  opacity: 1;
+}
+
 .activity-step {
   padding: 6px 12px;
 }
