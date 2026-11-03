@@ -9,6 +9,8 @@ import { ME, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
 
 const mock = new MockAdapter(serverAPI);
 
+const NO_EVENTS = { jobs: null, hackathons: { count: 0, hackathons: [] } };
+
 beforeEach(() => {
   setActivePinia(createPinia());
   useUserStore().user = { ...ME };
@@ -36,6 +38,16 @@ async function mountTeams() {
 
 function button(wrapper, text) {
   return wrapper.findAll('button').find((candidate) => candidate.text().includes(text));
+}
+
+function dialog(wrapper) {
+  return wrapper.find('[role="dialog"]');
+}
+
+function dialogButton(wrapper, text) {
+  return dialog(wrapper)
+    .findAll('button')
+    .find((candidate) => candidate.text().includes(text));
 }
 
 function requestsTo(url) {
@@ -93,5 +105,213 @@ describe('TeamsView errors', () => {
     expect(wrapper.find('[role="alert"]').text()).toContain(
       'Could not answer the request: This team is already full',
     );
+  });
+});
+
+describe('TeamsView', () => {
+  it('loads teams, mine and requests and pre-filters browse by my skills', async () => {
+    mockLists({
+      teams: [
+        team(),
+        team({ _id: 't2', name: 'Data Divers', skills: ['Python'] }),
+        team({ _id: 't3', name: 'Pixel Pals', skills: ['vue.js'] }),
+      ],
+      incoming: [joinRequest()],
+      sent: [joinRequest({ _id: 's1', user: ME }), joinRequest({ _id: 's2', status: 'declined' })],
+    });
+    const wrapper = await mountTeams();
+
+    expect(wrapper.findAll('nav .nav-link').map((tab) => tab.text())).toEqual([
+      'Browse teams 3',
+      'My teams 1',
+      'Requests 2',
+    ]);
+    expect(wrapper.find('.skills-label').text()).toBe('Skills: Vue.js');
+    expect(wrapper.text()).toContain('2 teams need your skills');
+    expect(titles(wrapper)).toEqual(['Byte Me', 'Pixel Pals']);
+    expect(requestsTo('/teams/m1/matches')).toHaveLength(1);
+  });
+
+  it('creates a team post and lands on My teams', async () => {
+    mockLists();
+    mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
+    mock.onPost('/teams').reply(201, ledTeam({ _id: 'm2', name: 'Pixel Pushers' }));
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Create team post').trigger('click');
+    await flushPromises();
+    await wrapper.find('[aria-label="Event name"]').setValue('Hack&Roll');
+    await wrapper.find('[aria-label="Event location"]').setValue('NUS');
+    await wrapper.find('[aria-label="Closing date"]').setValue('2026-11-20');
+    await wrapper.find('#post-name').setValue('Pixel Pushers');
+    await wrapper.find('#post-pitch').setValue('Design-led team.');
+    await dialogButton(wrapper, 'Publish post').trigger('click');
+    await flushPromises();
+
+    expect(requestsTo('/opportunity/all')).toHaveLength(1);
+    expect(JSON.parse(mock.history.post[0].data)).toEqual({
+      name: 'Pixel Pushers',
+      teamSize: 5,
+      openSlots: 1,
+      pitch: 'Design-led team.',
+      skills: [],
+      autoAccept: false,
+      status: 'open',
+      opportunityId: null,
+      eventName: 'Hack&Roll',
+      eventLocation: 'NUS',
+      closesAt: '2026-11-20',
+    });
+    expect(dialog(wrapper).exists()).toBe(false);
+    expect(button(wrapper, 'My teams').classes()).toContain('active');
+    expect(requestsTo('/teams/mine')).toHaveLength(2);
+  });
+
+  it('edits and deletes a post', async () => {
+    mockLists();
+    mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
+    mock.onPatch('/teams/m1').reply(200, ledTeam({ name: 'Night Owls 2' }));
+    mock.onDelete('/teams/m1').reply(204);
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'My teams').trigger('click');
+    await button(wrapper, 'Edit post').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('#post-name').element.value).toBe('Night Owls');
+    await wrapper.find('#post-name').setValue('Night Owls 2');
+    await dialogButton(wrapper, 'Save changes').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.patch[0].url).toBe('/teams/m1');
+    expect(JSON.parse(mock.history.patch[0].data)).toMatchObject({
+      name: 'Night Owls 2',
+      teamSize: 4,
+      openSlots: 2,
+      status: 'open',
+      eventName: 'Hack&Roll',
+      eventLocation: 'NUS',
+      closesAt: '2026-11-20',
+    });
+
+    await button(wrapper, 'Edit post').trigger('click');
+    await flushPromises();
+    await dialogButton(wrapper, 'Delete post').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.delete[0].url).toBe('/teams/m1');
+    expect(dialog(wrapper).exists()).toBe(false);
+  });
+
+  it('publishes a draft', async () => {
+    mockLists({ mine: [ledTeam({ status: 'draft' })] });
+    mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
+    mock.onPatch('/teams/m1').reply(200, ledTeam());
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'My teams').trigger('click');
+    expect(wrapper.text()).toContain('Draft');
+    await button(wrapper, 'Edit post').trigger('click');
+    await flushPromises();
+    expect(dialogButton(wrapper, 'Delete post')).toBeUndefined();
+    await dialogButton(wrapper, 'Publish post').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.patch[0].url).toBe('/teams/m1');
+    expect(JSON.parse(mock.history.patch[0].data)).toMatchObject({
+      status: 'open',
+      opportunityId: null,
+      eventName: 'Hack&Roll',
+      eventLocation: 'NUS',
+      closesAt: '2026-11-20',
+    });
+  });
+
+  it('sends a join request with role and message', async () => {
+    mockLists();
+    mock.onPost('/teams/t1/requests').reply(201, { _id: 'r9', status: 'pending' });
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Request to join').trigger('click');
+    await dialogButton(wrapper, 'Figma').trigger('click');
+    await wrapper.find('#join-message').setValue('I design and prototype.');
+    await dialogButton(wrapper, 'Send request').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.post[0].url).toBe('/teams/t1/requests');
+    expect(JSON.parse(mock.history.post[0].data)).toEqual({
+      role: 'Figma',
+      message: 'I design and prototype.',
+      shareProfile: true,
+    });
+    expect(dialog(wrapper).exists()).toBe(false);
+    expect(requestsTo('/teams')).toHaveLength(2);
+  });
+
+  it('answers and withdraws requests', async () => {
+    mockLists({
+      incoming: [joinRequest()],
+      sent: [
+        joinRequest({
+          _id: 's1',
+          user: ME,
+          team: { _id: 't1', name: 'Byte Me', event: { name: 'Hack&Roll' } },
+        }),
+      ],
+    });
+    mock.onPatch('/teams/requests/r1').reply(200, { _id: 'r1', status: 'accepted' });
+    mock.onDelete('/teams/requests/s1').reply(204);
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Requests').trigger('click');
+    await button(wrapper, 'Accept').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.patch[0].url).toBe('/teams/requests/r1');
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ status: 'accepted' });
+    expect(requestsTo('/teams/requests/incoming')).toHaveLength(2);
+
+    await button(wrapper, 'Withdraw').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.delete[0].url).toBe('/teams/requests/s1');
+    expect(requestsTo('/teams/requests/sent')).toHaveLength(3);
+  });
+
+  it("shows the server's reason inside the modal", async () => {
+    mockLists();
+    mock.onPost('/teams/t1/requests').reply(409, { error: 'This team is not taking requests' });
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Request to join').trigger('click');
+    await dialogButton(wrapper, 'Send request').trigger('click');
+    await flushPromises();
+
+    expect(dialog(wrapper).text()).toContain('This team is not taking requests');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+
+  it('saves skills from the banner and re-filters the browse list', async () => {
+    mockLists({
+      teams: [
+        team(),
+        team({ _id: 't2', name: 'Data Divers', skills: ['Figma'] }),
+        team({ _id: 't3', name: 'Py Pals', skills: ['Python'] }),
+      ],
+    });
+    mock.onPatch('/me').reply((config) => [200, { user: { ...ME, ...JSON.parse(config.data) } }]);
+    const wrapper = await mountTeams();
+    expect(titles(wrapper)).toEqual(['Byte Me']);
+
+    await button(wrapper, 'Edit skills').trigger('click');
+    const input = dialog(wrapper).find('.skill-text');
+    await input.setValue('Figma');
+    await input.trigger('keydown', { key: 'Enter' });
+    await dialogButton(wrapper, 'Save skills').trigger('click');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ skills: ['Vue.js', 'Figma'] });
+    expect(dialog(wrapper).exists()).toBe(false);
+    expect(wrapper.find('.skills-label').text()).toBe('Skills: Vue.js, Figma');
+    expect(titles(wrapper)).toEqual(['Byte Me', 'Data Divers']);
   });
 });
