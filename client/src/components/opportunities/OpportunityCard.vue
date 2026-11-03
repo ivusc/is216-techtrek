@@ -16,11 +16,24 @@ defineProps({
   teamCount: { type: Number, default: 0 } // open teams for this hackathon, shown on "Find team"
 })
 
-defineEmits(['details', 'toggle-save', 'find-team'])
+const emit = defineEmits(['details', 'toggle-save', 'find-team'])
+
+// clicks on the card's own buttons and links are left to them
+function openDetails(event) {
+  if (event.target.closest('button, a, input, select')) return
+  emit('details')
+}
 </script>
 
 <template>
-  <div class="opp-card card shadow-sm h-100">
+  <!-- the whole card opens the details panel; its own buttons (Track, Find team...) still do just their job -->
+  <div
+    class="opp-card card h-100 card-hover"
+    tabindex="0"
+    :aria-label="'Open details for ' + item.title"
+    @click="openDetails"
+    @keydown.enter.self="emit('details')"
+  >
     <!-- avatar, organisation + location -->
     <div class="d-flex align-items-center gap-3">
       <div
@@ -38,7 +51,7 @@ defineEmits(['details', 'toggle-save', 'find-team'])
       </div>
     </div>
 
-    <div class="d-flex flex-column gap-2" role="button" @click="$emit('details')">
+    <div class="d-flex flex-column gap-2">
       <!-- title -->
       <h3 class="opp-title mb-0">{{ item.title }}</h3>
 

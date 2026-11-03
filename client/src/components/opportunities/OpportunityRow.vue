@@ -16,12 +16,25 @@ defineProps({
   teamCount: { type: Number, default: 0 } // open teams for this hackathon, shown on "Find team"
 })
 
-defineEmits(['details', 'toggle-save', 'find-team'])
+const emit = defineEmits(['details', 'toggle-save', 'find-team'])
+
+// clicks on the card's own buttons and links are left to them
+function openDetails(event) {
+  if (event.target.closest('button, a, input, select')) return
+  emit('details')
+}
 </script>
 
 <template>
   <!-- list view: one row per opportunity, same info as OpportunityCard laid out sideways -->
-  <div class="opp-row">
+  <!-- the whole row opens the details panel; its own buttons still do just their job -->
+  <div
+    class="opp-row row-hover"
+    tabindex="0"
+    :aria-label="'Open details for ' + item.title"
+    @click="openDetails"
+    @keydown.enter.self="emit('details')"
+  >
     <div
       class="opp-row-logo rounded-3 d-flex justify-content-center align-items-center fw-semibold"
       :class="item.type === 'hackathon' ? 'bg-tt-peach text-body' : 'bg-primary-subtle text-primary'"
@@ -30,7 +43,7 @@ defineEmits(['details', 'toggle-save', 'find-team'])
     </div>
 
     <!-- title + tags, then organisation · location -->
-    <div class="opp-row-main min-w-0" role="button" @click="$emit('details')">
+    <div class="opp-row-main min-w-0">
       <div class="d-flex align-items-center gap-2 min-w-0">
         <h3 class="opp-row-title text-truncate mb-0">{{ item.title }}</h3>
         <span class="badge rounded-pill fw-medium flex-shrink-0" :class="typeBadge[item.type]">

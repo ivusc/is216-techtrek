@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { formatDate } from '@/utils/date'
 import {
   getDisplayName,
@@ -19,7 +20,15 @@ const props = defineProps({
   undoing: { type: Boolean, default: false } // true while this team's request is being withdrawn
 })
 
-defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite'])
+const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite'])
+
+// on Browse, a team I can still join opens "Request to join" when the card itself is clicked
+const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
+
+function onCardClick(event) {
+  if (!canRequest.value || event.target.closest('button, a, input, select')) return
+  emit('request')
+}
 
 function isMatch(skill) {
   return props.mySkills.some((mine) => sameSkill(mine, skill))
@@ -32,7 +41,14 @@ function isUrgent() {
 </script>
 
 <template>
-  <div class="card p-3 card-hover h-100">
+  <div
+    class="card p-3 h-100"
+    :class="{ 'card-hover': canRequest }"
+    :tabindex="canRequest ? 0 : undefined"
+    :aria-label="canRequest ? 'Ask to join ' + team.name : undefined"
+    @click="onCardClick"
+    @keydown.enter.self="canRequest && emit('request')"
+  >
 
     <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
       <span class="badge rounded-pill fw-medium text-truncate mw-100" :class="getEventBadgeClass(team.event.name)">

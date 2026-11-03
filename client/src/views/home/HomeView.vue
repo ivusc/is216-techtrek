@@ -101,6 +101,7 @@ const stats = computed(() => {
   return [
     {
       label: 'Saved opportunities',
+      to: '/tracker',
       value: countStatus('saved'),
       note: '+' + savedThisWeek.value + ' this week',
       icon: 'bi-clipboard-check',
@@ -108,6 +109,7 @@ const stats = computed(() => {
     },
     {
       label: 'Active applications',
+      to: '/tracker',
       value: countStatus('applied', 'interview'),
       note: countStatus('interview') + ' at interview',
       icon: 'bi-briefcase',
@@ -115,6 +117,7 @@ const stats = computed(() => {
     },
     {
       label: 'Deadlines this week',
+      to: '/tracker',
       value: dueThisWeek.value.length,
       note: nextDue ? 'Next: ' + formatDate(nextDue.deadline) : 'Nothing due',
       icon: 'bi-calendar-event',
@@ -122,6 +125,7 @@ const stats = computed(() => {
     },
     {
       label: 'Team requests',
+      to: { path: '/teams', query: { tab: 'requests' } },
       value: incoming.value.length,
       note: incoming.value.length > 0 ? 'Waiting for you' : 'All caught up',
       icon: 'bi-person-plus',
@@ -246,7 +250,8 @@ async function respond(request, status) {
     <!-- stat cards -->
     <div class="row g-3 mb-3">
       <div v-for="stat in stats" :key="stat.label" class="col-6 col-xl-3">
-        <div class="card home-stat-card h-100">
+        <!-- each number links to where it comes from -->
+        <RouterLink :to="stat.to" class="card home-stat-card card-hover h-100 text-decoration-none text-body">
           <div class="d-flex justify-content-between align-items-start mb-2">
             <span class="home-stat-icon rounded-3 d-flex align-items-center justify-content-center" :class="stat.tile">
               <i :class="`bi ${stat.icon}`"></i>
@@ -255,7 +260,7 @@ async function respond(request, status) {
           </div>
           <div class="text-stat">{{ stat.value }}</div>
           <div class="small text-body-secondary">{{ stat.label }}</div>
-        </div>
+        </RouterLink>
       </div>
     </div>
 
@@ -274,10 +279,11 @@ async function respond(request, status) {
           </p>
 
           <div class="scroll-list">
-          <div
+          <RouterLink
             v-for="entry in upcomingDeadlines.slice(0, 10)"
             :key="entry.application._id"
-            class="deadline-row d-flex align-items-center gap-3 py-2"
+            to="/tracker"
+            class="deadline-row row-hover d-flex align-items-center gap-3 py-2 px-2 text-decoration-none text-body"
           >
             <div
               class="date-tile rounded-3 d-flex flex-column align-items-center justify-content-center flex-shrink-0"
@@ -302,7 +308,7 @@ async function respond(request, status) {
             <span class="days-left small text-end flex-shrink-0" :class="entry.daysLeft <= 7 ? 'text-tt-accent fw-semibold' : 'text-body-secondary'">
               {{ daysLeftText(entry.daysLeft) }}
             </span>
-          </div>
+          </RouterLink>
           </div>
         </div>
 

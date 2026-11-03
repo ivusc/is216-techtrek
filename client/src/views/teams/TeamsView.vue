@@ -34,7 +34,9 @@ const sent = ref([])
 const matchesByTeam = ref({})
 const events = ref([])
 
-const activeTab = ref('browse')
+// /teams?tab=requests (e.g. from the dashboard's Team requests card) opens that tab
+const TAB_NAMES = ['browse', 'mine', 'requests']
+const activeTab = ref(TAB_NAMES.includes(useRoute().query.tab) ? useRoute().query.tab : 'browse')
 const isLoading = ref(true)
 const status = ref('')
 
