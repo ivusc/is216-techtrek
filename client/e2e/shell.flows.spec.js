@@ -11,7 +11,7 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
 
     const form = page.locator('#panel form:visible');
     await form.getByLabel('SMU email').fill(account.userName);
-    await form.getByLabel('Password').fill(account.password);
+    await form.getByLabel('Password', { exact: true }).fill(account.password);
     await form.getByRole('button', { name: 'Log in' }).click();
 
     await page.waitForURL((url) => url.pathname === '/tracker');
