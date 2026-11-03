@@ -12,6 +12,7 @@ const reEnteredPassword = ref('');
 const errorMessage = ref('');
 
 async function submitForm() {
+  errorMessage.value = '';
   if (email.value.includes('@') == false || email.value.split('@')[1] != 'smu.edu.sg') {
     errorMessage.value = 'Please enter a valid SMU email.';
     return;
@@ -20,7 +21,7 @@ async function submitForm() {
     errorMessage.value = "The passwords don't match!";
     return;
   }
-  if (password.value.trim().length < 8) {
+  if (password.value.length < 8) {
     errorMessage.value =
       'Your password should be at least 8 charcters long with 1 number, uppercase alphabet and symbol.';
     return;
@@ -75,9 +76,6 @@ async function submitForm() {
         <p>Create an account using your SMU email to being your trek into tech!</p>
       </div>
       <div>
-        <p></p>
-      </div>
-      <div>
         <label for="signup-email" class="form-label">Your SMU Email</label>
         <input
           id="signup-email"
@@ -98,9 +96,11 @@ async function submitForm() {
           v-model="password"
           autocomplete="new-password"
           placeholder="🔒︎ **********"
+          aria-describedby="signup-password-hint"
         />
-        <small>Your password should include at least 1 number, uppercase alphabet and symbol</small>
-        <br />
+        <div id="signup-password-hint" class="form-text mb-3">
+          Your password should include at least 1 number, uppercase alphabet and symbol
+        </div>
         <label for="signup-confirm" class="form-label">Re-Enter Password</label>
         <input
           id="signup-confirm"
@@ -111,9 +111,7 @@ async function submitForm() {
           placeholder="🔒︎ **********"
         />
       </div>
-      <div>
-        <p class="errors">{{ errorMessage }}</p>
-      </div>
+      <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
       <button type="submit" class="btn btn-primary">Create account</button>
     </div>
   </form>

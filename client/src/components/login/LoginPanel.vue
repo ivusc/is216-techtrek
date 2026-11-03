@@ -19,6 +19,7 @@ function sameOriginPath(target) {
 }
 
 async function submitForm() {
+  errorMessage.value = '';
   if (email.value.includes('@') == false || email.value.split('@')[1] != 'smu.edu.sg') {
     errorMessage.value = 'Please enter a valid SMU email.';
     password.value = '';
@@ -79,9 +80,6 @@ onMounted(() => {
         <p>Log in with your SMU account to pick up where you left off.</p>
       </div>
       <div>
-        <p class="errors">{{ errorMessage }}</p>
-      </div>
-      <div>
         <label for="login-email" class="form-label">SMU Email</label>
         <input
           id="login-email"
@@ -104,18 +102,11 @@ onMounted(() => {
           placeholder="🔒︎ **********"
         />
       </div>
-      <div id="extras">
-        <div class="form-check">
-          <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
-          <label class="form-check-label" for="login-remember"> Remember me </label>
-        </div>
-        <a
-          href=""
-          class="link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
-          style="font-weight: bold"
-          >Forgot password?</a
-        >
+      <div class="form-check">
+        <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
+        <label class="form-check-label" for="login-remember"> Remember me </label>
       </div>
+      <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
       <button type="submit" class="btn btn-primary">Log in</button>
       <div class="d-flex justify-content-center">
         <a
@@ -129,10 +120,3 @@ onMounted(() => {
     </div>
   </form>
 </template>
-
-<style lang="scss" scoped>
-#extras {
-  display: flex;
-  justify-content: space-between;
-}
-</style>
