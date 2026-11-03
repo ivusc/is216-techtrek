@@ -191,3 +191,22 @@ describe('CreateTeamModal event picker', () => {
     expect(eventPart(submitted(wrapper))).toStrictEqual(sent);
   });
 });
+
+describe('CreateTeamModal open slots', () => {
+  it('starts the open slots at one when publishing a draft', () => {
+    const draft = mountModal({ team: ledTeam({ status: 'draft' }) });
+    const published = mountModal({ team: ledTeam() });
+
+    expect(optionTexts(draft, '#post-slots')).toEqual(['1', '2', '3']);
+    expect(optionTexts(published, '#post-slots')).toEqual(['0', '1', '2', '3']);
+  });
+
+  it('moves a draft saved with no open slots up to one', async () => {
+    const wrapper = mountModal({ team: ledTeam({ status: 'draft', slotsOpen: 0 }) });
+
+    expect(wrapper.find('#post-slots').element.value).toBe('1');
+    await button(wrapper, 'Publish post').trigger('click');
+
+    expect(submitted(wrapper)).toMatchObject({ status: 'open', openSlots: 1 });
+  });
+});
