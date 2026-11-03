@@ -77,7 +77,7 @@
     margin-bottom: 15px;
 }
 
-.progress-bar {
+.progress-bar-container .progress-bar {
     height: 15px;
     width: 0%;
     background-color: #0081A7;
