@@ -562,7 +562,7 @@ async function getTeamInvites(req, res) {
     if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can see invites' });
 
     const invites = await TeamRequest.find({ teamId, kind: 'invite' })
-      .populate({ path: 'userId', select: 'displayName userName avatar.updatedAt' })
+      .populate({ path: 'userId', select: 'displayName avatar.updatedAt' })
       .sort('-createdAt');
     res.json(invites.filter((invite) => invite.userId).map(formatInvite));
   } catch (err) {
@@ -578,7 +578,7 @@ async function getMyInvites(req, res) {
       .populate({
         path: 'teamId',
         select: 'name event pitch skills leaderId',
-        populate: { path: 'leaderId', select: 'displayName userName avatar.updatedAt' },
+        populate: { path: 'leaderId', select: 'displayName avatar.updatedAt' },
       })
       .sort('-createdAt');
     res.json(invites.filter((invite) => invite.teamId).map(formatInvite));
