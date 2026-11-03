@@ -47,3 +47,45 @@ test.describe('app shell', () => {
     await expect(page.locator('#sidebar')).toHaveCSS('width', '260px');
   });
 });
+
+test.describe('sidebar profile footer', () => {
+  async function sidebarRightEdge(page) {
+    const sidebar = await page.locator('#sidebar').boundingBox();
+    return sidebar.x + sidebar.width;
+  }
+
+  async function rightEdge(locator) {
+    const box = await locator.boundingBox();
+    return box.x + box.width;
+  }
+
+  for (const width of [992, 1200, 1440]) {
+    test(`${width} keeps a long name and email inside the open sidebar`, async ({
+      loggedIn: page,
+      account,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/home');
+      const footer = page.locator('#profile');
+      const name = footer.locator('strong');
+      const email = footer.getByText(account.userName);
+      await expect(page.locator('#sidebar')).toHaveCSS('width', '260px');
+
+      const edge = await sidebarRightEdge(page);
+      expect(await rightEdge(name)).toBeLessThanOrEqual(edge);
+      expect(await rightEdge(email)).toBeLessThanOrEqual(edge);
+      await expect(name).toHaveAttribute('title', await name.innerText());
+      await expect(email).toHaveAttribute('title', account.userName);
+    });
+  }
+
+  test('768 keeps the collapsed profile button inside the sidebar', async ({ loggedIn: page }) => {
+    await page.setViewportSize(TABLET);
+    await page.goto('/home');
+    await expect(page.locator('#sidebar')).toHaveCSS('width', '80px');
+
+    expect(await rightEdge(page.locator('#profile'))).toBeLessThanOrEqual(
+      await sidebarRightEdge(page),
+    );
+  });
+});
