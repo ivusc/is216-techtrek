@@ -169,6 +169,39 @@ async function changePassword(userId, currentPassword, newPassword) {
   }
 }
 
+async function setAvatar(userId, data, contentType) {
+  try {
+    return await User.findByIdAndUpdate(
+      userId,
+      { avatar: { data, contentType, updatedAt: new Date() } },
+      { returnDocument: 'after' },
+    );
+  } catch (err) {
+    throw new DatabaseError('Database could not save the photo.');
+  }
+}
+
+async function removeAvatar(userId) {
+  try {
+    return await User.findByIdAndUpdate(
+      userId,
+      { $unset: { avatar: 1 } },
+      { returnDocument: 'after' },
+    );
+  } catch (err) {
+    throw new DatabaseError('Database could not remove the photo.');
+  }
+}
+
+async function findAvatar(userId) {
+  try {
+    const user = await User.findById(userId).select('+avatar.data +avatar.contentType');
+    return user?.avatar?.data ? user.avatar : null;
+  } catch (err) {
+    throw new DatabaseError('Database could not find the photo.');
+  }
+}
+
 /**
  * Deletes the user with their applications and interview attempts.
  * @param {Schema.Types.ObjectId} userId
@@ -205,5 +238,8 @@ module.exports = {
   findUserByUserId,
   updateUser,
   changePassword,
+  setAvatar,
+  removeAvatar,
+  findAvatar,
   deleteUserById,
 };

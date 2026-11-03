@@ -64,12 +64,19 @@ const userSchema = new mongoose.Schema(
         'Use a GitHub profile link like https://github.com/your-username',
       ],
     },
+    avatar: {
+      data: { type: Buffer, select: false },
+      contentType: { type: String, select: false },
+      updatedAt: Date,
+    },
   },
   {
     toJSON: {
       versionKey: false,
       transform(doc, ret) {
         delete ret.password;
+        delete ret.avatar?.data;
+        delete ret.avatar?.contentType;
         return ret;
       },
     },
