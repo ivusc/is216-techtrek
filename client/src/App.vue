@@ -1,14 +1,20 @@
 <script setup>
+import { useRoute } from 'vue-router';
 import SideBar from './components/SideBar.vue';
 import { useUserStore } from '@/store/user.js';
 
 const authStore = useUserStore();
+const route = useRoute();
 </script>
 
 <template>
   <div class="d-flex vh-100">
     <SideBar v-if="authStore.isLoggedIn" />
-    <main class="app-main flex-grow-1 overflow-y-auto p-3 p-md-4" style="min-width: 0">
+    <main
+      class="app-main flex-grow-1 overflow-y-auto"
+      :class="{ 'p-3 p-md-4': !route.meta.bare, 'with-tab-bar': authStore.isLoggedIn }"
+      style="min-width: 0"
+    >
       <div
         v-if="!authStore.hasCheckedSession"
         class="d-flex flex-column justify-content-center align-items-center gap-3 h-100 text-body-secondary"
@@ -25,7 +31,7 @@ const authStore = useUserStore();
 <style scoped>
 /* below md, leave room so the bottom tab bar doesn't cover the end of the page */
 @media (max-width: 767.98px) {
-  .app-main {
+  .app-main.with-tab-bar {
     padding-bottom: 96px !important;
   }
 }

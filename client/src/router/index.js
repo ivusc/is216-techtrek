@@ -13,7 +13,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', redirect: '/home' },
-    { path: '/login', component: LoginView, meta: { guestOnly: true } },
+    { path: '/login', component: LoginView, meta: { guestOnly: true, bare: true } },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/opportunities', component: OpportunitiesView, meta: { requiresAuth: true } },
