@@ -16,7 +16,7 @@ function switchToSignUp() {
 <template>
   <div class="row g-0 min-vh-100">
     <!-- banner, only from md up; on phones the form takes the whole screen -->
-    <div id="banner" class="col-md-6 d-none d-md-flex bg-primary text-white rounded-4 p-5">
+    <div id="banner" class="col-md-6 d-none d-md-flex bg-primary text-white p-4 p-lg-5">
       <div style="max-width: 440px">
         <div class="d-flex align-items-center gap-2 mb-4">
           <i class="bi bi-bootstrap-fill fs-1"></i>
@@ -32,8 +32,19 @@ function switchToSignUp() {
         </ul>
       </div>
     </div>
-    <div id="loginPanel" class="col-12 col-md-6 py-4 px-2">
-      <div id="panel">
+    <div
+      id="loginPanel"
+      class="col-12 col-md-6 d-flex flex-column justify-content-center align-items-center px-3 py-4 py-sm-5"
+    >
+      <div id="brandHeader" class="d-flex d-md-none align-items-center gap-2 mb-4">
+        <span
+          class="brand-tile d-flex align-items-center justify-content-center rounded-3 bg-primary text-white"
+        >
+          <i class="bi bi-bootstrap-fill" aria-hidden="true"></i>
+        </span>
+        <span class="fs-3 fw-bold text-primary">TechTrek</span>
+      </div>
+      <div id="panel" class="p-4 p-sm-5 p-md-4 p-lg-5">
         <div id="slider">
           <button class="slider-button btn" :class="{selected : isLogin}" @click="switchToLogin()">Log in</button>
           <button class="slider-button btn" :class="{selected : !isLogin}" @click="switchToSignUp()">Sign up</button>
@@ -46,10 +57,16 @@ function switchToSignUp() {
 </template>
 
 <style lang="scss" scoped>
-#loginPanel, #banner {
+#banner {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.brand-tile {
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
 }
 
 /* the card grows with its form, so the buttons never spill out of it */
@@ -60,7 +77,6 @@ function switchToSignUp() {
   width: 100%;
   max-width: 480px;
   background-color: white;
-  padding: 2.5rem 2rem;
   gap: 2rem;
   border-radius: var(--bs-border-radius);
   box-shadow: 0px 10px 25px 0px rgba(0, 0, 0, 0.15);
