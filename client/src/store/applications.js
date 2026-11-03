@@ -53,14 +53,16 @@ export const useApplicationsStore = defineStore('applications', () => {
   }
 
   async function updateApplicationStatus(id, newStatus) {
-    status.value = null;
-
     const application = applications.value.find((item) => item._id === id);
-    if (!application || application.status === newStatus) {
+    if (!application) {
       status.value = 'Unable to find application.';
       return;
     }
+    if (application.status === newStatus) {
+      return;
+    }
 
+    status.value = null;
     isSaving.value = true;
     try {
       await updateApplicationService(id, { status: newStatus });
