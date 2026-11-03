@@ -29,6 +29,7 @@ async function createUser(userName, password) {
       userName: cleanedUserName,
       password: encryptedPassword,
       displayName: displayNameFromEmail(cleanedUserName),
+      onboarded: false,
     });
     return user;
   } catch (err) {

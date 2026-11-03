@@ -16,7 +16,7 @@ export const useUserStore = defineStore('user', () => {
   const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
   const githubUrl = computed(() => user.value?.githubUrl ?? null);
   const faculty = computed(() => user.value?.faculty ?? null);
-  const onboarded = computed(() => user.value?.onboarded === true);
+  const onboarded = computed(() => user.value?.onboarded !== false);
   const isLoggedIn = computed(() => !!_id.value);
 
   // actions

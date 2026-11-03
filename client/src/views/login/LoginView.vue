@@ -23,7 +23,7 @@ function switchToSignUp() {
 </script>
 
 <template>
-  <div class="row g-0 min-vh-100">
+  <div class="row g-0 h-100">
     <BrandBanner>
       <h2 class="banner-title display-1 text-white mb-4">Every tech opportunity at SMU, in one place.</h2>
       <p class="banner-text mb-4">
