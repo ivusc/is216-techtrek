@@ -1,4 +1,12 @@
-import { WIDTHS, expect, expectNoHorizontalOverflow, screenshot, test } from './fixtures.js';
+import {
+  WIDTHS,
+  expect,
+  expectGutters,
+  expectInside,
+  expectNoHorizontalOverflow,
+  screenshot,
+  test,
+} from './fixtures.js';
 
 const SM = 576;
 const MD = 768;
@@ -74,19 +82,6 @@ async function expectScrollsSideways(scroller) {
   });
   expect(['auto', 'scroll']).toContain(scrolled.overflowX);
   expect(scrolled.scrollLeft).toBeGreaterThan(0);
-}
-
-async function expectInside(inner, outer) {
-  const innerBox = await inner.boundingBox();
-  const outerBox = await outer.boundingBox();
-  expect(innerBox.x).toBeGreaterThanOrEqual(outerBox.x);
-  expect(innerBox.x + innerBox.width).toBeLessThanOrEqual(outerBox.x + outerBox.width + 0.5);
-}
-
-async function expectGutters(dialog, width, gutter) {
-  const box = await dialog.boundingBox();
-  expect(box.x).toBeGreaterThanOrEqual(gutter);
-  expect(width - (box.x + box.width)).toBeGreaterThanOrEqual(gutter);
 }
 
 async function expectFieldsSideBySide(first, second, sideBySide) {

@@ -142,3 +142,124 @@ describe('useApplicationsStore', () => {
     expect(store.applications.map((item) => item._id)).toEqual(['a1', 'a2', 'a3']);
   });
 });
+
+describe('useApplicationsStore offer celebration', () => {
+  const REVIEW = { difficulty: 4, rounds: 'Case study, then a panel', tips: 'Know the product.' };
+
+  function shared(application) {
+    return { ...application, review: { ...REVIEW, createdAt: '2026-11-03T02:00:00.000Z' } };
+  }
+
+  it('celebrates a job that is moved into Offer', async () => {
+    mock.onPatch('/application/a3').reply(200, {});
+    const store = seededStore();
+
+    await store.updateApplicationStatus('a3', 'offer');
+
+    expect(store.celebration.step).toBe('congrats');
+    expect(store.celebration.application._id).toBe('a3');
+    expect(store.celebration.application.status).toBe('offer');
+  });
+
+  it('does not celebrate any other move', async () => {
+    mock.onPatch('/application/a1').reply(200, {});
+    const store = seededStore();
+
+    await store.updateApplicationStatus('a1', 'applied');
+
+    expect(store.celebration).toBeNull();
+  });
+
+  it('does not celebrate an offer whose tips were already shared', async () => {
+    mock.onPatch(/\/application\/.+/).reply(200, {});
+    const store = seededStore();
+    store.applications.push(
+      shared({ ...applications()[2], _id: 'a5', status: 'offer' }),
+      shared({ ...applications()[2], _id: 'a6', status: 'interview' }),
+    );
+
+    await store.updateApplicationStatus('a5', 'offer');
+    await store.updateApplicationStatus('a6', 'offer');
+
+    expect(mock.history.patch.map((request) => request.url)).toEqual(['/application/a6']);
+    expect(store.celebration).toBeNull();
+  });
+
+  it('celebrates when the detail form saves the move into Offer, but not a later edit', async () => {
+    const [, , interview] = applications();
+    mock
+      .onPatch('/application/a3')
+      .replyOnce(200, { ...interview, status: 'offer' })
+      .onPatch('/application/a3')
+      .reply(200, { ...interview, status: 'offer', notes: 'Signed.' });
+    const store = seededStore();
+
+    await store.updateApplication('a3', { status: 'offer' });
+
+    expect(store.celebration).toEqual({
+      application: { ...interview, status: 'offer' },
+      step: 'congrats',
+    });
+
+    store.dismissCelebration();
+    await store.updateApplication('a3', { status: 'offer', notes: 'Signed.' });
+
+    expect(store.celebration).toBeNull();
+  });
+
+  it('celebrates an application added straight into Offer', async () => {
+    const created = { ...applications()[2], _id: 'a5', status: 'offer' };
+    mock.onPost('/application').reply(201, created);
+    const store = seededStore();
+
+    await expect(store.addApplication(created.opportunityId, { status: 'offer' })).resolves.toBe(
+      true,
+    );
+
+    expect(store.applications).toHaveLength(5);
+    expect(store.celebration).toEqual({ application: created, step: 'congrats' });
+  });
+
+  it('opens a new celebration at the congratulations step', async () => {
+    mock.onPatch('/application/a3').reply(200, {});
+    const store = seededStore();
+    store.celebrate(store.applications[0], 'form');
+
+    await store.updateApplicationStatus('a3', 'offer');
+
+    expect(store.celebration.step).toBe('congrats');
+    expect(store.celebration.application._id).toBe('a3');
+  });
+
+  it('submitReview posts the tips, keeps the reviewed copy and closes the celebration', async () => {
+    const [, , interview] = applications();
+    const reviewed = shared({ ...interview, status: 'offer' });
+    mock.onPost('/application/a3/review').reply(201, reviewed);
+    const store = seededStore();
+    store.celebrate(store.applications[2], 'form');
+
+    await store.submitReview('a3', REVIEW);
+
+    expect(JSON.parse(mock.history.post[0].data)).toEqual(REVIEW);
+    expect(store.applications[2]).toEqual(reviewed);
+    expect(store.celebration).toBeNull();
+    expect(store.isSaving).toBe(false);
+  });
+
+  it("submitReview keeps the form open with the server's reason", async () => {
+    mock
+      .onPost('/application/a3/review')
+      .reply(409, { error: 'You already shared tips for this application.' });
+    const store = seededStore();
+    store.celebrate(store.applications[2], 'form');
+
+    await store.submitReview('a3', REVIEW);
+
+    expect(store.status).toBe(
+      'Could not share your tips: You already shared tips for this application.',
+    );
+    expect(store.celebration.step).toBe('form');
+    expect(store.applications[2].review).toBeUndefined();
+    expect(store.isSaving).toBe(false);
+  });
+});

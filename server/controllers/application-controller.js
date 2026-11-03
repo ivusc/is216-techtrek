@@ -106,10 +106,38 @@ async function deleteApplication(req, res) {
   }
 }
 
+async function createReview(req, res) {
+  const { id: applicationId } = req.params;
+  const { difficulty, rounds, tips } = req.body ?? {};
+
+  if (!mongoose.isValidObjectId(applicationId)) {
+    return res.status(400).json({ error: 'Invalid ID' });
+  }
+
+  try {
+    const application = await applicationService.getApplicationById(applicationId, req.session.user._id);
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    if (application.status !== 'offer') {
+      return res.status(409).json({ error: 'Move the application to Offer first.' });
+    }
+    if (application.review) {
+      return res.status(409).json({ error: 'You already shared tips for this application.' });
+    }
+
+    res.status(201).json(await applicationService.addReview(application, { difficulty, rounds, tips }));
+  } catch (err) {
+    handleError(res, err, 'Failed to share the tips');
+  }
+}
+
 module.exports = {
   createApplication,
   getApplications,
   getApplication,
   updateApplication,
   deleteApplication,
+  createReview,
 };

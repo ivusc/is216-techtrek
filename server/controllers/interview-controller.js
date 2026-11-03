@@ -6,19 +6,26 @@ const Opportunity = require('../models/Opportunity');
 const ai = require('../ai/gemini-config');
 const prompt = require('../ai/prompt');
 
+const matchKey = (opportunity) => opportunity.organisation.toLowerCase() + '|' + opportunity.title.toLowerCase()
+
 async function getInterviewDashboard(req, res) {
   try {
     const userId = req.session.user._id
     const applications = await Application.find({ userId: userId })
     const applicationCards = []
     const titles = []
+    const wanted = []
 
     for (const application of applications) {
       const opportunity = await Opportunity.findById(
         application.opportunityId
       )
+      const preparing = opportunity && (opportunity.type === "internship" || opportunity.type === "job") && (application.status === "applied" || application.status === "interview")
+      if (preparing) {
+        wanted.push(matchKey(opportunity))
+      }
       
-    if (opportunity && !titles.includes(opportunity.title) && (opportunity.type === "internship" || opportunity.type === "job") && (application.status === "applied" || application.status === "interview")) {
+    if (preparing && !titles.includes(opportunity.title)) {
         titles.push(opportunity.title)
 
         applicationCards.push({
@@ -87,6 +94,20 @@ async function getInterviewDashboard(req, res) {
       }
     }
 
+    const shared = await Application.find({ userId: { $ne: userId }, review: { $exists: true } })
+      .populate('opportunityId')
+      .sort('-review.createdAt')
+    const seniorTips = shared
+      .filter((application) => application.opportunityId && wanted.includes(matchKey(application.opportunityId)))
+      .map((application) => ({
+        organisation: application.opportunityId.organisation,
+        title: application.opportunityId.title,
+        difficulty: application.review.difficulty,
+        rounds: application.review.rounds,
+        tips: application.review.tips,
+        createdAt: application.review.createdAt,
+      }))
+
     res.json({
       applicationCards,
       interviewAttempts,
@@ -95,6 +116,7 @@ async function getInterviewDashboard(req, res) {
       questionScores,
       highestScore,
       averageScore,
+      seniorTips,
     })
   } catch (error) {
     console.log(error)

@@ -7,5 +7,6 @@ router.get('/', applicationController.getApplications);
 router.get('/:id', applicationController.getApplication);
 router.patch('/:id', applicationController.updateApplication);
 router.delete('/:id', applicationController.deleteApplication);
+router.post('/:id/review', applicationController.createReview);
 
 module.exports = router;

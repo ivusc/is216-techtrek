@@ -418,6 +418,7 @@ describe('GET /interview/dashboard', () => {
       questionScores: {},
       highestScore: 0,
       averageScore: 0,
+      seniorTips: [],
     });
   });
 

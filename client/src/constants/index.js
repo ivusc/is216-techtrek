@@ -31,6 +31,14 @@ export const hackathonResults = [
   { value: 'participated', label: 'Took part', icon: 'bi-check-circle-fill', css: 'bg-success-subtle text-success-emphasis' }
 ]
 
+export const reviewDifficulties = [
+  { value: 1, label: 'Easy' },
+  { value: 2, label: 'Fairly easy' },
+  { value: 3, label: 'Moderate' },
+  { value: 4, label: 'Hard' },
+  { value: 5, label: 'Very hard' }
+]
+
 // SMU schools for onboarding; the code is what gets saved (the server checks it is one of these)
 export const faculties = [
   { code: 'SCIS', name: 'School of Computing and Information Systems' },

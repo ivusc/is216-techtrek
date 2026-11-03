@@ -1,5 +1,6 @@
 import {
   addApplicationService,
+  addReviewService,
   deleteApplicationService,
   fetchAllApplications,
   updateApplicationService,
@@ -12,6 +13,19 @@ export const useApplicationsStore = defineStore('applications', () => {
   const isLoading = ref(false); // first fetch only, the tracker shows a full-page loader for it
   const isSaving = ref(false); // moves, edits and deletes, the page stays on screen
   const status = ref(null);
+  const celebration = ref(null);
+
+  function celebrate(application, step = 'congrats') {
+    celebration.value = { application, step };
+  }
+
+  function dismissCelebration() {
+    celebration.value = null;
+  }
+
+  function reachedOffer(previousStatus, application) {
+    return application.status === 'offer' && previousStatus !== 'offer' && !application.review;
+  }
 
   async function fetchApplications() {
     isLoading.value = true;
@@ -37,7 +51,9 @@ export const useApplicationsStore = defineStore('applications', () => {
     status.value = null;
 
     try {
-      applications.value.push(await addApplicationService(opportunity, details));
+      const created = await addApplicationService(opportunity, details);
+      applications.value.push(created);
+      if (reachedOffer(undefined, created)) celebrate(created);
       return true;
     } catch (error) {
       console.error(error);
@@ -61,9 +77,11 @@ export const useApplicationsStore = defineStore('applications', () => {
 
     status.value = null;
     isSaving.value = true;
+    const previous = application.status;
     try {
       await updateApplicationService(id, { status: newStatus });
       application.status = newStatus;
+      if (reachedOffer(previous, application)) celebrate(application);
     } catch (error) {
       console.error(error);
       status.value = 'There was an error: ' + error.message;
@@ -82,12 +100,31 @@ export const useApplicationsStore = defineStore('applications', () => {
     }
 
     isSaving.value = true;
+    const previous = applications.value[index].status;
     try {
       const updatedApplication = await updateApplicationService(id, changes);
       applications.value[index] = updatedApplication;
+      if (reachedOffer(previous, updatedApplication)) celebrate(updatedApplication);
     } catch (error) {
       console.error(error);
       status.value = 'There was an error: ' + error.message;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  async function submitReview(id, review) {
+    isSaving.value = true;
+    status.value = null;
+
+    try {
+      const reviewed = await addReviewService(id, review);
+      const index = applications.value.findIndex((item) => item._id === id);
+      applications.value[index] = reviewed;
+      dismissCelebration();
+    } catch (error) {
+      console.error(error);
+      status.value = 'Could not share your tips: ' + (error.response?.data?.error ?? error.message);
     } finally {
       isSaving.value = false;
     }
@@ -113,10 +150,14 @@ export const useApplicationsStore = defineStore('applications', () => {
     isLoading,
     isSaving,
     status,
+    celebration,
     fetchApplications,
     addApplication,
     updateApplicationStatus,
     updateApplication,
     deleteApplication,
+    celebrate,
+    dismissCelebration,
+    submitReview,
   };
 });

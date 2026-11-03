@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import './tracker.css';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
@@ -7,6 +7,7 @@ import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
 import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
 import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
 import AddApplicationModal from '@/components/tracker/AddApplicationModal.vue';
+import OfferCelebrationModal from '@/components/tracker/OfferCelebrationModal.vue';
 import { trackerStages, hackathonStages } from '@/constants';
 import { isDueThisWeek, isOverdue, isEventType } from '@/utils/application';
 import { storeToRefs } from 'pinia';
@@ -16,8 +17,16 @@ import PageHeader from '@/components/PageHeader.vue';
 import TrekLoader from '@/components/TrekLoader.vue';
 
 const applicationStore = useApplicationsStore();
-const { applications, status, isLoading, isSaving } = storeToRefs(applicationStore);
-const { fetchApplications, updateApplicationStatus, updateApplication, deleteApplication } = applicationStore;
+const { applications, status, isLoading, isSaving, celebration } = storeToRefs(applicationStore);
+const {
+  fetchApplications,
+  updateApplicationStatus,
+  updateApplication,
+  deleteApplication,
+  celebrate,
+  dismissCelebration,
+  submitReview,
+} = applicationStore;
 
 const search = ref('');
 const viewMode = ref('board'); // 'board' or 'calendar'
@@ -34,6 +43,7 @@ watch(board, () => {
 });
 
 onMounted(fetchApplications);
+onUnmounted(dismissCelebration);
 
 function clearFilters() {
   search.value = '';
@@ -159,6 +169,13 @@ async function deleteSelected() {
   await deleteApplication(selectedApplication.value._id);
   if (!status.value) closeDetails();
 }
+
+function shareTips() {
+  const application = selectedApplication.value;
+  closeDetails();
+  status.value = null;
+  celebrate(application, 'form');
+}
 </script>
 
 <template>
@@ -193,7 +210,13 @@ async function deleteSelected() {
 
       <!-- Details Modal -->
       <ApplicationDetailModal v-if="selectedApplication" :key="selectedApplication._id"
-        :application="selectedApplication" @close="closeDetails" @save="saveDetails" @delete="deleteSelected" />
+        :application="selectedApplication" @close="closeDetails" @save="saveDetails" @delete="deleteSelected"
+        @share-tips="shareTips" />
+
+      <OfferCelebrationModal v-if="celebration" :key="celebration.step" :application="celebration.application"
+        :step="celebration.step" :busy="isSaving" :error="status ?? ''" @close="dismissCelebration"
+        @next="celebrate(celebration.application, 'form')"
+        @submit="(review) => submitReview(celebration.application._id, review)" />
     </div>
   </div>
 </template>

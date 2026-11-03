@@ -9,7 +9,7 @@ const props = defineProps({
 })
 
 // close = X, Cancel, Esc or clicking outside; save = (changes); delete = Delete button
-const emit = defineEmits(['close', 'save', 'delete'])
+const emit = defineEmits(['close', 'save', 'delete', 'share-tips'])
 
 const opportunity = computed(() => props.application.opportunityId)
 
@@ -266,6 +266,15 @@ onMounted(() => dialog.value.focus())
             <RouterLink to="/interview" class="d-inline-block small fw-semibold text-decoration-none mt-2">
               Open Interview Prep →
             </RouterLink>
+          </div>
+
+          <div v-if="application.status === 'offer'" class="d-flex flex-wrap align-items-center gap-2 rounded-3 bg-warning-subtle px-3 py-2 small">
+            <i class="bi bi-chat-left-text text-body-secondary" aria-hidden="true"></i>
+            <span v-if="application.review" class="text-body-secondary">You shared your tips on {{ formatDate(application.review.createdAt) }}</span>
+            <template v-else>
+              <span class="text-body-secondary flex-grow-1">Got the offer? Help the next SMU student.</span>
+              <button class="btn btn-sm btn-primary fw-semibold" type="button" @click="$emit('share-tips')">Share your interview tips</button>
+            </template>
           </div>
 
           <div>

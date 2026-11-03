@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import MockAdapter from 'axios-mock-adapter';
 import serverAPI from '@/services/serverAPI';
 import TrackerView from '@/views/tracker/TrackerView.vue';
+import { useApplicationsStore } from '@/store/applications';
 import { NOW, applications } from '@/__tests__/fixtures/applications';
 
 process.env.TZ = 'Asia/Singapore';
@@ -61,6 +62,24 @@ function addModal(wrapper) {
 
 function detailModal(wrapper) {
   return wrapper.find('[aria-labelledby="application-modal-title"]');
+}
+
+function offerModal(wrapper) {
+  return wrapper.find('[aria-labelledby="offer-modal-title"]');
+}
+
+async function moveDataAnalystToOffer(wrapper) {
+  mock.onPatch('/application/a3').reply(200, { ...applications()[2], status: 'offer' });
+  mock.onPost('/application/a3/review').reply((config) => [
+    201,
+    {
+      ...applications()[2],
+      status: 'offer',
+      review: { ...JSON.parse(config.data), createdAt: NOW },
+    },
+  ]);
+  await button(column(wrapper, 'Interview').find('.dropdown-menu'), 'Offer').trigger('click');
+  await flushPromises();
 }
 
 async function fillAddForm(modal) {
@@ -171,6 +190,51 @@ describe('TrackerView', () => {
     expect(cardTitles(wrapper, 'Applied')).toEqual(['Frontend Intern']);
     expect(cardTitles(wrapper, 'Saved')).toEqual([]);
     expect(detailModal(wrapper).exists()).toBe(false);
+  });
+
+  it('congratulates a move into Offer and shares the tips from there', async () => {
+    const wrapper = await mountTracker();
+
+    await moveDataAnalystToOffer(wrapper);
+
+    expect(offerModal(wrapper).find('h2').text()).toBe('Congratulations on your offer from Grab!');
+    await button(offerModal(wrapper), 'Share your interview tips').trigger('click');
+    expect(offerModal(wrapper).find('h2').text()).toBe('Share your interview tips');
+    await offerModal(wrapper).find('#offer-tips').setValue('Know the product.');
+    await offerModal(wrapper).find('form').trigger('submit');
+    await flushPromises();
+
+    expect(mock.history.post[0].url).toBe('/application/a3/review');
+    expect(JSON.parse(mock.history.post[0].data)).toMatchObject({
+      difficulty: 3,
+      tips: 'Know the product.',
+    });
+    expect(offerModal(wrapper).exists()).toBe(false);
+    await column(wrapper, 'Offer').find('.kanban-card').trigger('click');
+    expect(detailModal(wrapper).text()).toContain('You shared your tips on 3 Nov');
+  });
+
+  it('leaves a way to share tips in the detail modal after Maybe later', async () => {
+    const wrapper = await mountTracker();
+
+    await moveDataAnalystToOffer(wrapper);
+    await button(offerModal(wrapper), 'Maybe later').trigger('click');
+
+    expect(offerModal(wrapper).exists()).toBe(false);
+    await column(wrapper, 'Offer').find('.kanban-card').trigger('click');
+    await button(detailModal(wrapper), 'Share your interview tips').trigger('click');
+
+    expect(detailModal(wrapper).exists()).toBe(false);
+    expect(offerModal(wrapper).find('h2').text()).toBe('Share your interview tips');
+  });
+
+  it('drops an unanswered congratulations when the tracker is left', async () => {
+    const wrapper = await mountTracker();
+    await moveDataAnalystToOffer(wrapper);
+
+    wrapper.unmount();
+
+    expect(useApplicationsStore().celebration).toBeNull();
   });
 
   it('dropping a card on its own column does nothing', async () => {

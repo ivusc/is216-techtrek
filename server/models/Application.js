@@ -22,6 +22,22 @@ const checklistItemSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const reviewSchema = new mongoose.Schema(
+  {
+    difficulty: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+      validate: { validator: Number.isInteger, message: 'difficulty must be a whole number' },
+    },
+    rounds: { type: String, trim: true, maxlength: 300 },
+    tips: { type: String, required: true, trim: true, maxlength: 1000 },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 const applicationSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -35,6 +51,7 @@ const applicationSchema = new mongoose.Schema(
     // left out until the first save from the detail modal, which fills in the default items;
     // no [] default, so a checklist the user emptied stays empty instead of getting the defaults back
     checklist: { type: [checklistItemSchema], default: undefined },
+    review: { type: reviewSchema },
   },
   { timestamps: true },
 );
