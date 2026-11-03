@@ -55,9 +55,14 @@ const loadAll = async (showLoading = true) => {
 
   try {
     teams.value = await fetchTeams()
+    if (!skillFilterReady) {
+      skillFilter.value = matchedSkills.value
+      skillFilterReady = true
+    }
   } catch (error) {
     console.error('Teams load failed:', error)
     teams.value = []
+    status.value = 'Could not load teams: ' + getErrorMessage(error)
   }
 
   try {
@@ -65,6 +70,7 @@ const loadAll = async (showLoading = true) => {
   } catch (error) {
     console.error('My teams load failed:', error)
     myTeams.value = []
+    status.value = 'Could not load teams: ' + getErrorMessage(error)
   }
 
   const suggestable = ledTeams.value.filter((team) => team.status === 'open' && team.skills.length > 0)
@@ -91,15 +97,6 @@ const loadAll = async (showLoading = true) => {
   } catch (error) {
     console.error('Sent requests load failed:', error)
     sent.value = []
-  }
-
-  try {
-    if (!skillFilterReady) {
-      skillFilter.value = matchedSkills.value
-      skillFilterReady = true
-    }
-  } catch (error) {
-    console.error(error)
   }
 
   isLoading.value = false
