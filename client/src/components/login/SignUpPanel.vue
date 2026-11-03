@@ -3,6 +3,7 @@ import '@/views/login/LoginView.css';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
+import PasswordInput from '@/components/PasswordInput.vue';
 
 defineEmits(['switch-to-login']);
 
@@ -99,41 +100,27 @@ async function submitForm() {
       </div>
       <div>
         <label for="signup-password" class="form-label small fw-semibold">Password</label>
-        <div class="position-relative">
-          <i
-            class="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
-            aria-hidden="true"
-          ></i>
-          <input
-            id="signup-password"
-            type="password"
-            class="form-control ps-5"
-            v-model="password"
-            autocomplete="new-password"
-            placeholder="••••••••••"
-            aria-describedby="signup-password-hint"
-          />
-        </div>
+        <PasswordInput
+          id="signup-password"
+          v-model="password"
+          lock-icon
+          autocomplete="new-password"
+          placeholder="••••••••••"
+          aria-describedby="signup-password-hint"
+        />
         <div id="signup-password-hint" class="form-text">
           At least 8 characters with a number, an uppercase letter and a symbol.
         </div>
       </div>
       <div>
         <label for="signup-confirm" class="form-label small fw-semibold">Re-enter password</label>
-        <div class="position-relative">
-          <i
-            class="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
-            aria-hidden="true"
-          ></i>
-          <input
-            id="signup-confirm"
-            type="password"
-            class="form-control ps-5"
-            v-model="reEnteredPassword"
-            autocomplete="new-password"
-            placeholder="••••••••••"
-          />
-        </div>
+        <PasswordInput
+          id="signup-confirm"
+          v-model="reEnteredPassword"
+          lock-icon
+          autocomplete="new-password"
+          placeholder="••••••••••"
+        />
       </div>
       <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
       <button type="submit" class="btn btn-primary fw-semibold">Create account</button>
