@@ -27,16 +27,16 @@ describe('teams identity', () => {
   });
 });
 
-describe('answering join requests', () => {
-  async function pendingRequest() {
-    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
-    const member = await loginAs(app, { userName: 'member@smu.edu.sg' });
-    const created = await leader.post('/teams').send(TEAM).expect(201);
-    await member.post(`/teams/${created.body._id}/requests`).send({ role: 'Designer' }).expect(201);
-    const joinRequest = await TeamRequest.findOne();
-    return { leader, teamId: created.body._id, requestId: String(joinRequest._id) };
-  }
+async function pendingRequest() {
+  const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+  const member = await loginAs(app, { userName: 'member@smu.edu.sg' });
+  const created = await leader.post('/teams').send(TEAM).expect(201);
+  await member.post(`/teams/${created.body._id}/requests`).send({ role: 'Designer' }).expect(201);
+  const joinRequest = await TeamRequest.findOne();
+  return { leader, member, teamId: created.body._id, requestId: String(joinRequest._id) };
+}
 
+describe('answering join requests', () => {
   it('refuses to accept the same request twice', async () => {
     const { leader, teamId, requestId } = await pendingRequest();
 
@@ -65,5 +65,17 @@ describe('answering join requests', () => {
 
     expect(answers.map((answer) => answer.status).sort()).toEqual([200, 409, 409]);
     expect((await Team.findById(teamId)).members).toHaveLength(2);
+  });
+});
+
+describe('listing join requests', () => {
+  it('shows the team on both the sent and the incoming list', async () => {
+    const { leader, member } = await pendingRequest();
+
+    const sent = await member.get('/teams/requests/sent').expect(200);
+    const incoming = await leader.get('/teams/requests/incoming').expect(200);
+
+    expect(sent.body.map((request) => request.team.name)).toEqual(['Byte Me']);
+    expect(incoming.body.map((request) => request.team.name)).toEqual(['Byte Me']);
   });
 });

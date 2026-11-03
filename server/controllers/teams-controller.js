@@ -317,7 +317,7 @@ async function getIncomingRequests(req, res) {
     const teamIds = await Team.find({ leaderId: userId }).distinct('_id');
     const requests = await TeamRequest.find({ teamId: { $in: teamIds } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
-      .populate({ path: 'teamId', select: 'name event' })
+      .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
@@ -331,7 +331,7 @@ async function getSentRequests(req, res) {
   try {
     const requests = await TeamRequest.find({ userId })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
-      .populate({ path: 'teamId', select: 'name event' })
+      .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
