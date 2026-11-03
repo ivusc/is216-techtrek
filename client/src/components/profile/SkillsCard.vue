@@ -8,7 +8,10 @@ const skills = defineModel({ type: Array, required: true });
   <div class="card profile-card p-4 d-flex flex-column gap-3">
     <div>
       <h3 class="mb-1">Skills</h3>
-      <p class="small text-body-tertiary mb-0">Used to match you with teams and recommend roles.</p>
+      <p class="small text-body-tertiary mb-0">
+        Your strengths. Used to match you with teams, and to suggest you to team leaders when Show
+        me in Teammate Finder is on.
+      </p>
     </div>
     <SkillInput v-model="skills" placeholder="Add a skill and press Enter" />
   </div>

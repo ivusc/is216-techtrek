@@ -36,6 +36,11 @@ export async function sendRequest(teamId, request) {
   return response.data;
 }
 
+export async function fetchMatches(teamId) {
+  const response = await serverAPI.get(BASE_URL + '/' + teamId + '/matches');
+  return response.data;
+}
+
 export async function fetchIncomingRequests() {
   const response = await serverAPI.get(BASE_URL + '/requests/incoming');
   return response.data;
