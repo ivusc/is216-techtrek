@@ -548,7 +548,7 @@ async function createInvite(req, res) {
 
     res.status(201).json({ _id: invite._id, status: invite.status, user: friend });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to send invite');
   }
 }
 
@@ -566,7 +566,7 @@ async function getTeamInvites(req, res) {
       .sort('-createdAt');
     res.json(invites.filter((invite) => invite.userId).map(formatInvite));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch invites');
   }
 }
 
@@ -583,7 +583,7 @@ async function getMyInvites(req, res) {
       .sort('-createdAt');
     res.json(invites.filter((invite) => invite.teamId).map(formatInvite));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch invites');
   }
 }
 
@@ -623,7 +623,7 @@ async function respondToInvite(req, res) {
 
     res.json({ _id: answered._id, status: answered.status, team: { _id: team._id, name: team.name } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to answer invite');
   }
 }
 
@@ -640,7 +640,7 @@ async function cancelInvite(req, res) {
     await TeamRequest.deleteOne({ _id: inviteId });
     res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to cancel invite');
   }
 }
 
