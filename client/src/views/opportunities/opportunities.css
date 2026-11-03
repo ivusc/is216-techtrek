@@ -81,6 +81,12 @@
   gap: 12px;
 }
 
+@media (max-width: 575.98px) {
+  .details-info-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .details-info-box {
   display: flex;
   align-items: center;
