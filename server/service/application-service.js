@@ -28,7 +28,7 @@ async function createApplication(userId, opportunity, details) {
     contactName: details.contactName,
   });
 
-  return application;
+  return application.populate('opportunityId');
 }
 
 // userId makes sure people can only see, change or delete their own applications

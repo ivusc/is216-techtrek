@@ -5,6 +5,7 @@ import {
   getLocationGroup,
   getMonthlySalary,
   getPrizeAmount,
+  getPrizeText,
   getUrgentText,
   getPostedText,
   getPlatform
@@ -79,7 +80,7 @@ function openDetails(event) {
         </span>
 
         <span v-if="item.type === 'hackathon' && getPrizeAmount(item) > 0">
-          <i class="bi bi-trophy me-1"></i> {{ item.prize }} prizes
+          <i class="bi bi-trophy me-1"></i> {{ getPrizeText(item) }}
         </span>
         <span v-else-if="getMonthlySalary(item) > 0">
           <i class="bi bi-currency-dollar me-1"></i> S${{ getMonthlySalary(item).toLocaleString() }}/mo

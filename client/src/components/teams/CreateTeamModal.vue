@@ -22,6 +22,7 @@ const MAX_PITCH = 300
 const isEditing = props.team !== null
 
 const memberCount = isEditing ? props.team.members.length : 1
+const fewestSlots = isEditing && props.team.status !== 'draft' ? 0 : 1
 
 const eventChoice = ref('')
 const otherName = ref('')
@@ -43,9 +44,36 @@ if (isEditing) {
   eventChoice.value = startEvent ? getKey(startEvent) : 'other'
 }
 
+function eventFields() {
+  if (eventChoice.value === 'other') {
+    return {
+      opportunityId: null,
+      eventName: otherName.value,
+      eventLocation: otherLocation.value,
+      closesAt: otherCloses.value
+    }
+  }
+  return { opportunity: props.events.find((candidate) => getKey(candidate) === eventChoice.value) }
+}
+
+const savedEventFields = eventFields()
+
+function changedEventFields() {
+  const fields = eventFields()
+  const changed = Object.keys(fields).filter((key) => fields[key] !== savedEventFields[key])
+  if (changed.length === 0) {
+    return {}
+  }
+  const sent = { opportunityId: null }
+  for (const key of changed) {
+    sent[key] = fields[key]
+  }
+  return sent
+}
+
 const name = ref(isEditing ? props.team.name : '')
 const teamSize = ref(isEditing ? props.team.teamSize : 5)
-const openSlots = ref(isEditing ? props.team.slotsOpen : 1)
+const openSlots = ref(isEditing ? Math.max(props.team.slotsOpen, fewestSlots) : 1)
 const pitch = ref(isEditing ? props.team.pitch : '')
 const skills = ref(isEditing ? [...props.team.skills] : [])
 const autoAccept = ref(isEditing ? props.team.autoAccept : false)
@@ -61,7 +89,7 @@ const teamSizeOptions = computed(() => {
 
 const openSlotOptions = computed(() => {
   const options = []
-  for (let slots = isEditing ? 0 : 1; slots <= teamSize.value - memberCount; slots++) {
+  for (let slots = fewestSlots; slots <= teamSize.value - memberCount; slots++) {
     options.push(slots)
   }
   return options
@@ -99,15 +127,7 @@ function submit(status) {
     status: status
   }
 
-  if (eventChoice.value === 'other') {
-    post.opportunityId = null
-    post.eventName = otherName.value
-    post.eventLocation = otherLocation.value
-    post.closesAt = otherCloses.value
-  } else {
-    // the server saves the hackathon (if it is new) and links the team to it
-    post.opportunity = props.events.find((event) => getKey(event) === eventChoice.value)
-  }
+  Object.assign(post, isEditing ? changedEventFields() : eventFields())
 
   emit('submit', post)
 }

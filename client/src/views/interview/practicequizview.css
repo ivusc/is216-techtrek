@@ -6,9 +6,15 @@
 
 .practice-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   align-items: start;
+}
+
+@media (min-width: 992px) {
+  .practice-layout {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
 }
 
 .answer-box {
@@ -71,7 +77,7 @@
     margin-bottom: 15px;
 }
 
-.progress-bar {
+.progress-bar-container .progress-bar {
     height: 15px;
     width: 0%;
     background-color: #0081A7;

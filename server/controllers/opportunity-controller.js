@@ -1,9 +1,6 @@
-const mongoose = require('mongoose');
-const Opportunity = require('../models/Opportunity');
 const opportunityService = require('../service/opportunity-service');
 
 function handleError(res, err, fallback) {
-  if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
   console.error(fallback, err.message);
   res.status(500).json({ error: fallback });
 }
@@ -99,39 +96,9 @@ async function fetchAll(req, res) {
   res.json({ jobs, hackathons });
 }
 
-// POST /opportunity  body: Opportunity fields (source, type, organisation, url, ...)
-async function saveOpportunity(req, res) {
-  const opportunity = req.body;
-
-  if (!opportunity) {
-    return res.status(400).json({ error: 'Opportunity is required' });
-  }
-
-  try {
-    const savedOpportunity = await opportunityService.findOrCreateOpportunity(opportunity);
-
-    res.status(201).json(savedOpportunity);
-  } catch (err) {
-    handleError(res, err, 'Failed to save opportunity.');
-  }
-}
-
-// DELETE /opportunity/:id
-async function deleteOpportunity(req, res) {
-  if (!mongoose.isValidObjectId(req.params.id))
-    return res.status(400).json({ error: 'Invalid ID' });
-
-  const deleted = await Opportunity.findByIdAndDelete(req.params.id);
-  if (!deleted) return res.status(404).json({ error: 'Opportunity not found' });
-
-  res.status(204).end();
-}
-
 module.exports = {
   fetchJobs,
   fetchJobFilterOptions,
   fetchHackathons,
   fetchAll,
-  saveOpportunity,
-  deleteOpportunity,
 };

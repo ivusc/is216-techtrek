@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
@@ -54,7 +55,7 @@ if (usePolling) {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), vueDevTools()],
+  plugins: [vue(), ...(process.env.E2E ? [] : [vueDevTools()])],
   css: {
     preprocessorOptions: {
       scss: {

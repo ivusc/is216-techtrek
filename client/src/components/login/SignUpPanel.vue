@@ -26,7 +26,7 @@ async function submitForm() {
   }
   if (password.value.length < 8) {
     errorMessage.value =
-      'Your password should be at least 8 charcters long with 1 number, uppercase alphabet and symbol.';
+      'Your password should be at least 8 characters long with 1 number, uppercase alphabet and symbol.';
     return;
   }
   const regex1 = /[^a-zA-Z0-9 ]/;

@@ -20,7 +20,7 @@ defineEmits(['details', 'toggle-save', 'find-team'])
 
 <template>
   <!-- list view: one card holding a row per item -->
-  <div v-if="viewMode === 'list'" class="card shadow-sm overflow-hidden" :class="{ 'd-none': items.length === 0 }">
+  <div v-if="viewMode === 'list'" class="card shadow-sm overflow-hidden" style="container: opportunity-list / inline-size" :class="{ 'd-none': items.length === 0 }">
     <OpportunityRow
       v-for="item in items"
       :key="getKey(item)"

@@ -9,6 +9,9 @@ export function toDayKey(date) {
 // turns one application into its calendar events: its deadline and/or its interview
 export function getEventsFor(application) {
   const opportunity = application.opportunityId
+  if (!opportunity) {
+    return []
+  }
   const events = []
 
   const deadline = getApplicationDeadline(application)
@@ -111,7 +114,7 @@ export function buildIcsFile(applications) {
         'DTSTART:' + toIcsDate(start),
         'DTEND:' + toIcsDate(end),
         'SUMMARY:' + escapeIcsText(event.detail + ': ' + opportunity.title),
-        'DESCRIPTION:' + escapeIcsText(opportunity.organisation),
+        'DESCRIPTION:' + escapeIcsText(opportunity.organisation ?? ''),
         'END:VEVENT'
       )
     }

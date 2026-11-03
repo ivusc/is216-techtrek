@@ -72,6 +72,7 @@ const loadAll = async (showLoading = true) => {
   } catch (error) {
     console.error('Teams load failed:', error)
     teams.value = []
+    status.value = 'Could not load teams: ' + getErrorMessage(error)
   }
 
   try {
@@ -79,6 +80,7 @@ const loadAll = async (showLoading = true) => {
   } catch (error) {
     console.error('My teams load failed:', error)
     myTeams.value = []
+    status.value = 'Could not load teams: ' + getErrorMessage(error)
   }
 
   const suggestable = ledTeams.value.filter((team) => team.status === 'open' && team.skills.length > 0)
@@ -431,7 +433,7 @@ onUnmounted(() => {
         <i class="bi bi-people-fill"></i>{{ joinedMessage }}
       </div>
       <div v-if="undoError" class="alert alert-danger py-2" role="alert">{{ undoError }}</div>
-      <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2">
+      <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2" role="alert">
         {{ status }}
         <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="loadAll()">Retry</button>
       </div>

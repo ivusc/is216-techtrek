@@ -228,7 +228,7 @@ function normaliseJob(job) {
 }
 
 function parseDeadline(dates) {
-  const [start, end] = dates.split(' - ');
+  const [start, end] = dates?.split(' - ') ?? [];
   if (!end) return null;
   const endDay = /^\d/.test(end) ? `${start.match(/^\w+/)[0]} ${end}` : end;
   const d = new Date(`${endDay} 23:59:59 UTC`); //set to end of day
@@ -249,7 +249,7 @@ function normaliseHackathon(h) {
     prize: (h.prize_amount ?? h.prizeText ?? '').replace(/<[^>]*>/g, '').trim(), //extract only the price
     themes: (h.themes ?? []).map((t) => t.name),
     url: h.url,
-    thumbnail: h.thumbnail_url?.startsWith('//') ? `https:${h.thumbnail_url}` : h.thumbnail_url,
+    thumbnail: h.thumbnail_url?.replace(/^\/\//, 'https://') ?? null,
     registrations: h.registrations_count,
     featured: h.featured,
   };

@@ -27,12 +27,3 @@ export async function fetchJobFilterOptions() {
   const response = await serverAPI.get(BASE_URL + '/job-filters')
   return response.data
 }
-
-export async function saveOpportunitService(item) {
-  const response = await serverAPI.post(BASE_URL, item)
-  return response.data
-}
-
-export async function deleteOpportunityService(id) {
-  await serverAPI.delete(BASE_URL + '/' + id)
-}

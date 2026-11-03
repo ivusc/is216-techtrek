@@ -6,8 +6,6 @@ const props = defineProps({
   applications: { type: Array, required: true } // only the applications in this stage
 })
 
-console.log(props.applications)
-
 // add = + button or "Add", open = a card was clicked, move = (applicationId, newStatus)
 const emit = defineEmits(['add', 'open', 'move'])
 

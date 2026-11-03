@@ -1,0 +1,131 @@
+{
+  "dashboard": {
+    "applicationCards": [
+      {
+        "applicationId": "6720a1b2c3d4e5f600000001",
+        "title": "Frontend Engineering Intern",
+        "company": "Acme Robotics",
+        "createdAt": "2026-10-20T02:00:00.000Z",
+        "interviewAt": "2026-11-10T06:00:00.000Z",
+        "status": "interview"
+      },
+      {
+        "applicationId": "6720a1b2c3d4e5f600000002",
+        "title": "Data Analyst",
+        "company": "Lion City Analytics",
+        "createdAt": "2026-10-22T02:00:00.000Z",
+        "status": "applied"
+      },
+      {
+        "applicationId": "6720a1b2c3d4e5f600000003",
+        "title": "Backend Developer",
+        "company": "Merlion Systems",
+        "createdAt": "2026-10-25T02:00:00.000Z",
+        "status": "applied"
+      }
+    ],
+    "interviewAttempts": [],
+    "titles": ["Frontend Engineering Intern", "Data Analyst", "Backend Developer"],
+    "allQuestions": [
+      {
+        "questionId": 1,
+        "question": "Tell me about a time you had to explain a technical trade-off to someone without a technical background.",
+        "type": "Behavioural",
+        "difficulty": "Medium",
+        "score": 8,
+        "applicationId": "6720a1b2c3d4e5f600000001",
+        "title": "Frontend Engineering Intern"
+      },
+      {
+        "questionId": 2,
+        "question": "How would you keep a large list of search results responsive while the user types?",
+        "type": "Technical",
+        "difficulty": "Hard",
+        "score": 4,
+        "applicationId": "6720a1b2c3d4e5f600000001",
+        "title": "Frontend Engineering Intern"
+      },
+      {
+        "questionId": 3,
+        "question": "Walk me through how you would clean a dataset where a third of the dates are in the wrong format.",
+        "type": "Case",
+        "difficulty": "Easy",
+        "score": 9,
+        "applicationId": "6720a1b2c3d4e5f600000002",
+        "title": "Data Analyst"
+      },
+      {
+        "questionId": 4,
+        "question": "Design a rate limiter for a public API that serves both students and staff.",
+        "type": "System Design",
+        "difficulty": "Hard",
+        "score": 6,
+        "applicationId": "6720a1b2c3d4e5f600000003",
+        "title": "Backend Developer"
+      }
+    ],
+    "questionScores": {
+      "1": { "highScore": 8 },
+      "2": { "highScore": 4 },
+      "3": { "highScore": 9 },
+      "4": { "highScore": 6 }
+    },
+    "highestScore": 9,
+    "averageScore": "6.8"
+  },
+  "questions": {
+    "questions": [
+      {
+        "questionId": 11,
+        "question": "Why do you want to join Acme Robotics as a frontend intern?",
+        "type": "Behavioural",
+        "difficulty": "Easy"
+      },
+      {
+        "questionId": 12,
+        "question": "Explain the difference between computed properties and watchers in Vue.",
+        "type": "Technical",
+        "difficulty": "Medium"
+      },
+      {
+        "questionId": 13,
+        "question": "Describe a project where you improved the accessibility of an interface.",
+        "type": "Behavioural",
+        "difficulty": "Medium"
+      },
+      {
+        "questionId": 14,
+        "question": "How would you structure the state of a kanban board with drag and drop?",
+        "type": "System Design",
+        "difficulty": "Hard"
+      },
+      {
+        "questionId": 15,
+        "question": "A page renders blank for some users only. How do you investigate?",
+        "type": "Case",
+        "difficulty": "Hard"
+      }
+    ]
+  },
+  "feedback": {
+    "feedback": {
+      "score": 7,
+      "summary": "A clear answer that needs one concrete result.",
+      "overallFeedback": "You described the situation and your actions well, but the impact is not measured.",
+      "structure": 8,
+      "clarity": 7,
+      "relevance": 8,
+      "impact": 5,
+      "strengths": ["Clear situation and task", "Specific actions you took"],
+      "improvements": ["Quantify the result", "Link the answer back to the role"],
+      "sampleAnswer": "In my second-year project I rebuilt the search page, which cut load time from four seconds to one."
+    }
+  },
+  "question": {
+    "questionId": 1,
+    "question": "Tell me about a time you had to explain a technical trade-off to someone without a technical background.",
+    "type": "Behavioural",
+    "difficulty": "Medium",
+    "score": 8
+  }
+}

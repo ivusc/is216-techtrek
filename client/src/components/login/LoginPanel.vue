@@ -37,6 +37,7 @@ async function submitForm() {
       localStorage.setItem('rememberUser', true);
     } else {
       localStorage.removeItem('email');
+      localStorage.removeItem('rememberUser');
     }
     errorMessage.value = '';
     // go back to the page the guard sent us away from, if there was one
