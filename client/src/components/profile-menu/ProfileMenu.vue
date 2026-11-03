@@ -36,9 +36,13 @@ const profileRoutes = [{ label: 'Profile', location: '/profile', icon: 'bi-perso
         :size="36"
         class="bg-tt-peach text-body"
       />
-      <span v-if="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
-        <strong class="small">{{ displayName }}</strong>
-        <span class="small fw-medium">{{ authStore.faculty ?? authStore.username }}</span>
+      <span v-if="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm" style="min-width: 0">
+        <strong class="small text-truncate" :title="displayName">{{ displayName }}</strong>
+        <span
+          class="small fw-medium text-truncate"
+          :title="authStore.faculty ?? authStore.username"
+          >{{ authStore.faculty ?? authStore.username }}</span
+        >
       </span>
     </button>
 

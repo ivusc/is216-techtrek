@@ -34,7 +34,7 @@ const collapsed = ref(window.matchMedia('(max-width: 991.98px)').matches)
     <ul class="nav nav-pills flex-column mb-auto mt-4">
       <li v-show="!collapsed"><span class="nav-item ms-2 text-white fs-6">MENU</span></li>
       <li v-for="route in appRoutes" class="nav-item mt-1 fw-medium" :key="route.location">
-        <RouterLink :to="route.location" :title="collapsed ? route.label : null" :class="['nav-link', { 'text-center px-0': collapsed }, location.path === route.location ? 'bg-body text-primary' : 'text-white']" aria-current="page">
+        <RouterLink :to="route.location" :title="collapsed ? route.label : null" :class="['nav-link', { 'text-center px-0': collapsed }, location.path === route.location ? 'bg-body text-primary' : 'text-white']">
           <i :class="`bi ${route.icon} fs-3`" class="align-middle" :style="{ marginRight: collapsed ? 0 : '.5rem' }"></i>
           <span v-show="!collapsed">{{ route.label }}</span>
         </RouterLink>

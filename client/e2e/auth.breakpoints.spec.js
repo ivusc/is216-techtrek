@@ -1,10 +1,8 @@
-import process from 'node:process';
-import { expect, test } from '@playwright/test';
+import { PHONE, expect, expectNoHorizontalOverflow, screenshot, test } from './fixtures.js';
 
 const MD = 768;
 const SM = 576;
 const GUTTER = 16;
-const PASSWORD = 'Password1!';
 const STATE_TABS = { login: 'Log in', signup: 'Sign up' };
 
 const SIZES = [
@@ -47,15 +45,12 @@ async function smallestInputFontSize(page) {
 }
 
 for (const authCase of CASES) {
-  test(`${authCase.name} lays out the page`, async ({ page }) => {
+  test(`${authCase.name} lays out the page`, async ({ page }, testInfo) => {
     await openAuthPage(page, authCase);
-    await page.screenshot({ path: `e2e/__screenshots__/auth/${authCase.name}.png` });
+    await screenshot(page, testInfo, `auth/${authCase.name}`);
 
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBe(0);
-    await expect(page.locator('#banner')).toBeVisible({ visible: authCase.wide });
+    await expectNoHorizontalOverflow(page);
+    await expect(page.locator('.brand-banner')).toBeVisible({ visible: authCase.wide });
     await expect(page.locator('#brandHeader')).toBeVisible({ visible: !authCase.wide });
 
     const card = await page.locator('#panel').boundingBox();
@@ -95,29 +90,9 @@ for (const authCase of CASES.filter((c) => !c.wide && c.state === 'signup')) {
 }
 
 test.describe('logged in', () => {
-  const userName = `auth.${Date.now()}@smu.edu.sg`;
-
-  test.skip(!process.env.API_URL, 'needs a running API, set API_URL');
-
-  test.beforeAll(async ({ request }) => {
-    const response = await request.post(`${process.env.API_URL}/register`, {
-      data: { userName, password: PASSWORD },
-    });
-    expect(response.status()).toBe(201);
-  });
-
-  test.afterAll(async ({ request }) => {
-    await request.post(`${process.env.API_URL}/login`, { data: { userName, password: PASSWORD } });
-    await request.delete(`${process.env.API_URL}/me`, { data: { password: PASSWORD } });
-  });
-
-  test('pads the page for the tab bar only below md', async ({ page }) => {
-    await page.setViewportSize({ width: 393, height: 851 });
-    await page.goto('/login');
-    await page.locator('input[type="email"]:visible').fill(userName);
-    await page.locator('input[type="password"]:visible').fill(PASSWORD);
-    await page.locator('button[type="submit"]:visible').click();
-    await page.waitForURL('**/home');
+  test('pads the page for the tab bar only below md', async ({ loggedIn: page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto('/home');
 
     await expect(page.locator('main')).toHaveCSS('padding-bottom', '96px');
 

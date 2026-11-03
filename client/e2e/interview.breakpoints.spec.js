@@ -64,8 +64,6 @@ test.describe('interview prep page', () => {
   const firstQuestionId = (stamp % 1e6) * 10;
   let appliedId;
 
-  test.skip(!process.env.API_URL, 'needs a running API, set API_URL');
-
   async function registered(playwright, userName) {
     const api = await playwright.request.newContext({ baseURL: process.env.API_URL });
     const response = await api.post('/register', { data: { userName, password: PASSWORD } });
