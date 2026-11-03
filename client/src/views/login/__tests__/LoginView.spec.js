@@ -60,7 +60,10 @@ describe('LoginView', () => {
   });
 
   it('opens sign up from the link on the log in panel', async () => {
-    await wrapper.find('a[href="#"]').trigger('click');
+    await wrapper
+      .findAll('a')
+      .find((link) => link.text() === 'New to TechTrek? Create an account')
+      .trigger('click');
 
     expect(panels()).toEqual(SIGN_UP_SHOWN);
   });
