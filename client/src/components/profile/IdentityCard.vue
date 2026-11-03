@@ -1,12 +1,15 @@
 <script setup>
-import { computed } from 'vue';
-import { getInitials } from '@/utils/team';
+import { computed, ref } from 'vue';
+import { useUserStore } from '@/store/user';
+import { getErrorMessage } from '@/services/teamService';
+import { toAvatarBlob } from '@/utils/image';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 const displayName = defineModel('displayName', { type: String, required: true });
 const year = defineModel('year', { type: [Number, String], default: '' });
 const course = defineModel('course', { type: String, default: '' });
 
-const props = defineProps({
+defineProps({
   email: { type: String, default: '' },
   openToTeams: { type: Boolean, default: false },
   editing: { type: Boolean, default: false },
@@ -18,7 +21,31 @@ const schoolLine = computed(() =>
   [year.value ? `Year ${year.value}` : '', course.value, 'SMU'].filter(Boolean).join(' · '),
 );
 
-const initials = computed(() => getInitials(displayName.value || props.email));
+const auth = useUserStore();
+const isUploading = ref(false);
+const photoError = ref('');
+const photoLabel = computed(() => (auth.avatarUpdatedAt ? 'Change photo' : 'Add a photo'));
+
+async function updatePhoto(change) {
+  isUploading.value = true;
+  photoError.value = '';
+  try {
+    await change();
+  } catch (error) {
+    photoError.value = getErrorMessage(error);
+  }
+  isUploading.value = false;
+}
+
+function choosePhoto(event) {
+  const [file] = event.target.files;
+  event.target.value = '';
+  if (file) updatePhoto(async () => auth.uploadAvatar(await toAvatarBlob(file)));
+}
+
+function removePhoto() {
+  updatePhoto(() => auth.removeAvatar());
+}
 </script>
 
 <template>
@@ -30,11 +57,41 @@ const initials = computed(() => getInitials(displayName.value || props.email));
     </div>
 
     <div class="d-flex flex-column align-items-center text-center gap-2 px-4 pt-3 pb-4">
-      <span
-        class="identity-avatar h2 mb-0 rounded-circle d-flex align-items-center justify-content-center"
+      <div class="position-relative">
+        <UserAvatar
+          :user-id="auth._id ?? ''"
+          :name="displayName || email"
+          :avatar-updated-at="auth.avatarUpdatedAt"
+          :size="72"
+          class="identity-avatar bg-tt-peach text-body"
+        />
+        <input
+          id="profile-photo"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          class="identity-photo-input visually-hidden"
+          :disabled="isUploading"
+          @change="choosePhoto"
+        />
+        <label
+          for="profile-photo"
+          class="identity-photo-button btn btn-light rounded-circle position-absolute bottom-0 end-0 p-0 d-flex align-items-center justify-content-center"
+          :title="photoLabel"
+        >
+          <i class="bi bi-camera" aria-hidden="true"></i>
+          <span class="visually-hidden">{{ photoLabel }}</span>
+        </label>
+      </div>
+      <p v-if="photoError" class="small text-tt-accent mb-0" role="alert">{{ photoError }}</p>
+      <button
+        v-if="auth.avatarUpdatedAt"
+        type="button"
+        class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
+        :disabled="isUploading"
+        @click="removePhoto"
       >
-        {{ initials }}
-      </span>
+        Remove photo
+      </button>
 
       <template v-if="!editing">
         <h2 class="mb-0 text-break">{{ displayName }}</h2>

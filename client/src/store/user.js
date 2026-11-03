@@ -66,6 +66,14 @@ export const useUserStore = defineStore('user', () => {
     await userService.changePassword(currentPassword, newPassword);
   }
 
+  async function uploadAvatar(blob) {
+    setUser(await userService.uploadAvatar(blob));
+  }
+
+  async function removeAvatar() {
+    setUser(await userService.removeAvatar());
+  }
+
   async function deleteMe(password) {
     await userService.deleteMe(password);
     clearSession();
@@ -90,5 +98,7 @@ export const useUserStore = defineStore('user', () => {
     updateMe,
     changePassword,
     deleteMe,
+    uploadAvatar,
+    removeAvatar,
   };
 });
