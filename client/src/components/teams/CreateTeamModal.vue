@@ -60,8 +60,15 @@ watch(
         otherCloses.value = props.team.closesAt ? props.team.closesAt.slice(0, 10) : ''
       }
     } else {
-      const startEvent = props.events.find((event) => event.title === props.initialEvent) ?? props.events[0]
-      eventChoice.value = startEvent ? getKey(startEvent) : 'other'
+      const startEvent = props.initialEvent
+        ? props.events.find((event) => event.title === props.initialEvent)
+        : props.events[0]
+      if (startEvent) {
+        eventChoice.value = getKey(startEvent)
+      } else {
+        eventChoice.value = 'other'
+        otherName.value = props.initialEvent
+      }
     }
     savedEventFields = eventFields()
   },

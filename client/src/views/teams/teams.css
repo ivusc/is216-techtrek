@@ -53,6 +53,10 @@
   max-width: 220px;
 }
 
+.event-select {
+  max-width: 100%;
+}
+
 .skills-menu {
   min-width: 200px;
   max-height: 260px;
