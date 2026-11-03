@@ -12,7 +12,15 @@ class IllegalArguementError extends Error {
   }
 }
 
+class WrongPasswordError extends Error {
+  constructor(msg) {
+    super(msg);
+    this.name = "WrongPasswordError";
+  }
+}
+
 module.exports = {
   DatabaseError,
-  IllegalArguementError
+  IllegalArguementError,
+  WrongPasswordError
 }

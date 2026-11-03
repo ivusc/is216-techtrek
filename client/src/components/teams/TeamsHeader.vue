@@ -35,13 +35,15 @@ defineEmits(['bell'])
         <span v-if="hasNewRequests" class="position-absolute top-0 end-0 mt-1 me-1 p-1 bg-tt-accent rounded-circle"></span>
       </button>
 
-      <span
+      <RouterLink
         v-if="userName !== ''"
-        class="size-40 rounded-circle d-flex justify-content-center align-items-center fw-semibold small bg-tt-peach"
+        to="/profile"
+        class="size-40 rounded-circle d-flex justify-content-center align-items-center fw-semibold small bg-tt-peach text-body text-decoration-none"
         :title="userName"
+        aria-label="Your profile"
       >
         {{ getInitials(userName) }}
-      </span>
+      </RouterLink>
     </div>
   </div>
 </template>

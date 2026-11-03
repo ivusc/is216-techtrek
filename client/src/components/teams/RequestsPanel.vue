@@ -5,6 +5,7 @@ import {
   getSchoolLine,
   timeAgo
 } from '@/utils/team'
+import { safeHttpUrl } from '@/utils/url'
 import TeamAvatar from './TeamAvatar.vue'
 
 const props = defineProps({
@@ -97,12 +98,12 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
           <template v-if="request.shareProfile">
             <p class="mb-1">
               <i class="bi bi-github me-1"></i>
-              <a v-if="request.user.githubUrl" :href="request.user.githubUrl" target="_blank" rel="noopener">{{ request.user.githubUrl }}</a>
+              <a v-if="safeHttpUrl(request.user.githubUrl)" :href="safeHttpUrl(request.user.githubUrl)" target="_blank" rel="noopener noreferrer">{{ request.user.githubUrl }}</a>
               <span v-else class="text-body-tertiary">No GitHub added</span>
             </p>
             <p class="mb-0">
               <i class="bi bi-linkedin me-1"></i>
-              <a v-if="request.user.linkedinUrl" :href="request.user.linkedinUrl" target="_blank" rel="noopener">{{ request.user.linkedinUrl }}</a>
+              <a v-if="safeHttpUrl(request.user.linkedinUrl)" :href="safeHttpUrl(request.user.linkedinUrl)" target="_blank" rel="noopener noreferrer">{{ request.user.linkedinUrl }}</a>
               <span v-else class="text-body-tertiary">No LinkedIn added</span>
             </p>
           </template>

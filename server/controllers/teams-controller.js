@@ -13,14 +13,6 @@ function hasSkillMatch(userSkills = [], teamSkills = []) {
   return userSkills.some((skill) => wanted.includes(skill.toLowerCase()));
 }
 
-function syncStatus(team) {
-  if (team.status === 'open' && team.slotsOpen === 0) {
-    team.status = 'closed';
-  } else if (team.status === 'closed' && team.slotsOpen > 0) {
-    team.status = 'open';
-  }
-}
-
 function isLeader(team, userId) {
   return String(team.leaderId?._id ?? team.leaderId) === String(userId);
 }
@@ -199,7 +191,7 @@ async function updateTeam(req, res) {
       team.externalMembers = external;
     }
 
-    syncStatus(team);
+    team.syncStatus();
     await team.save();
 
     const updated = await populateTeam(Team.findById(team._id));
@@ -246,7 +238,7 @@ async function createRequest(req, res) {
 
     if (team.autoAccept && hasSkillMatch(user.skills, team.skills)) {
       team.members.push({ userId, role });
-      syncStatus(team);
+      team.syncStatus();
       await team.save();
       request.status = 'accepted';
       await request.save();
@@ -285,7 +277,7 @@ async function respondToRequest(req, res) {
 
     if (status === 'accepted') {
       team.members.push({ userId: answered.userId, role: answered.role });
-      syncStatus(team);
+      team.syncStatus();
       await team.save();
     }
 

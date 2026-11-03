@@ -55,7 +55,7 @@ describe('sessions', () => {
       .send({ userName: 'kellie.jubela@smu.edu.sg', password: PASSWORD })
       .expect(200);
 
-    await first.delete('/me').expect(204);
+    await first.delete('/me').send({ password: PASSWORD }).expect(204);
     await second
       .post('/teams')
       .send({ name: 'Ghosts', eventName: 'Hack', teamSize: 3, openSlots: 1, pitch: 'Boo' })
