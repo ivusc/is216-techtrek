@@ -20,6 +20,11 @@ export const useUserStore = defineStore('user', () => {
     user.value = profile ?? null;
   }
 
+  function clearSession() {
+    setUser(null);
+    hasCheckedSession.value = true;
+  }
+
   // asks the server who is logged in (the session cookie survives a page refresh, the store does not)
   async function fetchMe() {
     try {
@@ -48,7 +53,7 @@ export const useUserStore = defineStore('user', () => {
     } catch (error) {
       console.error(error);
     }
-    setUser(null);
+    clearSession();
   }
 
   async function updateMe(changes) {
@@ -68,6 +73,7 @@ export const useUserStore = defineStore('user', () => {
     login,
     register,
     logout,
+    clearSession,
     updateMe,
   };
 });

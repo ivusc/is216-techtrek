@@ -6,7 +6,11 @@ export async function fetchMe() {
 }
 
 export async function login(userName, password) {
-  const response = await serverAPI.post('/login', { userName, password });
+  const response = await serverAPI.post(
+    '/login',
+    { userName, password },
+    { skipAuthRedirect: true },
+  );
   return response.data.user;
 }
 
