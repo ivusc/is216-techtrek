@@ -17,8 +17,8 @@ const collapsed = ref(false)
 </script>
 
 <template>
-  <!-- sidebar, only from lg up -->
-  <div class="d-none d-lg-flex flex-column vh-100 sticky-top flex-shrink-0 bg-primary text-white p-3" id="sidebar" :style="{ width: collapsed ? '80px' : '260px' }" style="transition: width .2s;">
+  <!-- sidebar, only from md up -->
+  <div class="d-none d-md-flex flex-column vh-100 sticky-top flex-shrink-0 bg-primary text-white p-3" id="sidebar" :style="{ width: collapsed ? '80px' : '260px' }" style="transition: width .2s;">
 
     <div class="d-flex align-items-center justify-content-between" :class="{ 'flex-column gap-2': collapsed }">
       <RouterLink to="/home" class="d-flex align-items-center text-decoration-none">
@@ -45,8 +45,8 @@ const collapsed = ref(false)
 
   </div>
 
-  <!-- bottom tab bar, only below lg -->
-  <nav class="bottom-nav d-flex d-lg-none fixed-bottom bg-white border-top" aria-label="Main menu">
+  <!-- bottom tab bar, only below md -->
+  <nav class="bottom-nav d-flex d-md-none fixed-bottom bg-white border-top" aria-label="Main menu">
     <RouterLink
       v-for="route in appRoutes"
       :key="route.location"
