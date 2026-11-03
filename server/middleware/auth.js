@@ -13,14 +13,4 @@ async function requireLogin(req, res, next) {
   next();
 }
 
-// For routes where the client still sends a userId (teams):
-// the userId must belong to the logged-in user, so nobody can act as someone else
-function requireSameUser(req, res, next) {
-  const sentUserId = req.query.userId ?? req.body?.userId;
-  if (sentUserId && String(sentUserId) !== String(req.session.user._id)) {
-    return res.status(403).json({ error: 'You can only do this for your own account.' });
-  }
-  next();
-}
-
-module.exports = { requireLogin, requireSameUser };
+module.exports = { requireLogin };
