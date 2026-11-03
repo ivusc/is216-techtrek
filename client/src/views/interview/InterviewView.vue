@@ -17,7 +17,6 @@ const highestScore = ref(0);
 const applicationCards = ref([]);
 const titles = ref([]);
 const questions = ref([]);
-const questionScores = ref({});
 const seniorTips = ref([]);
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -30,7 +29,6 @@ const loadData = async () => {
     applicationCards.value = response.data.applicationCards;
     titles.value = response.data.titles;
     questions.value = response.data.allQuestions;
-    questionScores.value = response.data.questionScores;
     averageScore.value = response.data.averageScore;
     highestScore.value = response.data.highestScore;
     seniorTips.value = response.data.seniorTips;
@@ -122,9 +120,6 @@ function shortDate(value) {
   });
 }
 
-function bestScore(question) {
-  return questionScores.value[question.questionId]?.highScore ?? 0;
-}
 </script>
 
 <template>
@@ -354,12 +349,12 @@ function bestScore(question) {
                   <span
                     class="badge rounded-pill fw-medium"
                     :class="
-                      bestScore(question) < 5
+                      question.bestScore < 5
                         ? 'bg-danger-subtle text-tt-accent'
                         : 'bg-info-subtle text-primary'
                     "
                   >
-                    {{ bestScore(question) }} / 10
+                    {{ question.bestScore }} / 10
                   </span>
                   <RouterLink
                     class="btn btn-light btn-sm fw-semibold"

@@ -8,6 +8,29 @@ const prompt = require('../ai/prompt');
 
 const matchKey = (opportunity) => opportunity.organisation.toLowerCase() + '|' + opportunity.title.toLowerCase()
 
+function summariseQuestions(attempts, titleByApplication) {
+  const byId = new Map();
+  for (const attempt of attempts) {
+    for (const asked of attempt.questions) {
+      const seen = byId.get(asked.questionId);
+      if (seen) {
+        seen.bestScore = Math.max(seen.bestScore, asked.score);
+      } else {
+        byId.set(asked.questionId, {
+          questionId: asked.questionId,
+          question: asked.question,
+          type: asked.type,
+          difficulty: asked.difficulty,
+          applicationId: attempt.applicationId,
+          title: titleByApplication.get(String(attempt.applicationId)),
+          bestScore: asked.score,
+        });
+      }
+    }
+  }
+  return [...byId.values()];
+}
+
 async function getInterviewDashboard(req, res) {
   try {
     const userId = req.session.user._id
@@ -39,60 +62,24 @@ async function getInterviewDashboard(req, res) {
       }
     }
 
-    const interviewAttempts = await InterviewAttempt.find({ userId: userId })
-
-    const allQuestions = []
-    let highestScore = 0
-    let averageScore =0
-    const questionScores = {}
+    const interviewAttempts = await InterviewAttempt.find({ userId }).sort({ completedAt: 1, _id: 1 });
+    const titleByApplication = new Map();
+    const preparingAttempts = [];
     for (const attempt of interviewAttempts) {
-      for (const q of attempt.questions) {
-        const application = await Application.findById(attempt.applicationId)
-
-        if (!application || (application.status !== 'applied' && application.status !== 'interview')) {
-          continue
-        }
-        let found = false
-        for (const existingQuestion of allQuestions) {
-          if (existingQuestion.question === q.question) {
-            found = true
-            break
-          }
-        }
-        if (!found) {
-          const data = await getOpportunityFromApplication(attempt.applicationId, userId)
-          // skip questions whose application was deleted
-          if (!data) continue
-          allQuestions.push({
-            questionId: q.questionId,
-            question: q.question,
-            type: q.type,
-            difficulty: q.difficulty,
-            score: q.score,
-            applicationId: attempt.applicationId,
-            title:data.opportunity.title,
-          })
-        }
-        if (!questionScores[q.questionId]) {
-          questionScores[q.questionId] = {
-            highScore: q.score
-          }
-          if (q.score > highestScore) {
-            highestScore = q.score
-          }
-        } else if (q.score > questionScores[q.questionId].highScore) {
-          questionScores[q.questionId].highScore = q.score
-          if (q.score > highestScore) {
-            highestScore = q.score
-          }
-        }
-        let totalHighScore = 0
-        for (const questionId in questionScores) {
-          totalHighScore += questionScores[questionId].highScore
-        }
-        averageScore =Object.keys(questionScores).length > 0? (totalHighScore / Object.keys(questionScores).length).toFixed(1): 0
+      const data = await getOpportunityFromApplication(attempt.applicationId, userId);
+      if (!data || (data.application.status !== 'applied' && data.application.status !== 'interview')) {
+        continue;
       }
+      titleByApplication.set(String(attempt.applicationId), data.opportunity.title);
+      preparingAttempts.push(attempt);
     }
+    const allQuestions = summariseQuestions(preparingAttempts, titleByApplication);
+    const highestScore = Math.max(0, ...allQuestions.map((question) => question.bestScore));
+    const averageScore = allQuestions.length
+      ? (
+          allQuestions.reduce((sum, question) => sum + question.bestScore, 0) / allQuestions.length
+        ).toFixed(1)
+      : 0;
 
     const shared = await Application.find({ userId: { $ne: userId }, review: { $exists: true } })
       .populate('opportunityId')
@@ -110,10 +97,8 @@ async function getInterviewDashboard(req, res) {
 
     res.json({
       applicationCards,
-      interviewAttempts,
       titles,
       allQuestions,
-      questionScores,
       highestScore,
       averageScore,
       seniorTips,
@@ -171,8 +156,10 @@ async function getQuestion(req, res) {
         error: 'Question not found'
       })
     }
-    const question = interviewAttempt.questions.find((q) => q.questionId === questionId);
-    res.json(question)
+    const { question, type, difficulty } = interviewAttempt.questions.find(
+      (asked) => asked.questionId === questionId,
+    );
+    res.json({ questionId, question, type, difficulty });
   } catch (error) {
     console.log(error)
 
