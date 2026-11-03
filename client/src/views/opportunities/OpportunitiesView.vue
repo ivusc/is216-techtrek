@@ -273,7 +273,7 @@ const loadMore = async () => {
       <small v-if="lastUpdated !== ''"> · updated {{ lastUpdated }}</small>
     </p>
 
-    <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2">
+    <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2" role="alert">
       {{ status }}
       <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="opportunityStore.fetchOpportunities">Retry</button>
     </div>
