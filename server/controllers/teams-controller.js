@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
 const { cleanSkills } = require('../service/skills');
 const opportunityService = require('../service/opportunity-service');
+const applicationService = require('../service/application-service');
 
 const PROFILE_FIELDS = 'userName displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
@@ -178,6 +179,11 @@ async function createTeam(req, res) {
       status: data.status === 'draft' ? 'draft' : 'open',
     });
 
+    // the leader's tracker card for this hackathon moves to "Team formed"
+    if (team.status !== 'draft') {
+      await applicationService.markTeamFormed(userId, eventData.opportunityId);
+    }
+
     const populated = await populateTeam(Team.findById(team._id));
     res.status(201).json(formatTeam(populated, userId));
   } catch (err) {
@@ -257,6 +263,7 @@ async function createRequest(req, res) {
       team.members.push({ userId, role });
       team.syncStatus();
       await team.save();
+      await applicationService.markTeamFormed(userId, team.event?.opportunityId);
       request.status = 'accepted';
       await request.save();
     }
@@ -296,6 +303,7 @@ async function respondToRequest(req, res) {
       team.members.push({ userId: answered.userId, role: answered.role });
       team.syncStatus();
       await team.save();
+      await applicationService.markTeamFormed(answered.userId, team.event?.opportunityId);
     }
 
     res.json({ _id: answered._id, status: answered.status });
@@ -526,6 +534,7 @@ async function respondToInvite(req, res) {
       team.members.push({ userId, role: answered.role });
       team.syncStatus();
       await team.save();
+      await applicationService.markTeamFormed(userId, team.event?.opportunityId);
     }
 
     res.json({ _id: answered._id, status: answered.status, team: { _id: team._id, name: team.name } });

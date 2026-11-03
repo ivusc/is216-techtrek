@@ -126,6 +126,11 @@ $nav-underline-link-active-color: $tt-primary;
   --tt-status-interview: #e8995a;
   --tt-status-offer:     #{$tt-secondary};
   --tt-status-rejected:  #{$tt-accent};
+  // hackathon steps
+  --tt-status-registered: #{$tt-primary};
+  --tt-status-team:       #8a6fd1;
+  --tt-status-submitted:  #e8995a;
+  --tt-status-results:    #{$tt-secondary};
 }
 
 // ─── 4. Component rules the Sass variables can't express ─────────────────

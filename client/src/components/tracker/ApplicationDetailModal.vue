@@ -1,8 +1,8 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { formatDate, toDateTimeInputValue } from '@/utils/date'
-import { typeBadge, trackerStages } from '@/constants'
-import { getApplicationDeadline } from '@/utils/application'
+import { typeBadge, hackathonResults } from '@/constants'
+import { getApplicationDeadline, stagesFor } from '@/utils/application'
 
 const props = defineProps({
   application: { type: Object, required: true } // one item from GET /application (opportunityId is populated)
@@ -13,9 +13,13 @@ const emit = defineEmits(['close', 'save', 'delete'])
 
 const opportunity = computed(() => props.application.opportunityId)
 
+// a job's steps or a hackathon's steps, never both
+const stageOptions = computed(() => stagesFor(opportunity.value.type))
+
 // the form edits a copy, so Cancel leaves the card unchanged
 const form = reactive({
   status: props.application.status,
+  result: props.application.result ?? '',
   notes: props.application.notes ?? '',
   interviewAt: toDateTimeInputValue(props.application.interviewAt),
   // same deadline the card shows: the application's own, else the listing's
@@ -85,8 +89,8 @@ function deleteStep(item) {
 const activity = computed(() => {
   const steps = [{ status: 'saved', label: 'Saved', date: props.application.createdAt }]
   if (props.application.status !== 'saved') {
-    const stage = trackerStages.find((item) => item.status === props.application.status)
-    steps.push({ status: stage.status, label: stage.label, date: props.application.updatedAt })
+    const stage = stageOptions.value.find((item) => item.status === props.application.status)
+    if (stage) steps.push({ status: stage.status, label: stage.label, date: props.application.updatedAt })
   }
   return steps
 })
@@ -94,6 +98,8 @@ const activity = computed(() => {
 function save() {
   emit('save', {
     status: form.status,
+    // only a finished hackathon has a result
+    result: form.status === 'results' && form.result ? form.result : null,
     notes: form.notes,
     // empty input = clear the date
     checklist: checklist.value.map((item) => ({ label: item.label, done: item.done })),
@@ -157,14 +163,22 @@ onMounted(() => dialog.value.focus())
                 class="form-select field-lg"
                 :style="{ color: `var(--tt-status-${form.status})` }"
               >
-                <option v-for="stage in trackerStages" :key="stage.status" :value="stage.status">●&nbsp;&nbsp;{{ stage.label }}</option>
+                <option v-for="stage in stageOptions" :key="stage.status" :value="stage.status">●&nbsp;&nbsp;{{ stage.label }}</option>
+              </select>
+            </div>
+            <!-- a finished hackathon: how did it go? -->
+            <div v-if="form.status === 'results'" class="col-sm-6">
+              <label for="application-result" class="form-label small fw-semibold mb-1">How did it go?</label>
+              <select id="application-result" v-model="form.result" class="form-select field-lg">
+                <option value="">Not decided yet</option>
+                <option v-for="option in hackathonResults" :key="option.value" :value="option.value">{{ option.label }}</option>
               </select>
             </div>
             <div v-if="form.status === 'interview'" class="col-sm-6">
               <label for="application-interview" class="form-label small fw-semibold mb-1">Interview date</label>
               <input id="application-interview" v-model="form.interviewAt" type="datetime-local" class="form-control field-lg">
             </div>
-            <div v-else class="col-sm-6">
+            <div v-else-if="form.status !== 'results'" class="col-sm-6">
               <label for="application-deadline" class="form-label small fw-semibold mb-1">Deadline</label>
               <input id="application-deadline" v-model="form.deadline" type="date" class="form-control field-lg">
             </div>

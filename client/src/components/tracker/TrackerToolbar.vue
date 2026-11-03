@@ -3,24 +3,38 @@ import { computed, ref } from 'vue'
 
 const props = defineProps({
   total: { type: Number, required: true }, // applications shown on the board
-  dueThisWeek: { type: Number, required: true }
+  dueThisWeek: { type: Number, required: true },
+  boardCounts: { type: Object, default: () => ({ jobs: 0, hackathons: 0 }) }
 })
 
 const viewMode = defineModel('viewMode', { type: String, required: true })
 const typeFilter = defineModel('type', { type: String, required: true })
 const deadlineFilter = defineModel('deadline', { type: String, required: true })
 const hideRejected = defineModel('hideRejected', { type: Boolean, required: true })
+// 'jobs' or 'hackathons': which kanban board is shown
+const board = defineModel('board', { type: String, default: 'jobs' })
 
 defineEmits(['add', 'clear'])
 
-// value '' = no filter
-const typeOptions = [
+// value '' = no filter; on a board only that board's types make sense, the calendar shows all of them
+const allTypeOptions = [
   { value: '', label: 'All' },
-  { value: 'job', label: 'Job' },
-  { value: 'internship', label: 'Internship' },
-  { value: 'hackathon', label: 'Hackathon' },
-  { value: 'competition', label: 'Competition' }
+  { value: 'job', label: 'Job', board: 'jobs' },
+  { value: 'internship', label: 'Internship', board: 'jobs' },
+  { value: 'hackathon', label: 'Hackathon', board: 'hackathons' },
+  { value: 'competition', label: 'Competition', board: 'hackathons' }
 ]
+const typeOptions = computed(() => {
+  if (viewMode.value !== 'board') return allTypeOptions
+  return allTypeOptions.filter((option) => option.value === '' || option.board === board.value)
+})
+
+const boardOptions = [
+  { value: 'jobs', label: 'Jobs & internships', short: 'Jobs', icon: 'bi-briefcase' },
+  { value: 'hackathons', label: 'Hackathons & competitions', short: 'Hackathons', icon: 'bi-trophy' }
+]
+// "Hide rejected" only means something on the jobs board
+const showHideRejected = computed(() => viewMode.value !== 'board' || board.value === 'jobs')
 
 const deadlineOptions = [
   { value: '', label: 'Any deadline' },
@@ -44,7 +58,8 @@ const activeFilterCount = computed(() => {
 })
 
 const summary = computed(() => {
-  const noun = props.total === 1 ? 'application' : 'applications'
+  const isEvents = viewMode.value === 'board' && board.value === 'hackathons'
+  const noun = isEvents ? (props.total === 1 ? 'event' : 'events') : props.total === 1 ? 'application' : 'applications'
   return props.total + ' ' + noun + ' · ' + props.dueThisWeek + ' due this week'
 })
 </script>
@@ -66,6 +81,24 @@ const summary = computed(() => {
         @click="viewMode = 'calendar'"
       >
         <i class="bi bi-calendar me-1"></i> Calendar
+      </button>
+    </div>
+
+    <!-- which board: jobs and hackathons have different steps, so they get their own columns -->
+    <div v-if="viewMode === 'board'" class="btn-group bg-body-secondary rounded p-1" role="tablist" aria-label="Board">
+      <button
+        v-for="option in boardOptions"
+        :key="option.value"
+        class="btn btn-sm border-0 rounded-1 d-flex align-items-center gap-1"
+        :class="board === option.value ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
+        role="tab"
+        :aria-selected="board === option.value"
+        @click="board = option.value"
+      >
+        <i :class="'bi ' + option.icon"></i>
+        <span class="d-none d-xl-inline">{{ option.label }}</span>
+        <span class="d-xl-none">{{ option.short }}</span>
+        <span class="badge rounded-pill bg-body-secondary text-body-secondary fw-medium">{{ boardCounts[option.value] }}</span>
       </button>
     </div>
 
@@ -111,6 +144,7 @@ const summary = computed(() => {
       </select>
 
       <button
+        v-if="showHideRejected"
         class="btn btn-sm rounded-pill"
         :class="hideRejected ? 'btn-light border-primary' : 'bg-white border'"
         type="button"
@@ -126,7 +160,7 @@ const summary = computed(() => {
     <span class="small fw-medium text-body-tertiary ms-auto">{{ summary }}</span>
 
     <button class="btn btn-tt-accent fw-semibold btn-cta" type="button" @click="$emit('add')">
-      <i class="bi bi-plus-lg me-2"></i>Add application
+      <i class="bi bi-plus-lg me-2"></i>{{ viewMode === 'board' && board === 'hackathons' ? 'Add event' : 'Add application' }}
     </button>
   </div>
 </template>

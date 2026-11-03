@@ -1,6 +1,17 @@
 const mongoose = require('mongoose');
 
-const STATUS_TYPES = ['saved', 'applied', 'interview', 'offer', 'rejected'];
+// jobs and internships move through job steps; hackathons and competitions have their own steps
+const JOB_STATUSES = ['saved', 'applied', 'interview', 'offer', 'rejected'];
+const EVENT_STATUSES = ['saved', 'registered', 'team', 'submitted', 'results'];
+const EVENT_TYPES = ['hackathon', 'competition'];
+const STATUS_TYPES = [...new Set([...JOB_STATUSES, ...EVENT_STATUSES])];
+// how a finished hackathon went (only for status 'results')
+const RESULT_TYPES = ['won', 'finalist', 'participated'];
+
+// the steps allowed for an opportunity type, e.g. statusesFor('hackathon')
+function statusesFor(type) {
+  return EVENT_TYPES.includes(type) ? EVENT_STATUSES : JOB_STATUSES;
+}
 
 // one tick box in the tracker's "Prep checklist"
 const checklistItemSchema = new mongoose.Schema(
@@ -16,6 +27,7 @@ const applicationSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     opportunityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Opportunity', required: true },
     status: { type: String, enum: STATUS_TYPES, required: true, default: 'saved' },
+    result: { type: String, enum: RESULT_TYPES },
     notes: { type: String, trim: true, maxlength: 2000 },
     deadline: { type: Date },
     interviewAt: { type: Date },
@@ -30,3 +42,8 @@ const applicationSchema = new mongoose.Schema(
 applicationSchema.index({ userId: 1, opportunityId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Application', applicationSchema);
+module.exports.JOB_STATUSES = JOB_STATUSES;
+module.exports.EVENT_STATUSES = EVENT_STATUSES;
+module.exports.EVENT_TYPES = EVENT_TYPES;
+module.exports.RESULT_TYPES = RESULT_TYPES;
+module.exports.statusesFor = statusesFor;

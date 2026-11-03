@@ -12,8 +12,8 @@ import { useApplicationsStore } from '@/store/applications'
 import { useOpportunityStore } from '@/store/opportunity'
 import { fetchIncomingRequests, answerRequest, getErrorMessage } from '@/services/teamService'
 import serverAPI from '@/services/serverAPI'
-import { trackerStages, typeBadge } from '@/constants'
-import { getApplicationDeadline, isDueThisWeek } from '@/utils/application'
+import { typeBadge } from '@/constants'
+import { getApplicationDeadline, isDueThisWeek, getStageLabel } from '@/utils/application'
 import { getDaysLeft, isClosed } from '@/utils/opportunity'
 import { formatDate } from '@/utils/date'
 import { getDisplayName, getInitials, getAvatarStyle } from '@/utils/team'
@@ -136,18 +136,13 @@ const stats = computed(() => {
 
 // --- upcoming deadlines ---
 
-const statusLabels = {}
-for (const stage of trackerStages) {
-  statusLabels[stage.status] = stage.label
-}
-
-// tracked applications with a deadline from today onwards, soonest first (rejected ones are left out)
+// tracked applications with a deadline from today onwards, soonest first (rejected and finished ones are left out)
 const upcomingDeadlines = computed(() => {
   const list = []
   for (const application of applications.value) {
     const deadline = getApplicationDeadline(application)
     const daysLeft = getDaysLeft({ deadline })
-    if (deadline && daysLeft >= 0 && application.status !== 'rejected') {
+    if (deadline && daysLeft >= 0 && application.status !== 'rejected' && application.status !== 'results') {
       list.push({ application, deadline, daysLeft })
     }
   }
@@ -303,7 +298,7 @@ async function respond(request, status) {
             </div>
             <span class="status-pill badge rounded-pill bg-body-secondary text-body fw-medium d-none d-sm-inline-flex align-items-center gap-1">
               <span class="status-dot-home rounded-circle" :style="{ backgroundColor: `var(--tt-status-${entry.application.status})` }"></span>
-              {{ statusLabels[entry.application.status] }}
+              {{ getStageLabel(entry.application.status) }}
             </span>
             <span class="days-left small text-end flex-shrink-0" :class="entry.daysLeft <= 7 ? 'text-tt-accent fw-semibold' : 'text-body-secondary'">
               {{ daysLeftText(entry.daysLeft) }}
