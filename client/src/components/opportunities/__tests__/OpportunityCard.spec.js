@@ -40,6 +40,18 @@ describe('OpportunityCard', () => {
     expect(estimated.text()).toContain('est.');
   });
 
+  it.each([
+    ['$2,000 in prizes', '$2,000 in prizes'],
+    ['Over $1,000 in Prizes', 'Over $1,000 in Prizes'],
+    ['$5,000 Prize pool', '$5,000 Prize pool'],
+    ['$500 grand prize', '$500 grand prize'],
+    ['$5,000', '$5,000 prizes'],
+  ])('says prizes once for a prize of %s', (prize, shown) => {
+    const card = mountCard({ ...HACKATHONS[0], prize });
+
+    expect(card.find('.bi-trophy').element.parentElement.textContent.trim()).toBe(shown);
+  });
+
   it('labels the Track button by saved state and emits toggle-save', async () => {
     const card = mountCard(jobs(1)[0]);
 

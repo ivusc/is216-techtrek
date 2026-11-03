@@ -8,6 +8,7 @@ import {
   getPlatform,
   getPostedText,
   getPrizeAmount,
+  getPrizeText,
   getUrgentText,
   isClosed,
   isPaid,
@@ -72,6 +73,19 @@ describe('getPrizeAmount', () => {
     [undefined, 0],
   ])('%j is worth %j', (prize, amount) => {
     expect(getPrizeAmount({ prize })).toBe(amount);
+  });
+});
+
+describe('getPrizeText', () => {
+  it.each([
+    ['$10,000 in prizes', '$10,000 in prizes'],
+    ['Over $1,000 in Prizes', 'Over $1,000 in Prizes'],
+    ['$5,000 Prize pool', '$5,000 Prize pool'],
+    ['$500 grand prize', '$500 grand prize'],
+    ['$5,000', '$5,000 prizes'],
+    ['Enterprize Cup: $300', 'Enterprize Cup: $300 prizes'],
+  ])('%j reads %j', (prize, text) => {
+    expect(getPrizeText({ prize })).toBe(text);
   });
 });
 
