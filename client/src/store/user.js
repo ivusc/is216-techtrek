@@ -11,6 +11,7 @@ export const useUserStore = defineStore('user', () => {
   const _id = computed(() => user.value?._id ?? null);
   const username = computed(() => user.value?.userName ?? null);
   const displayName = computed(() => user.value?.displayName ?? null);
+  const avatarUpdatedAt = computed(() => user.value?.avatar?.updatedAt ?? '');
   const skills = computed(() => user.value?.skills ?? []);
   const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
   const githubUrl = computed(() => user.value?.githubUrl ?? null);
@@ -74,6 +75,7 @@ export const useUserStore = defineStore('user', () => {
     user,
     username,
     displayName,
+    avatarUpdatedAt,
     _id,
     skills,
     linkedinUrl,

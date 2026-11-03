@@ -51,16 +51,6 @@
   background-color: var(--bs-danger-bg-subtle);
 }
 
-.profile-avatar {
-  width: 36px;
-  height: 36px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bs-body-color);
-  background-color: var(--tt-peach);
-  border: 2px solid var(--bs-tertiary-bg);
-}
-
 /* Bootstrap toggles display, so transitions can't run; animate on .show instead.
    Uses `translate` (not `transform`) so it doesn't fight Popper's inline transform. */
 .profile-menu.show {

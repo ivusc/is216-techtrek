@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import './profile-menu.css';
 import { useUserStore } from '@/store/user';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 defineProps({ collapsed: { type: Boolean, default: false } });
 
@@ -10,7 +11,6 @@ const router = useRouter();
 const authStore = useUserStore();
 
 const displayName = computed(() => authStore.displayName ?? '');
-const initial = computed(() => displayName.value.charAt(0).toUpperCase() || '?');
 
 async function signOut() {
   await authStore.logout();
@@ -29,10 +29,13 @@ const profileRoutes = [{ label: 'Profile', location: '/profile', icon: 'bi-perso
       aria-expanded="false"
       :aria-label="collapsed ? 'Open profile menu' : null"
     >
-      <span
-        class="profile-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-        >{{ initial }}</span
-      >
+      <UserAvatar
+        :user-id="authStore._id ?? ''"
+        :name="displayName"
+        :avatar-updated-at="authStore.avatarUpdatedAt"
+        :size="36"
+        class="bg-tt-peach text-body"
+      />
       <span v-if="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
         <strong class="small">{{ displayName }}</strong>
         <span class="small fw-medium">{{ authStore.username }}</span>
