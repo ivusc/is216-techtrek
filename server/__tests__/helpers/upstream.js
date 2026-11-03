@@ -24,8 +24,8 @@ export function stubAdzuna({ results, count = results.length }) {
   return reply(process.env.JOB_API_URL, async () => ({ data: { count, results } }));
 }
 
-export function stubDevpost({ hackathons }) {
-  return reply(process.env.HACKATHONS_API_URL, async () => ({ data: { hackathons } }));
+export function stubDevpost({ hackathons, meta }) {
+  return reply(process.env.HACKATHONS_API_URL, async () => ({ data: { hackathons, meta } }));
 }
 
 export function failAdzuna() {

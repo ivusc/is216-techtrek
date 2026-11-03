@@ -7,9 +7,9 @@ import { NOW } from '@/__tests__/fixtures/applications';
 beforeEach(() => vi.setSystemTime(NOW));
 afterEach(() => vi.useRealTimers());
 
-function mountCard(item, saved = false) {
+function mountCard(item, saved = false, teamCount = 0) {
   return mount(OpportunityCard, {
-    props: { item, saved },
+    props: { item, saved, teamCount },
     global: { stubs: { RouterLink: true } },
   });
 }
@@ -19,7 +19,7 @@ function button(wrapper, text) {
 }
 
 describe('OpportunityCard', () => {
-  it('shows urgency, platform, pay and the find-team link only for hackathons', () => {
+  it('shows urgency, platform, pay and the Find team button only for hackathons', () => {
     const hackathon = mountCard(HACKATHONS[0]);
     const [internship, estimated] = jobs(2).map((job) => mountCard(job));
 
@@ -27,14 +27,14 @@ describe('OpportunityCard', () => {
     expect(hackathon.text()).toContain('Register by');
     expect(hackathon.text()).toContain('$2,000 in prizes');
     expect(hackathon.text()).toContain('via Devpost');
-    expect(hackathon.find('router-link-stub[to="/teams"]').exists()).toBe(true);
+    expect(button(hackathon, 'Find team').attributes('aria-label')).toBe('Find team');
 
     expect(internship.text()).toContain('Posted today');
     expect(internship.text()).toContain('S$2,000/mo');
     expect(internship.text()).toContain('via Adzuna');
     expect(internship.text()).not.toContain('days left');
     expect(internship.text()).not.toContain('est.');
-    expect(internship.find('router-link-stub').exists()).toBe(false);
+    expect(button(internship, 'Find team')).toBeUndefined();
 
     expect(estimated.text()).toContain('S$4,100/mo');
     expect(estimated.text()).toContain('est.');
@@ -64,12 +64,30 @@ describe('OpportunityCard', () => {
     expect(button(card, 'Track').text()).toBe('Tracked');
   });
 
-  it('emits details from the title and the Details button', async () => {
+  it('opens details from anywhere on the card, the Details button and Enter, but not from Track', async () => {
     const card = mountCard(jobs(1)[0]);
 
-    await card.find('[role="button"]').trigger('click');
+    await card.find('.opp-title').trigger('click');
     await button(card, 'Details').trigger('click');
+    await card.find('.opp-card').trigger('keydown', { key: 'Enter' });
+    await button(card, 'Track').trigger('click');
 
-    expect(card.emitted('details')).toHaveLength(2);
+    expect(card.emitted('details')).toHaveLength(3);
+    expect(card.find('.opp-card').attributes('aria-label')).toBe(
+      'Open details for Frontend Intern',
+    );
+  });
+
+  it('counts the open teams on Find team and emits find-team', async () => {
+    const card = mountCard(HACKATHONS[0], false, 2);
+    const findTeam = button(card, 'Find team');
+
+    expect(findTeam.text()).toBe('Find team 2');
+    expect(findTeam.attributes('aria-label')).toBe('Find team, 2 open');
+
+    await findTeam.trigger('click');
+
+    expect(card.emitted('find-team')).toHaveLength(1);
+    expect(card.emitted('details')).toBeUndefined();
   });
 });
