@@ -12,11 +12,6 @@ export async function fetchMyTeams() {
   return response.data;
 }
 
-export async function fetchEvents() {
-  const response = await serverAPI.get(BASE_URL + '/events');
-  return response.data;
-}
-
 export async function createTeam(team) {
   const response = await serverAPI.post(BASE_URL, team);
   return response.data;

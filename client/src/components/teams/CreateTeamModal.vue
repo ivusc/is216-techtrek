@@ -8,6 +8,8 @@ import { getKey } from '@/utils/opportunity'
 // events: open hackathons from the Devpost list (they have no database _id yet, so they are picked by getKey)
 const props = defineProps({
   events: { type: Array, required: true },
+  eventsLoading: { type: Boolean, default: false },
+  eventsError: { type: Boolean, default: false },
   // the hackathon title to start with, e.g. when "Start a team" is pressed on a hackathon
   initialEvent: { type: String, default: '' },
   team: { type: Object, default: null },
@@ -29,21 +31,6 @@ const otherName = ref('')
 const otherLocation = ref('')
 const otherCloses = ref('')
 
-if (isEditing) {
-  const savedEvent = props.events.find((event) => event.title === props.team.event.name)
-  if (savedEvent) {
-    eventChoice.value = getKey(savedEvent)
-  } else {
-    eventChoice.value = 'other'
-    otherName.value = props.team.event.name
-    otherLocation.value = props.team.event.location ?? ''
-    otherCloses.value = props.team.closesAt ? props.team.closesAt.slice(0, 10) : ''
-  }
-} else {
-  const startEvent = props.events.find((event) => event.title === props.initialEvent) ?? props.events[0]
-  eventChoice.value = startEvent ? getKey(startEvent) : 'other'
-}
-
 function eventFields() {
   if (eventChoice.value === 'other') {
     return {
@@ -56,7 +43,30 @@ function eventFields() {
   return { opportunity: props.events.find((candidate) => getKey(candidate) === eventChoice.value) }
 }
 
-const savedEventFields = eventFields()
+let savedEventFields
+
+watch(
+  () => props.eventsLoading,
+  (loading) => {
+    if (loading) return
+    if (isEditing) {
+      const savedEvent = props.events.find((event) => event.title === props.team.event.name)
+      if (savedEvent) {
+        eventChoice.value = getKey(savedEvent)
+      } else {
+        eventChoice.value = 'other'
+        otherName.value = props.team.event.name
+        otherLocation.value = props.team.event.location ?? ''
+        otherCloses.value = props.team.closesAt ? props.team.closesAt.slice(0, 10) : ''
+      }
+    } else {
+      const startEvent = props.events.find((event) => event.title === props.initialEvent) ?? props.events[0]
+      eventChoice.value = startEvent ? getKey(startEvent) : 'other'
+    }
+    savedEventFields = eventFields()
+  },
+  { immediate: true }
+)
 
 function changedEventFields() {
   const fields = eventFields()
@@ -146,12 +156,18 @@ const showDelete = isEditing && props.team.status !== 'draft'
 
     <div class="mb-3">
       <label class="small fw-semibold mb-1" for="post-event">Hackathon or competition</label>
-      <select id="post-event" v-model="eventChoice" class="form-select">
-        <option v-for="event in events" :key="getKey(event)" :value="getKey(event)">
-          {{ event.title }}<template v-if="event.deadline"> · closes {{ formatDate(event.deadline) }}</template>
-        </option>
-        <option value="other">Other event (not on the list)</option>
+      <select id="post-event" v-model="eventChoice" class="form-select" :disabled="eventsLoading">
+        <option v-if="eventsLoading" value="">Loading hackathons…</option>
+        <template v-else>
+          <option v-for="event in events" :key="getKey(event)" :value="getKey(event)">
+            {{ event.title }}<template v-if="event.deadline"> · closes {{ formatDate(event.deadline) }}</template>
+          </option>
+          <option value="other">Other event (not on the list)</option>
+        </template>
       </select>
+      <p v-if="eventsError" class="text-caption text-tt-accent mt-1 mb-0">
+        Couldn't load Devpost hackathons. Pick Other and type the event's name.
+      </p>
 
       <div v-if="eventChoice === 'other'" class="row g-2 mt-1">
         <div class="col-12 col-sm-5">
@@ -219,10 +235,10 @@ const showDelete = isEditing && props.team.status !== 'draft'
       >
         Delete post
       </button>
-      <button v-else class="btn btn-sm btn-link fw-semibold text-decoration-none me-auto" :disabled="busy" @click="submit('draft')">Save draft</button>
+      <button v-else class="btn btn-sm btn-link fw-semibold text-decoration-none me-auto" :disabled="busy || eventsLoading" @click="submit('draft')">Save draft</button>
 
       <button class="btn btn-sm btn-outline-primary fw-semibold px-3" @click="$emit('close')">Cancel</button>
-      <button class="btn btn-sm btn-tt-accent fw-semibold px-3" :disabled="busy" @click="submit('open')">
+      <button class="btn btn-sm btn-tt-accent fw-semibold px-3" :disabled="busy || eventsLoading" @click="submit('open')">
         {{ busy ? 'Saving...' : publishLabel }}
       </button>
     </template>

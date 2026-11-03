@@ -246,44 +246,6 @@ describe('GET /teams/mine', () => {
   });
 });
 
-describe('GET /teams/events', () => {
-  it('lists upcoming hackathons and competitions only', async () => {
-    const me = await loginAs(app, { userName: 'me@smu.edu.sg' });
-    const upcoming = await hackathon();
-    await hackathon({
-      externalId: '102',
-      title: 'Last Year',
-      deadline: new Date(Date.now() - DAY),
-    });
-    await Opportunity.create({
-      source: 'manual',
-      type: 'competition',
-      title: 'Case Comp',
-      organisation: 'SMU',
-      location: 'SMU',
-    });
-    await Opportunity.create({
-      source: 'manual',
-      type: 'job',
-      title: 'Frontend Intern',
-      organisation: 'Acme',
-    });
-
-    const response = await me.get('/teams/events').expect(200);
-
-    expect(response.body).toEqual([
-      { _id: expect.any(String), title: 'Case Comp', organisation: 'SMU', location: 'SMU' },
-      {
-        _id: String(upcoming._id),
-        title: 'NUS Hack 2027',
-        organisation: 'NUS Hackers',
-        location: 'NUS',
-        deadline: upcoming.deadline.toISOString(),
-      },
-    ]);
-  });
-});
-
 describe('PATCH /teams/:id', () => {
   it('lets the leader edit and reopens the team when slots grow', async () => {
     const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
