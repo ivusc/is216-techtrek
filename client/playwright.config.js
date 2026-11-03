@@ -2,6 +2,9 @@ import process from 'node:process';
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = Number(process.env.E2E_PORT || (process.env.CI ? 4173 : 5173));
+const API_PORT = Number(process.env.E2E_API_PORT || 8011);
+const ownApi = !process.env.API_URL;
+process.env.API_URL ||= `http://localhost:${API_PORT}`;
 
 /**
  * Read environment variables from file.
@@ -99,15 +102,27 @@ export default defineConfig({
   // outputDir: 'test-results/',
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    /**
-     * Use the dev server by default for faster feedback loop.
-     * Use the preview server on CI for more realistic testing.
-     * Playwright will re-use the local server if there is already a dev-server running.
-     */
-    command: `npm run ${process.env.CI ? 'preview' : 'dev'} -- --port ${PORT}`,
-    port: PORT,
-    reuseExistingServer: !process.env.CI,
-    env: process.env.API_URL ? { VITE_SERVER_URL: process.env.API_URL } : {},
-  },
+  webServer: [
+    ...(ownApi
+      ? [
+          {
+            command: 'node ../server/scripts/e2e-api.js',
+            url: `${process.env.API_URL}/`,
+            env: { PORT: String(API_PORT), FRONTEND_URL: `http://localhost:${PORT}` },
+            reuseExistingServer: false,
+            timeout: 300_000,
+          },
+        ]
+      : []),
+    {
+      /**
+       * Use the dev server by default for faster feedback loop.
+       * Use the preview server on CI for more realistic testing.
+       */
+      command: `npm run ${process.env.CI ? 'preview' : 'dev'} -- --port ${PORT}`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !ownApi && !process.env.CI,
+      env: { VITE_SERVER_URL: process.env.API_URL },
+    },
+  ],
 });
