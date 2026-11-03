@@ -19,10 +19,9 @@ function button(wrapper, text) {
 describe('TeamCard', () => {
   it.each([
     ['Request to join', null, 2, false],
-    ['Request sent', 'pending', 2, true],
     ['Request declined', 'declined', 2, true],
+    ["You're in!", 'accepted', 2, true],
     ['Team full', null, 0, true],
-    ['Request sent', 'pending', 0, true],
   ])(
     'shows %s when the request is %s with %i slots open',
     (label, requestStatus, slotsOpen, disabled) => {
@@ -35,13 +34,39 @@ describe('TeamCard', () => {
     },
   );
 
-  it('emits request when asked to join', async () => {
+  it('emits request when asked to join, from the button, the card and Enter', async () => {
     const wrapper = mountCard();
 
     await button(wrapper, 'Request to join').trigger('click');
+    await wrapper.find('h3').trigger('click');
+    await wrapper.find('.card').trigger('keydown', { key: 'Enter' });
 
-    expect(wrapper.emitted('request')).toHaveLength(1);
+    expect(wrapper.emitted('request')).toHaveLength(3);
+    expect(wrapper.find('.card').attributes('aria-label')).toBe('Ask to join ' + team().name);
   });
+
+  it('does not open a request from the card of a full team', async () => {
+    const wrapper = mountCard({ team: team({ slotsOpen: 0 }) });
+
+    await wrapper.find('.card').trigger('click');
+
+    expect(wrapper.emitted('request')).toBeUndefined();
+    expect(wrapper.find('.card').attributes('tabindex')).toBeUndefined();
+  });
+
+  it.each([2, 0])(
+    'shows a pending request as sent with an Undo button when %i slots are open',
+    async (slotsOpen) => {
+      const wrapper = mountCard({ team: team({ requestStatus: 'pending', slotsOpen }) });
+
+      expect(wrapper.text()).toContain('Request sent');
+      await button(wrapper, 'Undo').trigger('click');
+      expect(wrapper.emitted('undo')).toHaveLength(1);
+
+      await wrapper.setProps({ undoing: true });
+      expect(button(wrapper, 'Undoing...').attributes('disabled')).toBeDefined();
+    },
+  );
 
   it('shows the leader badges, Requests and Edit post on my teams', async () => {
     const wrapper = mountCard({ team: ledTeam(), mode: 'mine' });
