@@ -2,7 +2,16 @@
 import { ref } from 'vue';
 import LoginPanel from '@/components/login/LoginPanel.vue';
 import SignUpPanel from '@/components/login/SignUpPanel.vue';
+import BrandBanner from '@/components/login/BrandBanner.vue';
 const isLogin = ref(true);
+
+// the 4 things TechTrek does, shown on the banner (same icons as the sidebar)
+const features = [
+  { title: 'Discover', text: 'Adzuna jobs + open hackathons, filtered for you', icon: 'bi-compass' },
+  { title: 'Track', text: 'A board and calendar for every deadline', icon: 'bi-clipboard-data' },
+  { title: 'Team up', text: 'Find teammates with the skills you need', icon: 'bi-people' },
+  { title: 'Practise', text: 'Interview answers graded by AI', icon: 'bi-chat-left' },
+];
 
 function switchToLogin() {
   isLogin.value = true;
@@ -15,55 +24,51 @@ function switchToSignUp() {
 
 <template>
   <div class="row g-0 min-vh-100">
-    <!-- banner, only from lg up; on phones the form takes the whole screen -->
-    <div id="banner" class="col-lg-6 d-none d-lg-flex bg-primary text-white rounded-4 p-5">
-      <div style="max-width: 440px">
-        <div class="d-flex align-items-center gap-2 mb-4">
-          <i class="bi bi-bootstrap-fill fs-1"></i>
-          <span class="fs-1 fw-bold">TechTrek</span>
-        </div>
-        <h2 class="fw-bold mb-3">Your trek into tech starts here.</h2>
-        <p class="mb-4 opacity-75">Everything you need for internships, hackathons and interviews, in one place.</p>
-        <ul class="list-unstyled d-flex flex-column gap-3 mb-0">
-          <li><i class="bi bi-compass me-2"></i>Discover internships, jobs and hackathons</li>
-          <li><i class="bi bi-clipboard-data me-2"></i>Track every application and deadline</li>
-          <li><i class="bi bi-people me-2"></i>Find teammates for your next hackathon</li>
-          <li><i class="bi bi-chat-left me-2"></i>Practise interviews with AI feedback</li>
-        </ul>
-      </div>
-    </div>
-    <div id="loginPanel" class="col-12 col-lg-6 py-4 px-2">
+    <BrandBanner>
+      <h1 class="banner-title fw-bold text-white mb-3">Every tech opportunity at SMU, in one place.</h1>
+      <p class="banner-text mb-4">
+        Internships, hackathons and competitions from across the web — with a tracker, teammate finder and
+        interview practice built in.
+      </p>
+      <ul class="list-unstyled d-flex flex-column gap-3 mb-0">
+        <li v-for="feature in features" :key="feature.title" class="d-flex align-items-center gap-3">
+          <span class="feature-icon rounded-2 d-flex align-items-center justify-content-center flex-shrink-0">
+            <i :class="`bi ${feature.icon}`"></i>
+          </span>
+          <span class="d-flex flex-column lh-sm">
+            <strong class="small">{{ feature.title }}</strong>
+            <span class="feature-text">{{ feature.text }}</span>
+          </span>
+        </li>
+      </ul>
+    </BrandBanner>
+
+    <div id="loginPanel" class="col-12 col-lg-6 d-flex justify-content-center align-items-center py-5 px-3">
       <div id="panel">
         <div id="slider">
           <button class="slider-button btn" :class="{selected : isLogin}" @click="switchToLogin()">Log in</button>
           <button class="slider-button btn" :class="{selected : !isLogin}" @click="switchToSignUp()">Sign up</button>
         </div>
         <LoginPanel v-show="isLogin" @switch-to-signup="switchToSignUp()"/>
-        <SignUpPanel v-show="!isLogin"/>
+        <SignUpPanel v-show="!isLogin" @switch-to-login="switchToLogin()"/>
       </div>
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-#loginPanel, #banner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 /* the card grows with its form, so the buttons never spill out of it */
 #panel {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
   background-color: white;
-  padding: 2.5rem 2rem;
-  gap: 2rem;
-  border-radius: var(--bs-border-radius);
-  box-shadow: 0px 10px 25px 0px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  gap: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0px 10px 25px 0px rgba(0, 0, 0, 0.08);
 }
 
 #slider {
@@ -75,10 +80,11 @@ function switchToSignUp() {
 }
 
 .slider-button {
-  margin: 5px;
+  margin: 4px;
   border-radius: var(--bs-border-radius);
   width: 50%;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .selected {

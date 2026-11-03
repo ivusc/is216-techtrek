@@ -4,6 +4,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 
+defineEmits(['switch-to-login']);
+
 const router = useRouter();
 const userStore = useUserStore();
 const email = ref('');
@@ -71,44 +73,62 @@ async function submitForm() {
   <form @submit.prevent="submitForm">
     <div class="form-field">
       <div>
-        <h1>Welcome to Tech Trek!</h1>
-        <p>Create an account using your SMU email to being your trek into tech!</p>
+        <h1 class="form-title">Welcome to TechTrek</h1>
+        <p class="form-subtitle">Create an account with your SMU email to begin your trek into tech.</p>
+      </div>
+      <p v-if="errorMessage" class="errors">{{ errorMessage }}</p>
+      <div>
+        <label for="signup-email" class="form-label">SMU email</label>
+        <div class="icon-input">
+          <i class="bi bi-envelope"></i>
+          <input
+            id="signup-email"
+            type="email"
+            class="form-control"
+            v-model="email"
+            autocomplete="username"
+            placeholder="john.doe.2025@smu.edu.sg"
+          />
+        </div>
       </div>
       <div>
-        <p></p>
+        <label for="signup-password" class="form-label">Password</label>
+        <div class="icon-input">
+          <i class="bi bi-lock"></i>
+          <input
+            id="signup-password"
+            type="password"
+            class="form-control"
+            v-model="password"
+            autocomplete="new-password"
+            placeholder="••••••••••"
+          />
+        </div>
+        <small class="text-body-secondary">At least 8 characters, with 1 number, 1 uppercase letter and 1 symbol.</small>
       </div>
       <div>
-        <label for="" class="form-label">Your SMU Email</label>
-        <input
-          type="email"
-          class="form-control"
-          v-model="email"
-          aria-describedby="emailHelpId"
-          placeholder="✉ john.doe.2025@smu.edu.sg"
-        />
+        <label for="signup-password-again" class="form-label">Re-enter password</label>
+        <div class="icon-input">
+          <i class="bi bi-lock"></i>
+          <input
+            id="signup-password-again"
+            type="password"
+            class="form-control"
+            v-model="reEnteredPassword"
+            autocomplete="new-password"
+            placeholder="••••••••••"
+          />
+        </div>
       </div>
-      <div>
-        <label for="" class="form-label">Password</label>
-        <input
-          type="password"
-          class="form-control"
-          v-model="password"
-          placeholder="🔒︎ **********"
-        />
-        <small>Your password should include at least 1 number, uppercase alphabet and symbol</small>
-        <br />
-        <label for="" class="form-label">Re-Enter Password</label>
-        <input
-          type="password"
-          class="form-control"
-          v-model="reEnteredPassword"
-          placeholder="🔒︎ **********"
-        />
-      </div>
-      <div>
-        <p class="errors">{{ errorMessage }}</p>
-      </div>
-      <button type="submit" class="btn btn-primary">Create account</button>
+      <button type="submit" class="btn btn-primary fw-semibold">Create account</button>
+      <p class="form-note mb-0">
+        <i class="bi bi-lock"></i>
+        Sign-up is limited to @smu.edu.sg emails.
+      </p>
+      <p class="text-center small text-body-secondary mb-0">
+        Already have an account?
+        <a href="#" class="text-body-secondary" @click.prevent="$emit('switch-to-login')">Log in</a>
+      </p>
     </div>
   </form>
 </template>

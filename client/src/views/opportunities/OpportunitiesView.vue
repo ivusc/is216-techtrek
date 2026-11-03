@@ -1,11 +1,13 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import './opportunities.css'
 import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
+import OpportunityLoader from '@/components/opportunities/OpportunityLoader.vue'
 import {
   getDaysLeft,
   getLocationGroup,
@@ -24,7 +26,8 @@ const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, 
 
 const activeTab = ref('overview')
 
-const search = ref('')
+// the home page search sends people here with ?search=...
+const search = ref(useRoute().query.search ?? '')
 const locationFilter = ref('')
 const paidOnly = ref(false)
 // hackathon filters, done here because all hackathons are loaded at once
@@ -275,7 +278,7 @@ const loadMore = async () => {
       <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="opportunityStore.fetchOpportunities">Retry</button>
     </div>
 
-    <p v-if="isLoading" class="text-center text-body-secondary py-5">Loading opportunities...</p>
+    <OpportunityLoader v-if="isLoading" />
 
     <!-- Overview tab -->
     <template v-else-if="activeTab === 'overview'">

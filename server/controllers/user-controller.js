@@ -10,6 +10,15 @@ function toSessionUser(profile) {
     skills: profile.skills,
     linkedinUrl: profile.linkedinUrl,
     githubUrl: profile.githubUrl,
+    displayName: profile.displayName,
+    faculty: profile.faculty,
+    onboarded: profile.onboarded === true,
+    year: profile.year,
+    bio: profile.bio,
+    // sent to the client as { "Vue.js": "Advanced" }
+    skillLevels: Object.fromEntries((profile.skillLevels ?? []).map((entry) => [entry.skill, entry.level])),
+    careerInterests: profile.careerInterests,
+    openToTeams: profile.openToTeams !== false,
   };
 }
 
@@ -80,13 +89,28 @@ async function me(req, res) {
   });
 }
 
-// PATCH /me  body: any of newUserName, password, skills, linkedinUrl, githubUrl
+// PATCH /me  body: any of newUserName, password, skills, linkedinUrl, githubUrl, displayName, faculty, onboarded,
+//            year, bio, skillLevels, careerInterests, openToTeams
 async function updateUser(req, res) {
-  const { newUserName, password, skills, linkedinUrl, githubUrl } = req.body ?? {};
+  const body = req.body ?? {};
   const userId = req.session.user._id;
 
   try {
-    const profile = await userService.updateUser(userId, { newUserName, password, skills, linkedinUrl, githubUrl });
+    const profile = await userService.updateUser(userId, {
+      newUserName: body.newUserName,
+      password: body.password,
+      skills: body.skills,
+      linkedinUrl: body.linkedinUrl,
+      githubUrl: body.githubUrl,
+      displayName: body.displayName,
+      faculty: body.faculty,
+      onboarded: body.onboarded,
+      year: body.year,
+      bio: body.bio,
+      skillLevels: body.skillLevels,
+      careerInterests: body.careerInterests,
+      openToTeams: body.openToTeams,
+    });
     if (!profile) return res.status(404).json({ error: 'User not found.' });
 
     req.session.user = toSessionUser(profile);

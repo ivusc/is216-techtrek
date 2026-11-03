@@ -7,8 +7,8 @@ import { useUserStore } from '@/store/user';
 const router = useRouter();
 const authStore = useUserStore();
 
-// username is the SMU email, show the part before the @ as the name
-const displayName = computed(() => (authStore.username ?? '').split('@')[0]);
+// the name from onboarding, else the part of the SMU email before the @
+const displayName = computed(() => authStore.displayName || (authStore.username ?? '').split('@')[0]);
 const initial = computed(() => displayName.value.charAt(0).toUpperCase() || '?');
 
 async function signOut() {
@@ -38,7 +38,7 @@ const collapsed = ref(false);
       >
       <span v-show="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
         <strong class="small">{{ displayName }}</strong>
-        <span class="small fw-medium">{{ authStore.username }}</span>
+        <span class="small fw-medium">{{ authStore.faculty ?? authStore.username }}</span>
       </span>
     </button>
 

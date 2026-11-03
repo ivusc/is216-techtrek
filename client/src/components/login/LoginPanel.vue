@@ -71,60 +71,54 @@ onMounted(() => {
   <form @submit.prevent="submitForm">
     <div class="form-field">
       <div>
-        <h1>Welcome back!</h1>
-        <p>Log in with your SMU account to pick up where you left off.</p>
+        <h1 class="form-title">Welcome back</h1>
+        <p class="form-subtitle">Log in with your SMU account to pick up where you left off.</p>
       </div>
+      <p v-if="errorMessage" class="errors">{{ errorMessage }}</p>
       <div>
-        <p class="errors">{{ errorMessage }}</p>
-      </div>
-      <div>
-        <label for="" class="form-label">SMU Email</label>
-        <input
-          type="email"
-          class="form-control"
-          v-model="email"
-          aria-describedby="emailHelpId"
-          placeholder="✉ john.doe.2025@smu.edu.sg"
-        />
-      </div>
-      <div>
-        <label for="" class="form-label">Password</label>
-        <input
-          type="password"
-          class="form-control"
-          v-model="password"
-          placeholder="🔒︎ **********"
-        />
-      </div>
-      <div id="extras">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" v-model="rememberUser" />
-          <label class="form-check-label" for=""> Remember me </label>
+        <label for="login-email" class="form-label">SMU email</label>
+        <div class="icon-input">
+          <i class="bi bi-envelope"></i>
+          <input
+            id="login-email"
+            type="email"
+            class="form-control"
+            v-model="email"
+            autocomplete="username"
+            placeholder="john.doe.2025@smu.edu.sg"
+          />
         </div>
-        <a
-          href=""
-          class="link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
-          style="font-weight: bold"
-          >Forgot password?</a
-        >
       </div>
-      <button type="submit" class="btn btn-primary">Log in</button>
-      <div class="d-flex justify-content-center">
-        <a
-          href="#"
-          class="link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
-          style="color: grey"
-          @click.prevent="$emit('switch-to-signup')"
-          >New to TechTrek? Create an account</a
-        >
+      <div>
+        <label for="login-password" class="form-label">Password</label>
+        <div class="icon-input">
+          <i class="bi bi-lock"></i>
+          <input
+            id="login-password"
+            type="password"
+            class="form-control"
+            v-model="password"
+            autocomplete="current-password"
+            placeholder="••••••••••"
+          />
+        </div>
       </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="form-check mb-0">
+          <input id="remember-me" class="form-check-input" type="checkbox" v-model="rememberUser" />
+          <label class="form-check-label small fw-medium" for="remember-me">Remember me</label>
+        </div>
+        <a href="#" class="small fw-semibold text-decoration-none" @click.prevent>Forgot password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary fw-semibold">Log in</button>
+      <p class="form-note mb-0">
+        <i class="bi bi-lock"></i>
+        Sign-up is limited to @smu.edu.sg emails.
+      </p>
+      <p class="text-center small text-body-secondary mb-0">
+        New to TechTrek?
+        <a href="#" class="text-body-secondary" @click.prevent="$emit('switch-to-signup')">Create an account</a>
+      </p>
     </div>
   </form>
 </template>
-
-<style lang="scss" scoped>
-#extras {
-  display: flex;
-  justify-content: space-between;
-}
-</style>

@@ -4,7 +4,7 @@ const TeamRequest = require('../models/TeamRequest');
 const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
 
-const PROFILE_FIELDS = 'userName displayName year course skills githubUrl linkedinUrl';
+const PROFILE_FIELDS = 'userName displayName faculty year course skills githubUrl linkedinUrl';
 const MAX_SKILLS = 12;
 
 // --- Helper Functions ---

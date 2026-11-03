@@ -6,6 +6,8 @@ import TeamsView from '@/views/teams/TeamsView.vue';
 import TrackerView from '@/views/tracker/TrackerView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 import HomeView from '@/views/home/HomeView.vue';
+import OnboardingView from '@/views/onboarding/OnboardingView.vue';
+import ProfileView from '@/views/profile/ProfileView.vue';
 import { useUserStore } from '@/store/user';
 import { createRouter, createWebHistory } from 'vue-router';
 
@@ -14,12 +16,15 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/home' },
     { path: '/login', component: LoginView, meta: { guestOnly: true } },
+    // fullScreen: no sidebar or page padding, like the login page
+    { path: '/onboarding', component: OnboardingView, meta: { requiresAuth: true, fullScreen: true } },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/opportunities', component: OpportunitiesView, meta: { requiresAuth: true } },
     { path: '/tracker', component: TrackerView, meta: { requiresAuth: true } },
     { path: '/teams', component: TeamsView, meta: { requiresAuth: true } },
     { path: '/interview', component: InterviewView, meta: { requiresAuth: true } },
+    { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
     { path: '/practice/:applicationId', component: PracticeQuizView, meta: { requiresAuth: true } },
     { path: '/practice/question/:applicationId/:questionId', component: PracticeQuizView, meta: { requiresAuth: true } },
   ],
@@ -40,6 +45,14 @@ router.beforeEach(async (to) => {
 
   // already logged in, no need to see the login page
   if (to.meta.guestOnly && auth.isLoggedIn) {
+    return { path: '/home' };
+  }
+
+  // first time users set up their profile before using the app
+  if (auth.isLoggedIn && !auth.onboarded && to.path !== '/onboarding') {
+    return { path: '/onboarding' };
+  }
+  if (auth.onboarded && to.path === '/onboarding') {
     return { path: '/home' };
   }
 

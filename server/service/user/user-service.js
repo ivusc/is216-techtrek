@@ -96,10 +96,43 @@ async function findUserByUserId(userId) {
   }
 }
 
+// trimmed, no blanks or duplicates (ignoring case), at most 12 - same rules as the Teams page
+function cleanSkills(skills) {
+  if (!Array.isArray(skills)) return [];
+  const cleaned = [];
+  for (const skill of skills) {
+    const text = String(skill).trim().slice(0, 40);
+    const alreadyThere = cleaned.some((item) => item.toLowerCase() === text.toLowerCase());
+    if (text !== '' && !alreadyThere) cleaned.push(text);
+  }
+  return cleaned.slice(0, 12);
+}
+
+// { "Vue.js": "Advanced" } from the client -> [{ skill, level }] for the database,
+// keeping only Beginner / Intermediate / Advanced
+function cleanSkillLevels(levels) {
+  const cleaned = [];
+  for (const [skill, level] of Object.entries(levels ?? {})) {
+    if (['Beginner', 'Intermediate', 'Advanced'].includes(level)) {
+      cleaned.push({ skill: String(skill).trim().slice(0, 40), level });
+    }
+  }
+  return cleaned;
+}
+
+// profile links: blank removes the link, anything else has to be a web address
+function cleanLink(link, siteName) {
+  const text = String(link ?? '').trim();
+  if (text !== '' && !/^https?:\/\/\S+$/i.test(text)) {
+    throw new IllegalArguementError(`Your ${siteName} link should start with https://`);
+  }
+  return text;
+}
+
 /**
  * Only the fields that were sent are changed.
  * @param {Schema.Types.ObjectId} userId
- * @param {{newUserName?: String, password?: String, skills?: [String], linkedinUrl?: String, githubUrl?: String}} changes
+ * @param {{newUserName?: String, password?: String, skills?: [String], linkedinUrl?: String, githubUrl?: String, displayName?: String, faculty?: String, onboarded?: Boolean}} changes
  * @throws {IllegalArguementError, DatabaseError}
  * @returns {Promise<Document | null>} the updated user, or null if not found
  */
@@ -120,9 +153,32 @@ async function updateUser(userId, changes) {
     update.password = await bycrpt.hash(changes.password, SALT_ROUNDS);
   }
 
-  if (changes.skills !== undefined) update.skills = changes.skills;
-  if (changes.linkedinUrl !== undefined) update.linkedinUrl = changes.linkedinUrl;
-  if (changes.githubUrl !== undefined) update.githubUrl = changes.githubUrl;
+  if (changes.skills !== undefined) update.skills = cleanSkills(changes.skills);
+  if (changes.linkedinUrl !== undefined) update.linkedinUrl = cleanLink(changes.linkedinUrl, 'LinkedIn');
+  if (changes.githubUrl !== undefined) update.githubUrl = cleanLink(changes.githubUrl, 'GitHub');
+
+  if (changes.displayName !== undefined) {
+    const name = String(changes.displayName).trim();
+    if (name.length == 0) throw new IllegalArguementError('Please enter your name.');
+    update.displayName = name;
+  }
+  if (changes.faculty !== undefined) update.faculty = changes.faculty;
+  if (changes.onboarded !== undefined) update.onboarded = Boolean(changes.onboarded);
+
+  // profile page fields (the User model checks the allowed values)
+  if (changes.year !== undefined) update.year = changes.year === null || changes.year === '' ? undefined : Number(changes.year);
+  if (changes.bio !== undefined) update.bio = String(changes.bio).trim();
+  if (changes.skillLevels !== undefined) update.skillLevels = cleanSkillLevels(changes.skillLevels);
+  if (changes.careerInterests !== undefined) {
+    const interests = changes.careerInterests ?? {};
+    update.careerInterests = {
+      roles: cleanSkills(interests.roles),
+      opportunityTypes: Array.isArray(interests.opportunityTypes) ? interests.opportunityTypes : [],
+      workType: interests.workType || undefined,
+      availableFrom: interests.availableFrom || undefined,
+    };
+  }
+  if (changes.openToTeams !== undefined) update.openToTeams = Boolean(changes.openToTeams);
 
   try {
     const user = await User.findByIdAndUpdate(userId, update, { returnDocument: 'after', runValidators: true });
