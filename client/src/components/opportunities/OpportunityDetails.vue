@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { typeBadge } from '@/constants'
 import {
@@ -16,7 +16,16 @@ const props = defineProps({
   saved: { type: Boolean, default: false }
 })
 
-defineEmits(['close', 'toggle-save'])
+const emit = defineEmits(['close', 'toggle-save'])
+
+function onKeydown(event) {
+  if (event.key === 'Escape') {
+    emit('close')
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const isHackathon = computed(() => props.item.type === 'hackathon')
 
