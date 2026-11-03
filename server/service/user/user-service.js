@@ -3,6 +3,7 @@ const User = require('../../models/User');
 const Application = require('../../models/Application');
 const InterviewAttempt = require('../../models/interviewAttempt');
 const bycrpt = require('bcryptjs');
+const { cleanSkills } = require('../skills');
 
 const SALT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
@@ -120,7 +121,7 @@ async function updateUser(userId, changes) {
     update.password = await bycrpt.hash(changes.password, SALT_ROUNDS);
   }
 
-  if (changes.skills !== undefined) update.skills = changes.skills;
+  if (changes.skills !== undefined) update.skills = cleanSkills(changes.skills);
   if (changes.linkedinUrl !== undefined) update.linkedinUrl = changes.linkedinUrl;
   if (changes.githubUrl !== undefined) update.githubUrl = changes.githubUrl;
 

@@ -1,16 +1,11 @@
 const userService = require('../service/user/user-service');
 const { DatabaseError, IllegalArguementError } = require('../service/user/user-service-errors');
 const bycrpt = require('bcryptjs');
+const { regenerateSession, endSession } = require('../middleware/session');
 
 // What we keep about the user in the session (never the password)
 function toSessionUser(profile) {
-  return {
-    _id: profile._id,
-    userName: profile.userName,
-    skills: profile.skills,
-    linkedinUrl: profile.linkedinUrl,
-    githubUrl: profile.githubUrl,
-  };
+  return { _id: profile._id };
 }
 
 function handleUserError(res, err) {
@@ -35,8 +30,9 @@ async function createUser(req, res) {
     const profile = await userService.createUser(cleanedUserName, password);
 
     // log the new user in straight away
+    await regenerateSession(req);
     req.session.user = toSessionUser(profile);
-    return res.status(201).json({ user: req.session.user });
+    return res.status(201).json({ user: profile });
   } catch (err) {
     return handleUserError(res, err);
   }
@@ -62,22 +58,29 @@ async function login(req, res) {
 
   if (!isCorrectPassword) return res.status(401).json({ error: 'Wrong password.' });
 
+  await regenerateSession(req);
   req.session.user = toSessionUser(profile);
-  return res.status(200).json({ user: req.session.user });
+  return res.status(200).json({ user: profile });
 }
 
 async function me(req, res) {
-  if (req.session && req.session.user) {
-    return res.json({
-      isAuthenticated: true,
-      user: req.session.user,
-    });
+  if (!req.session?.user) {
+    return res.json({ isAuthenticated: false, user: null });
   }
 
-  res.json({
-    isAuthenticated: false,
-    user: null,
-  });
+  let profile;
+  try {
+    profile = await userService.findUserByUserId(req.session.user._id);
+  } catch (err) {
+    return handleUserError(res, err);
+  }
+
+  if (profile == null) {
+    await endSession(req, res);
+    return res.json({ isAuthenticated: false, user: null });
+  }
+
+  return res.json({ isAuthenticated: true, user: profile });
 }
 
 // PATCH /me  body: any of newUserName, password, skills, linkedinUrl, githubUrl
@@ -89,8 +92,7 @@ async function updateUser(req, res) {
     const profile = await userService.updateUser(userId, { newUserName, password, skills, linkedinUrl, githubUrl });
     if (!profile) return res.status(404).json({ error: 'User not found.' });
 
-    req.session.user = toSessionUser(profile);
-    return res.status(200).json({ user: req.session.user });
+    return res.status(200).json({ user: profile });
   } catch (err) {
     return handleUserError(res, err);
   }
@@ -112,15 +114,13 @@ async function logout(req, res) {
   destroySession(req, res);
 }
 
-function destroySession(req, res) {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to log out' });
-    }
-
-    res.clearCookie('connect.sid', { path: '/' });
-    return res.status(204).end();
-  });
+async function destroySession(req, res) {
+  try {
+    await endSession(req, res);
+  } catch {
+    return res.status(500).json({ error: 'Failed to log out' });
+  }
+  return res.status(204).end();
 }
 
 module.exports = {
