@@ -1,0 +1,51 @@
+/* first-time setup page, same card style as the login page */
+.onboarding-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 480px;
+  background-color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0px 10px 25px 0px rgba(0, 0, 0, 0.08);
+}
+
+.onboarding-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.onboarding-subtitle {
+  font-size: 14px;
+  color: var(--bs-secondary-color);
+  margin-bottom: 0;
+}
+
+.step-bar {
+  height: 6px;
+}
+
+.faculty-option {
+  cursor: pointer;
+}
+.faculty-option.is-selected {
+  border-color: var(--bs-primary) !important;
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+/* same icon-inside-input as the login form */
+.onboarding-card .icon-input {
+  position: relative;
+}
+.onboarding-card .icon-input i {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--bs-tertiary-color);
+}
+.onboarding-card .icon-input .form-control {
+  padding-left: 40px;
+}

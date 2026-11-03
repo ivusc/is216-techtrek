@@ -15,6 +15,8 @@ export const useUserStore = defineStore('user', () => {
   const skills = computed(() => user.value?.skills ?? []);
   const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
   const githubUrl = computed(() => user.value?.githubUrl ?? null);
+  const faculty = computed(() => user.value?.faculty ?? null);
+  const onboarded = computed(() => user.value?.onboarded !== false);
   const isLoggedIn = computed(() => !!_id.value);
 
   // actions
@@ -88,6 +90,8 @@ export const useUserStore = defineStore('user', () => {
     skills,
     linkedinUrl,
     githubUrl,
+    faculty,
+    onboarded,
     hasCheckedSession,
     isLoggedIn,
     fetchMe,

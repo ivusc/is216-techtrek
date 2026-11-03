@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 
+// SMU schools a user can pick during onboarding (the client shows the full names)
+const FACULTIES = ['SOA', 'LKCSB', 'SCIS', 'SOE', 'YPHSL', 'SOSS', 'CIS'];
+
 const userSchema = new mongoose.Schema(
   {
     userName: {
@@ -29,6 +32,13 @@ const userSchema = new mongoose.Schema(
       max: [4, 'Year must be between 1 and 4.'],
       validate: { validator: Number.isInteger, message: 'Year must be a whole number.' },
     },
+    faculty: {
+      type: String,
+      enum: { values: FACULTIES, message: 'Please pick an SMU school.' },
+    },
+    // false from sign up until the first-time setup (name, school, skills) is done;
+    // accounts made before onboarding existed have no value and skip it
+    onboarded: Boolean,
     course: {
       type: String,
       trim: true,
@@ -84,3 +94,4 @@ const userSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('User', userSchema);
+module.exports.FACULTIES = FACULTIES;

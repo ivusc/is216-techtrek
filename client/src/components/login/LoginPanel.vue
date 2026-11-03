@@ -81,6 +81,7 @@ onMounted(() => {
           Log in with your SMU account to pick up where you left off.
         </p>
       </div>
+      <p v-if="errorMessage" class="errors">{{ errorMessage }}</p>
       <div>
         <label for="login-email" class="form-label small fw-semibold">SMU email</label>
         <div class="position-relative">

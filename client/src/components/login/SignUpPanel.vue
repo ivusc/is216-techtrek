@@ -4,6 +4,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 
+defineEmits(['switch-to-login']);
+
 const router = useRouter();
 const userStore = useUserStore();
 const email = ref('');

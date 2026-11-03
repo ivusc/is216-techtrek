@@ -6,6 +6,7 @@ import TeamsView from '@/views/teams/TeamsView.vue';
 import TrackerView from '@/views/tracker/TrackerView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 import HomeView from '@/views/home/HomeView.vue';
+import OnboardingView from '@/views/onboarding/OnboardingView.vue';
 import ProfileView from '@/views/profile/ProfileView.vue';
 import { useUserStore } from '@/store/user';
 import { createRouter, createWebHistory } from 'vue-router';
@@ -14,7 +15,9 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', redirect: '/home' },
-    { path: '/login', component: LoginView, meta: { guestOnly: true, bare: true } },
+    { path: '/login', component: LoginView, meta: { guestOnly: true, bare: true, noScroll: true } },
+    // bare: no page padding, so the banner reaches the screen edges; noScroll: the page never scrolls
+    { path: '/onboarding', component: OnboardingView, meta: { requiresAuth: true, bare: true } },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/opportunities', component: OpportunitiesView, meta: { requiresAuth: true } },
@@ -42,6 +45,14 @@ router.beforeEach(async (to) => {
 
   // already logged in, no need to see the login page
   if (to.meta.guestOnly && auth.isLoggedIn) {
+    return { path: '/home' };
+  }
+
+  // first time users set up their profile before using the app
+  if (auth.isLoggedIn && !auth.onboarded && to.path !== '/onboarding') {
+    return { path: '/onboarding' };
+  }
+  if (auth.onboarded && to.path === '/onboarding') {
     return { path: '/home' };
   }
 

@@ -5,6 +5,7 @@ import serverAPI from '@/services/serverAPI'
 import { useRoute } from 'vue-router'
 import FeedbackCard from '@/components/interviews/FeedbackCard.vue'
 import QuestionCard from '@/components/interviews/QuestionCard.vue'
+import TrekLoader from '@/components/TrekLoader.vue'
 import './practicequizview.css'
 const applicationId = route.params.applicationId;
 const questionId = route.params.questionId
@@ -103,7 +104,11 @@ onMounted(() => {
   <div v-if="errorMessage" class="error-message">
     {{ errorMessage }}
   </div>
-  <div style="text-align:center" v-if="practiceQuestions.length === 0 && !errorMessage">Generating questions....</div>
+  <TrekLoader
+    v-if="practiceQuestions.length === 0 && !errorMessage"
+    title="Writing your interview questions"
+    :captions="['Reading the job description…', 'Asking Gemini for 5 fresh questions…', 'Mixing technical and behavioural…', 'This can take a few seconds…']"
+  />
   <div v-if="practiceQuestions.length > 0">
     <div class="progress-bar-container">
       <div class="progress-bar" :style="{ width: `${((currentQuestionIndex + 1) / practiceQuestions.length) * 100}%` }">
@@ -124,7 +129,12 @@ onMounted(() => {
           </button>
         </div>
       </div>
-      <div style="text-align:center" v-if="feedbackLoading">Generating feedback....</div>
+      <TrekLoader
+        v-if="feedbackLoading"
+        compact
+        title="Grading your answer"
+        :captions="['Checking structure and clarity…', 'Looking for impact…', 'Writing a stronger sample answer…']"
+      />
       <FeedbackCard v-else-if="feedback" :feedback="feedback"
         :isLastQuestion="currentQuestionIndex === practiceQuestions.length - 1" @next="nextQuestion" />
 

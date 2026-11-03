@@ -1,15 +1,59 @@
+/* shared by the log in and sign up panels */
 .form-field {
   display:flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-label {
-  font-weight: bold;
+.form-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.form-subtitle {
+  font-size: 14px;
+  color: var(--bs-secondary-color);
+  margin-bottom: 0;
+}
+
+.form-field .form-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* an input with an icon sitting inside it on the left */
+.icon-input {
+  position: relative;
+}
+.icon-input i {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  transform: translateY(-50%);
+  color: var(--bs-tertiary-color);
+}
+.icon-input .form-control {
+  padding-left: 40px;
+}
+
+/* light blue note under the button */
+.form-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--bs-border-radius);
+  background-color: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+  font-size: 13px;
 }
 
 .errors {
   color: #b8433a;
+  font-size: 14px;
+  margin-bottom: 0;
 }
 
 @media (max-width: 767.98px) {

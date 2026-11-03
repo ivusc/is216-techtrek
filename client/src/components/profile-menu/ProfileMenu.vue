@@ -38,7 +38,7 @@ const profileRoutes = [{ label: 'Profile', location: '/profile', icon: 'bi-perso
       />
       <span v-if="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
         <strong class="small">{{ displayName }}</strong>
-        <span class="small fw-medium">{{ authStore.username }}</span>
+        <span class="small fw-medium">{{ authStore.faculty ?? authStore.username }}</span>
       </span>
     </button>
 
