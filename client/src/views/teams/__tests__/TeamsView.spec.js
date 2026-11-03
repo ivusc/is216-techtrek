@@ -6,6 +6,7 @@ import serverAPI from '@/services/serverAPI';
 import { useUserStore } from '@/store/user';
 import TeamsView from '@/views/teams/TeamsView.vue';
 import { ME, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
+import { HACKATHONS } from '@/__tests__/fixtures/opportunities';
 
 const mock = new MockAdapter(serverAPI);
 
@@ -167,6 +168,33 @@ describe('TeamsView', () => {
     expect(requestsTo('/teams/mine')).toHaveLength(2);
   });
 
+  it('creates a team post for a listed hackathon', async () => {
+    mockLists();
+    mock
+      .onGet('/opportunity/all')
+      .reply(200, { jobs: null, hackathons: { count: HACKATHONS.length, hackathons: HACKATHONS } });
+    mock.onPost('/teams').reply(201, ledTeam({ _id: 'm2', name: 'Pixel Pushers' }));
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Create team post').trigger('click');
+    await flushPromises();
+    await wrapper.find('#post-event').setValue('devpost-203');
+    await wrapper.find('#post-name').setValue('Pixel Pushers');
+    await wrapper.find('#post-pitch').setValue('Design-led team.');
+    await dialogButton(wrapper, 'Publish post').trigger('click');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.post[0].data)).toMatchObject({
+      name: 'Pixel Pushers',
+      status: 'open',
+      opportunityId: null,
+      eventName: 'AI Builders Challenge',
+      eventLocation: 'Online',
+      closesAt: '2026-11-30T23:59:59.000Z',
+    });
+    expect(dialog(wrapper).exists()).toBe(false);
+  });
+
   it('edits and deletes a post', async () => {
     mockLists();
     mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
@@ -183,14 +211,14 @@ describe('TeamsView', () => {
     await flushPromises();
 
     expect(mock.history.patch[0].url).toBe('/teams/m1');
-    expect(JSON.parse(mock.history.patch[0].data)).toMatchObject({
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({
       name: 'Night Owls 2',
       teamSize: 4,
       openSlots: 2,
+      pitch: 'We ship a working demo every weekend.',
+      skills: ['Vue.js', 'Figma'],
+      autoAccept: false,
       status: 'open',
-      eventName: 'Hack&Roll',
-      eventLocation: 'NUS',
-      closesAt: '2026-11-20',
     });
 
     await button(wrapper, 'Edit post').trigger('click');
@@ -200,6 +228,27 @@ describe('TeamsView', () => {
 
     expect(mock.history.delete[0].url).toBe('/teams/m1');
     expect(dialog(wrapper).exists()).toBe(false);
+  });
+
+  it('edits a post while the event list is down without resending its close date', async () => {
+    mockLists();
+    mock.onGet('/opportunity/all').reply(200, { jobs: { count: 0, jobs: [] }, hackathons: null });
+    mock.onPatch('/teams/m1').reply(200, ledTeam({ name: 'Night Owls 2' }));
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'My teams').trigger('click');
+    await button(wrapper, 'Edit post').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('#post-event').element.value).toBe('other');
+    expect(wrapper.find('[aria-label="Closing date"]').element.value).toBe('2026-11-20');
+    await wrapper.find('#post-name').setValue('Night Owls 2');
+    await dialogButton(wrapper, 'Save changes').trigger('click');
+    await flushPromises();
+
+    const body = JSON.parse(mock.history.patch[0].data);
+    expect(body.name).toBe('Night Owls 2');
+    expect(body).not.toHaveProperty('closesAt');
+    expect(body).not.toHaveProperty('eventName');
   });
 
   it('publishes a draft', async () => {
@@ -217,12 +266,14 @@ describe('TeamsView', () => {
     await flushPromises();
 
     expect(mock.history.patch[0].url).toBe('/teams/m1');
-    expect(JSON.parse(mock.history.patch[0].data)).toMatchObject({
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({
+      name: 'Night Owls',
+      teamSize: 4,
+      openSlots: 2,
+      pitch: 'We ship a working demo every weekend.',
+      skills: ['Vue.js', 'Figma'],
+      autoAccept: false,
       status: 'open',
-      opportunityId: null,
-      eventName: 'Hack&Roll',
-      eventLocation: 'NUS',
-      closesAt: '2026-11-20',
     });
   });
 
