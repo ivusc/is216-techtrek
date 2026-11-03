@@ -77,7 +77,121 @@ async function mountDashboard() {
   return wrapper;
 }
 
+function rows(wrapper) {
+  return wrapper.findAll('.list-group-item');
+}
+
+function rowQuestions(wrapper) {
+  return rows(wrapper).map((row) => row.get('.interview-question p').text());
+}
+
+function filterInput(wrapper, label) {
+  const target = wrapper.findAll('label').find((candidate) => candidate.text() === label);
+  return wrapper.get(`#${target.attributes('for')}`);
+}
+
+function clearButton(wrapper) {
+  return wrapper.findAll('button').find((button) => button.text() === 'Clear');
+}
+
+function caption(wrapper) {
+  return wrapper.get('#interview-bank-title + p').text();
+}
+
 describe('InterviewView', () => {
+  it('shows the role cards, the stats and a row per question', async () => {
+    mock.onGet('/interview/dashboard').reply(200, DASHBOARD);
+    const wrapper = await mountDashboard();
+
+    const cards = wrapper.findAll('article');
+    expect(cards.map((card) => card.get('h2').text())).toEqual(['Frontend Intern', 'Data Analyst']);
+    expect(cards[0].text()).toContain('Interview · Tue, 10 Nov');
+    expect(cards[0].text()).toContain('Acme');
+    expect(cards[1].text()).toContain('Applied · Thu, 22 Oct');
+    expect(cards[0].getComponent(RouterLinkStub).props('to')).toBe('/practice/a1');
+    expect(cards[0].getComponent(RouterLinkStub).text()).toBe('Start 5-question session');
+
+    expect(
+      wrapper
+        .findAll('.interview-stat')
+        .map((stat) => [stat.get('.small').text(), stat.get('.h3').text()]),
+    ).toEqual([
+      ['Average score', '7.0'],
+      ['Highest score', '9'],
+      ['Questions answered', '3'],
+    ]);
+
+    expect(caption(wrapper)).toBe('3 questions');
+    expect(rowQuestions(wrapper)).toEqual(DASHBOARD.allQuestions.map((q) => q.question));
+    const [first, second, third] = rows(wrapper);
+    expect(first.get('.badge').text()).toBe('Behavioural');
+    expect(first.text()).toContain('Frontend Intern · Medium');
+    const firstScore = first.findAll('.badge')[1];
+    expect(firstScore.text()).toBe('8 / 10');
+    expect(firstScore.classes()).toContain('bg-info-subtle');
+    expect(second.findAll('.badge')[1].classes()).toContain('bg-danger-subtle');
+    expect(third.getComponent(RouterLinkStub).props('to')).toBe('/practice/question/a2/3');
+    expect(third.getComponent(RouterLinkStub).text()).toBe('Retry');
+  });
+
+  it('filters the bank by search, role, type and difficulty and clears the filters', async () => {
+    mock.onGet('/interview/dashboard').reply(200, DASHBOARD);
+    const wrapper = await mountDashboard();
+
+    expect(clearButton(wrapper)).toBeUndefined();
+    await wrapper.get('input[aria-label="Search questions"]').setValue('DATES');
+    expect(rowQuestions(wrapper)).toEqual(['How would you clean messy dates?']);
+    await wrapper.get('input[aria-label="Search questions"]').setValue('');
+
+    await filterInput(wrapper, 'Frontend Intern').setValue(true);
+    expect(rowQuestions(wrapper)).toHaveLength(2);
+    expect(caption(wrapper)).toBe('Frontend Intern · 2 questions');
+
+    await filterInput(wrapper, 'Technical').setValue(true);
+    expect(rowQuestions(wrapper)).toEqual(['How would you keep search responsive?']);
+    expect(caption(wrapper)).toBe('Frontend Intern · Technical · 1 question');
+
+    await filterInput(wrapper, 'Easy').setValue(true);
+    expect(rows(wrapper)).toHaveLength(0);
+    expect(wrapper.text()).toContain('No questions match these filters.');
+
+    await clearButton(wrapper).trigger('click');
+    expect(rowQuestions(wrapper)).toHaveLength(3);
+    expect(caption(wrapper)).toBe('3 questions');
+    expect(clearButton(wrapper)).toBeUndefined();
+  });
+
+  it('explains how to start when there is nothing to practise for', async () => {
+    mock
+      .onGet('/interview/dashboard')
+      .reply(200, { ...DASHBOARD, applicationCards: [], titles: [], allQuestions: [] });
+    const wrapper = await mountDashboard();
+
+    expect(wrapper.get('#interview-empty-title').text()).toBe('Nothing to practise for yet');
+    expect(
+      wrapper.findAllComponents(RouterLinkStub).map((link) => [link.text(), link.props('to')]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['Open tracker', '/tracker'],
+        ['Browse opportunities', '/opportunities'],
+      ]),
+    );
+    expect(wrapper.find('#interview-bank-title').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Filters');
+  });
+
+  it('says the bank is empty before the first session', async () => {
+    mock
+      .onGet('/interview/dashboard')
+      .reply(200, { ...DASHBOARD, allQuestions: [], questionScores: {} });
+    const wrapper = await mountDashboard();
+
+    expect(wrapper.findAll('article')).toHaveLength(2);
+    expect(caption(wrapper)).toBe('0 questions');
+    expect(wrapper.text()).toContain('No questions yet. Start a session');
+    expect(wrapper.find('#interview-empty-title').exists()).toBe(false);
+  });
+
   it('shows a failed load as an alert with a retry that clears it as soon as the retry starts', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     let finishRetry;
