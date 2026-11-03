@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 const applicationService = require('../service/application-service');
 
 function handleError(res, err, fallback) {
-  if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
+  if (err.name === 'ValidationError' || err.name === 'CastError') {
+    return res.status(400).json({ error: err.message });
+  }
   if (err.code === 11000) return res.status(409).json({ error: 'Application already exists' });
   console.error(fallback, err.message);
   res.status(500).json({ error: fallback });
