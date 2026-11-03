@@ -82,28 +82,32 @@ onMounted(() => {
         <p class="errors">{{ errorMessage }}</p>
       </div>
       <div>
-        <label for="" class="form-label">SMU Email</label>
+        <label for="login-email" class="form-label">SMU Email</label>
         <input
+          id="login-email"
           type="email"
           class="form-control"
           v-model="email"
-          aria-describedby="emailHelpId"
+          autocomplete="username"
+          inputmode="email"
           placeholder="✉ john.doe.2025@smu.edu.sg"
         />
       </div>
       <div>
-        <label for="" class="form-label">Password</label>
+        <label for="login-password" class="form-label">Password</label>
         <input
+          id="login-password"
           type="password"
           class="form-control"
           v-model="password"
+          autocomplete="current-password"
           placeholder="🔒︎ **********"
         />
       </div>
       <div id="extras">
         <div class="form-check">
-          <input class="form-check-input" type="checkbox" v-model="rememberUser" />
-          <label class="form-check-label" for=""> Remember me </label>
+          <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
+          <label class="form-check-label" for="login-remember"> Remember me </label>
         </div>
         <a
           href=""

@@ -11,3 +11,9 @@ label {
 .errors {
   color: #b8433a;
 }
+
+@media (max-width: 767.98px) {
+  #panel .form-control {
+    font-size: 1rem;
+  }
+}

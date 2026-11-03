@@ -78,30 +78,36 @@ async function submitForm() {
         <p></p>
       </div>
       <div>
-        <label for="" class="form-label">Your SMU Email</label>
+        <label for="signup-email" class="form-label">Your SMU Email</label>
         <input
+          id="signup-email"
           type="email"
           class="form-control"
           v-model="email"
-          aria-describedby="emailHelpId"
+          autocomplete="username"
+          inputmode="email"
           placeholder="✉ john.doe.2025@smu.edu.sg"
         />
       </div>
       <div>
-        <label for="" class="form-label">Password</label>
+        <label for="signup-password" class="form-label">Password</label>
         <input
+          id="signup-password"
           type="password"
           class="form-control"
           v-model="password"
+          autocomplete="new-password"
           placeholder="🔒︎ **********"
         />
         <small>Your password should include at least 1 number, uppercase alphabet and symbol</small>
         <br />
-        <label for="" class="form-label">Re-Enter Password</label>
+        <label for="signup-confirm" class="form-label">Re-Enter Password</label>
         <input
+          id="signup-confirm"
           type="password"
           class="form-control"
           v-model="reEnteredPassword"
+          autocomplete="new-password"
           placeholder="🔒︎ **********"
         />
       </div>
