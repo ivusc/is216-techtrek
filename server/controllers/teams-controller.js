@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
 const User = require('../models/User');
@@ -13,6 +14,25 @@ const MAX_MATCHES = 20;
 function matchedTeamSkills(userSkills = [], teamSkills = []) {
   const mine = userSkills.map((skill) => skill.toLowerCase());
   return teamSkills.filter((skill) => mine.includes(skill.toLowerCase()));
+}
+
+function handleError(res, err, fallback) {
+  if (err.name === 'CastError') return res.status(400).json({ error: 'Invalid ID' });
+  if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
+  if (err.code === 11000) {
+    return res.status(409).json({ error: 'You have already asked to join this team' });
+  }
+  console.error(fallback, err.message);
+  res.status(500).json({ error: fallback });
+}
+
+function hasValidSlots(teamSize, openSlots, memberCount, fewestOpen) {
+  return (
+    Number.isInteger(teamSize) &&
+    Number.isInteger(openSlots) &&
+    openSlots >= fewestOpen &&
+    openSlots + memberCount <= teamSize
+  );
 }
 
 function isLeader(team, userId) {
@@ -98,7 +118,7 @@ async function getTeams(req, res) {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch teams');
   }
 }
 
@@ -112,7 +132,7 @@ async function getMyTeams(req, res) {
     const result = teams.filter((t) => t.leaderId).map((t) => formatTeam(t, userId));
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch your teams');
   }
 }
 
@@ -125,13 +145,16 @@ async function getEvents(req, res) {
 
     res.json(events);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch events');
   }
 }
 
 async function createTeam(req, res) {
   const userId = req.session.user._id;
   const data = req.body ?? {};
+  if (data.opportunityId && !mongoose.isValidObjectId(data.opportunityId)) {
+    return res.status(400).json({ error: 'Invalid ID' });
+  }
 
   try {
     let eventData = { name: data.eventName, location: data.eventLocation };
@@ -146,7 +169,7 @@ async function createTeam(req, res) {
 
     const teamSize = Number(data.teamSize);
     const openSlots = Number(data.openSlots);
-    if (!Number.isInteger(teamSize) || !Number.isInteger(openSlots) || openSlots < 1 || openSlots > teamSize - 1) {
+    if (!hasValidSlots(teamSize, openSlots, 1, 1)) {
       return res.status(400).json({ error: 'Invalid slots configuration' });
     }
 
@@ -167,7 +190,7 @@ async function createTeam(req, res) {
     const populated = await populateTeam(Team.findById(team._id));
     res.status(201).json(formatTeam(populated, userId));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to create team');
   }
 }
 
@@ -175,6 +198,9 @@ async function updateTeam(req, res) {
   const { id: teamId } = req.params;
   const userId = req.session.user._id;
   const data = req.body ?? {};
+  if (data.opportunityId && !mongoose.isValidObjectId(data.opportunityId)) {
+    return res.status(400).json({ error: 'Invalid ID' });
+  }
 
   try {
     const team = await populateTeam(Team.findById(teamId));
@@ -189,9 +215,11 @@ async function updateTeam(req, res) {
     if (data.teamSize !== undefined || data.openSlots !== undefined) {
       const teamSize = Number(data.teamSize ?? team.teamSize);
       const openSlots = Number(data.openSlots ?? team.slotsOpen);
-      const external = teamSize - openSlots - team.members.length;
+      if (!hasValidSlots(teamSize, openSlots, team.members.length, 0)) {
+        return res.status(400).json({ error: 'Invalid slots configuration' });
+      }
       team.teamSize = teamSize;
-      team.externalMembers = external;
+      team.externalMembers = teamSize - openSlots - team.members.length;
     }
 
     team.syncStatus();
@@ -200,7 +228,7 @@ async function updateTeam(req, res) {
     const updated = await populateTeam(Team.findById(team._id));
     res.json(formatTeam(updated, userId));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to update team');
   }
 }
 
@@ -217,7 +245,7 @@ async function deleteTeam(req, res) {
     await Team.findByIdAndDelete(teamId);
     res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to delete team');
   }
 }
 
@@ -249,7 +277,7 @@ async function createRequest(req, res) {
 
     res.status(201).json({ _id: request._id, status: request.status });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to send request');
   }
 }
 
@@ -286,7 +314,7 @@ async function respondToRequest(req, res) {
 
     res.json({ _id: answered._id, status: answered.status });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to answer request');
   }
 }
 
@@ -302,7 +330,7 @@ async function withdrawRequest(req, res) {
     await TeamRequest.findByIdAndDelete(requestId);
     res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to withdraw request');
   }
 }
 
@@ -338,7 +366,7 @@ async function getMatches(req, res) {
 
     res.json(matches);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch matches');
   }
 }
 
@@ -353,7 +381,7 @@ async function getIncomingRequests(req, res) {
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch requests');
   }
 }
 
@@ -367,7 +395,7 @@ async function getSentRequests(req, res) {
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handleError(res, err, 'Failed to fetch requests');
   }
 }
 
