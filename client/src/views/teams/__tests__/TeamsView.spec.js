@@ -240,6 +240,31 @@ describe('TeamsView', () => {
     expect(options).not.toContain('devpost-202');
   });
 
+  it('waits for the latest hackathons reply when the form is closed and opened again', async () => {
+    mockLists();
+    const answers = [];
+    mock
+      .onGet('/opportunity/hackathons')
+      .reply(() => new Promise((resolve) => answers.push(resolve)));
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Create team post').trigger('click');
+    await flushPromises();
+    await dialogButton(wrapper, 'Cancel').trigger('click');
+    await button(wrapper, 'Create team post').trigger('click');
+    await flushPromises();
+    answers[0]([200, NO_EVENTS]);
+    await flushPromises();
+
+    expect(wrapper.find('#post-event').attributes('disabled')).toBeDefined();
+
+    answers[1]([200, { count: HACKATHONS.length, hackathons: HACKATHONS }]);
+    await flushPromises();
+
+    expect(wrapper.find('#post-event').attributes('disabled')).toBeUndefined();
+    expect(wrapper.find('#post-event').element.value).toBe('devpost-201');
+  });
+
   it('says when the hackathons could not be loaded and starts on Other', async () => {
     mockLists();
     mock.onGet('/opportunity/hackathons').reply(500, { error: 'Failed to fetch hackathons.' });
