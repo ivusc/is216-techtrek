@@ -1,12 +1,13 @@
-const { IllegalArguementError, DatabaseError } = require('./user-service-errors');
+const { IllegalArguementError, DatabaseError, WrongPasswordError } = require('./user-service-errors');
 const User = require('../../models/User');
 const Application = require('../../models/Application');
 const InterviewAttempt = require('../../models/interviewAttempt');
 const bycrpt = require('bcryptjs');
-const { cleanSkills } = require('../skills');
+const { MAX_SKILLS, cleanSkills } = require('../skills');
 
 const SALT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
+const OPTIONAL_FIELDS = ['year', 'course', 'about', 'linkedinUrl', 'githubUrl'];
 
 /**
  *
@@ -111,37 +112,58 @@ async function findUserByUserId(userId) {
 /**
  * Only the fields that were sent are changed.
  * @param {Schema.Types.ObjectId} userId
- * @param {{newUserName?: String, password?: String, skills?: [String], linkedinUrl?: String, githubUrl?: String}} changes
  * @throws {IllegalArguementError, DatabaseError}
  * @returns {Promise<Document | null>} the updated user, or null if not found
  */
 async function updateUser(userId, changes) {
-  const update = {};
-
-  if (changes.newUserName !== undefined) {
-    const cleanedUserName = validateUserName(changes.newUserName).toLowerCase();
-    const existing = await findUserByUserName(cleanedUserName);
-    if (existing != null && String(existing._id) !== String(userId)) {
-      throw new IllegalArguementError('Username already exists.');
-    }
-    update.userName = cleanedUserName;
+  if ('skills' in changes && !isSkillList(changes.skills)) {
+    throw new IllegalArguementError(`Skills must be a list of at most ${MAX_SKILLS}.`);
   }
 
-  if (changes.password !== undefined) {
-    validatePassword(changes.password);
-    update.password = await bycrpt.hash(changes.password, SALT_ROUNDS);
+  const set = {};
+  const unset = {};
+  for (const [field, value] of Object.entries(changes)) {
+    if (OPTIONAL_FIELDS.includes(field) && isBlank(value)) unset[field] = 1;
+    else set[field] = field === 'skills' ? cleanSkills(value) : value;
   }
-
-  if (changes.skills !== undefined) update.skills = cleanSkills(changes.skills);
-  if (changes.linkedinUrl !== undefined) update.linkedinUrl = changes.linkedinUrl;
-  if (changes.githubUrl !== undefined) update.githubUrl = changes.githubUrl;
 
   try {
-    const user = await User.findByIdAndUpdate(userId, update, { returnDocument: 'after', runValidators: true });
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: set, $unset: unset },
+      { returnDocument: 'after', runValidators: true },
+    );
     return user;
   } catch (err) {
-    if (err.name === 'ValidationError') throw new IllegalArguementError(err.message);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      throw new IllegalArguementError(err.message);
+    }
     throw new DatabaseError('Database could not update user.');
+  }
+}
+
+function isSkillList(skills) {
+  return Array.isArray(skills) && skills.length <= MAX_SKILLS;
+}
+
+function isBlank(value) {
+  return value == null || String(value).trim() === '';
+}
+
+async function checkPassword(user, password) {
+  const isCorrect = user != null && (await bycrpt.compare(String(password ?? ''), user.password));
+  if (!isCorrect) throw new WrongPasswordError('Wrong password.');
+}
+
+async function changePassword(userId, currentPassword, newPassword) {
+  const user = await findUserByUserId(userId);
+  await checkPassword(user, currentPassword);
+  validatePassword(newPassword);
+  user.password = await bycrpt.hash(newPassword, SALT_ROUNDS);
+  try {
+    await user.save();
+  } catch (err) {
+    throw new DatabaseError('Database could not change the password.');
   }
 }
 
@@ -167,5 +189,6 @@ module.exports = {
   findUserByUserName,
   findUserByUserId,
   updateUser,
+  changePassword,
   deleteUserById,
 };

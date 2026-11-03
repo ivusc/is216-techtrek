@@ -1,11 +1,29 @@
 const userService = require('../service/user/user-service');
-const { DatabaseError, IllegalArguementError } = require('../service/user/user-service-errors');
+const {
+  DatabaseError,
+  IllegalArguementError,
+  WrongPasswordError,
+} = require('../service/user/user-service-errors');
 const bycrpt = require('bcryptjs');
 const { startSession, isSessionExpired, endSession } = require('../middleware/session');
+
+const EDITABLE_FIELDS = [
+  'displayName',
+  'year',
+  'course',
+  'about',
+  'skills',
+  'linkedinUrl',
+  'githubUrl',
+  'openToTeams',
+];
 
 function handleUserError(res, err) {
   if (err instanceof IllegalArguementError) {
     return res.status(400).json({ error: err.message });
+  }
+  if (err instanceof WrongPasswordError) {
+    return res.status(403).json({ error: err.message });
   }
   if (err instanceof DatabaseError) {
     return res.status(500).json({ error: err.message });
@@ -78,19 +96,36 @@ async function me(req, res) {
   return res.json({ isAuthenticated: true, user: profile });
 }
 
-// PATCH /me  body: any of newUserName, password, skills, linkedinUrl, githubUrl
 async function updateUser(req, res) {
-  const { newUserName, password, skills, linkedinUrl, githubUrl } = req.body ?? {};
+  const changes = req.body ?? {};
+  const lockedFields = Object.keys(changes).filter((field) => !EDITABLE_FIELDS.includes(field));
+  if (lockedFields.length > 0) {
+    return res.status(400).json({ error: `These fields cannot be changed here: ${lockedFields.join(', ')}` });
+  }
   const userId = req.session.user._id;
 
   try {
-    const profile = await userService.updateUser(userId, { newUserName, password, skills, linkedinUrl, githubUrl });
+    const profile = await userService.updateUser(userId, changes);
     if (!profile) return res.status(404).json({ error: 'User not found.' });
 
     return res.status(200).json({ user: profile });
   } catch (err) {
     return handleUserError(res, err);
   }
+}
+
+async function changePassword(req, res) {
+  const { currentPassword, newPassword } = req.body ?? {};
+  if (typeof currentPassword != 'string' || typeof newPassword != 'string') {
+    return res.status(400).json({ error: 'Current and new password are required.' });
+  }
+
+  try {
+    await userService.changePassword(req.session.user._id, currentPassword, newPassword);
+  } catch (err) {
+    return handleUserError(res, err);
+  }
+  return res.status(204).end();
 }
 
 // DELETE /me  deletes the logged-in user's account, then logs them out
@@ -123,6 +158,7 @@ module.exports = {
   login,
   me,
   updateUser,
+  changePassword,
   deleteUser,
   logout,
 };

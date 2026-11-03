@@ -11,4 +11,4 @@ function cleanSkills(skills) {
   return cleaned.slice(0, MAX_SKILLS);
 }
 
-module.exports = { cleanSkills };
+module.exports = { MAX_SKILLS, cleanSkills };
