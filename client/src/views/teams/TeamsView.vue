@@ -106,7 +106,6 @@ const loadAll = async (showLoading = true) => {
 onMounted(loadAll)
 
 const mySkills = computed(() => auth.skills)
-const myName = computed(() => getDisplayName(auth.user))
 
 const matchedSkills = computed(() => {
   const wanted = []
@@ -334,7 +333,7 @@ function openSkills() {
   <div class="p-2">
 
     <template v-if="auth._id">
-      <TeamsHeader v-model="search" :user-name="myName" :has-new-requests="pendingIncoming > 0" @bell="activeTab = 'requests'" />
+      <TeamsHeader v-model="search" :has-new-requests="pendingIncoming > 0" @bell="activeTab = 'requests'" />
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />
 

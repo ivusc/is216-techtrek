@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '@/store/user'
-import { getInitials } from '@/utils/team'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const auth = useUserStore()
-const initials = computed(() => getInitials(auth.displayName ?? auth.username ?? ''))
+const name = computed(() => auth.displayName ?? auth.username ?? '')
 
 const search = defineModel({ type: String, default: '' })
 
@@ -34,11 +34,14 @@ defineProps({
       >
     </div>
     <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-    <RouterLink
-      to="/profile"
-      class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold text-body text-decoration-none"
-      :title="auth.displayName"
-      aria-label="Your profile"
-    >{{ initials }}</RouterLink>
+    <RouterLink to="/profile" class="flex-shrink-0 text-decoration-none" aria-label="Your profile">
+      <UserAvatar
+        :user-id="auth._id ?? ''"
+        :name="name"
+        :avatar-updated-at="auth.avatarUpdatedAt"
+        :size="36"
+        class="bg-tt-peach text-body"
+      />
+    </RouterLink>
   </div>
 </template>

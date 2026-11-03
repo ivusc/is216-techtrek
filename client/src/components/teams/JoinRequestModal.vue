@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { formatDate } from '@/utils/date'
 import { getDisplayName, sameSkill } from '@/utils/team'
 import TeamModal from './TeamModal.vue'
-import TeamAvatar from './TeamAvatar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const props = defineProps({
   team: { type: Object, required: true },
@@ -34,7 +34,7 @@ function send() {
 
     <div class="d-flex align-items-center gap-3 bg-body-secondary rounded-3 p-3 mb-3">
       <div class="avatar-stack d-flex">
-        <TeamAvatar v-for="member in team.members.slice(0, 4)" :key="member.user._id" :name="getDisplayName(member.user)" :size="32" />
+        <UserAvatar v-for="member in team.members.slice(0, 4)" :key="member.user._id" :user-id="member.user._id" :name="getDisplayName(member.user)" :avatar-updated-at="member.user.avatar?.updatedAt" :size="32" />
       </div>
       <div class="min-w-0">
         <p class="text-caption text-body-tertiary mb-1">Looking for</p>

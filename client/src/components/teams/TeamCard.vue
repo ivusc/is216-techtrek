@@ -8,7 +8,7 @@ import {
   getClosesInDays,
   sameSkill
 } from '@/utils/team'
-import TeamAvatar from './TeamAvatar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import SuggestedTeammates from './SuggestedTeammates.vue'
 
 const props = defineProps({
@@ -75,7 +75,7 @@ function isUrgent() {
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 mt-auto border-top">
       <div class="d-flex align-items-center gap-2">
         <div class="avatar-stack d-flex">
-          <TeamAvatar v-for="member in team.members.slice(0, 4)" :key="member.user._id" :name="getDisplayName(member.user)" :size="28" />
+          <UserAvatar v-for="member in team.members.slice(0, 4)" :key="member.user._id" :user-id="member.user._id" :name="getDisplayName(member.user)" :avatar-updated-at="member.user.avatar?.updatedAt" :size="28" />
         </div>
         <span class="text-caption text-body-secondary">{{ getSlotsText(team) }}</span>
       </div>

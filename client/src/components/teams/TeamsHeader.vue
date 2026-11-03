@@ -1,10 +1,12 @@
 <script setup>
-import { getInitials } from '@/utils/team'
+import { useUserStore } from '@/store/user'
+import UserAvatar from '@/components/UserAvatar.vue'
+
+const auth = useUserStore()
 
 const search = defineModel({ type: String, required: true })
 
 defineProps({
-  userName: { type: String, default: '' },
   hasNewRequests: { type: Boolean, default: false }
 })
 
@@ -35,14 +37,14 @@ defineEmits(['bell'])
         <span v-if="hasNewRequests" class="position-absolute top-0 end-0 mt-1 me-1 p-1 bg-tt-accent rounded-circle"></span>
       </button>
 
-      <RouterLink
-        v-if="userName !== ''"
-        to="/profile"
-        class="size-40 rounded-circle d-flex justify-content-center align-items-center fw-semibold small bg-tt-peach text-body text-decoration-none"
-        :title="userName"
-        aria-label="Your profile"
-      >
-        {{ getInitials(userName) }}
+      <RouterLink to="/profile" class="flex-shrink-0 text-decoration-none" aria-label="Your profile">
+        <UserAvatar
+          :user-id="auth._id ?? ''"
+          :name="auth.displayName ?? ''"
+          :avatar-updated-at="auth.avatarUpdatedAt"
+          :size="40"
+          class="bg-tt-peach text-body"
+        />
       </RouterLink>
     </div>
   </div>

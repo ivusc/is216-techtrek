@@ -43,10 +43,19 @@
 }
 
 .identity-avatar {
-  width: 72px;
-  height: 72px;
-  background-color: var(--tt-peach);
-  border: 3px solid #fff;
+  border-width: 3px !important;
+}
+
+.identity-photo-button {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+.identity-photo-input:focus-visible + .identity-photo-button {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
 }
 
 .profile-link {

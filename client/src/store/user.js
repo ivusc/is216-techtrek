@@ -11,6 +11,7 @@ export const useUserStore = defineStore('user', () => {
   const _id = computed(() => user.value?._id ?? null);
   const username = computed(() => user.value?.userName ?? null);
   const displayName = computed(() => user.value?.displayName ?? null);
+  const avatarUpdatedAt = computed(() => user.value?.avatar?.updatedAt ?? '');
   const skills = computed(() => user.value?.skills ?? []);
   const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
   const githubUrl = computed(() => user.value?.githubUrl ?? null);
@@ -65,6 +66,14 @@ export const useUserStore = defineStore('user', () => {
     await userService.changePassword(currentPassword, newPassword);
   }
 
+  async function uploadAvatar(blob) {
+    setUser(await userService.uploadAvatar(blob));
+  }
+
+  async function removeAvatar() {
+    setUser(await userService.removeAvatar());
+  }
+
   async function deleteMe(password) {
     await userService.deleteMe(password);
     clearSession();
@@ -74,6 +83,7 @@ export const useUserStore = defineStore('user', () => {
     user,
     username,
     displayName,
+    avatarUpdatedAt,
     _id,
     skills,
     linkedinUrl,
@@ -88,5 +98,7 @@ export const useUserStore = defineStore('user', () => {
     updateMe,
     changePassword,
     deleteMe,
+    uploadAvatar,
+    removeAvatar,
   };
 });

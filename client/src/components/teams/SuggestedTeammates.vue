@@ -2,7 +2,7 @@
 import { computed, ref, useId } from 'vue';
 import { getDisplayName, getSchoolLine } from '@/utils/team';
 import { safeHttpUrl } from '@/utils/url';
-import TeamAvatar from './TeamAvatar.vue';
+import UserAvatar from '@/components/UserAvatar.vue';
 
 const props = defineProps({
   matches: { type: Array, required: true },
@@ -49,7 +49,12 @@ function profileLinks(person) {
           :key="person._id"
           class="d-flex align-items-start gap-2 bg-white rounded-3 p-2"
         >
-          <TeamAvatar :name="getDisplayName(person)" :size="32" />
+          <UserAvatar
+            :user-id="person._id"
+            :name="getDisplayName(person)"
+            :avatar-updated-at="person.avatar?.updatedAt"
+            :size="32"
+          />
           <div class="flex-grow-1 min-w-0">
             <p class="small fw-semibold mb-0 text-truncate">{{ getDisplayName(person) }}</p>
             <p v-if="getSchoolLine(person) !== ''" class="text-caption text-body-tertiary mb-1">

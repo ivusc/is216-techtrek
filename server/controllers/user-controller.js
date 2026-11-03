@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const userService = require('../service/user/user-service');
 const {
   DatabaseError,
@@ -6,6 +7,7 @@ const {
 } = require('../service/user/user-service-errors');
 const bycrpt = require('bcryptjs');
 const { startSession, isSessionExpired, endSession } = require('../middleware/session');
+const { sniffImageType, extensionOf } = require('../service/avatar');
 
 const EDITABLE_FIELDS = [
   'displayName',
@@ -128,6 +130,50 @@ async function changePassword(req, res) {
   return res.status(204).end();
 }
 
+async function uploadAvatar(req, res) {
+  const imageType = Buffer.isBuffer(req.body) ? sniffImageType(req.body) : null;
+  if (!imageType || !req.is(imageType)) {
+    return res.status(400).json({ error: 'Upload a JPEG, PNG or WebP image.' });
+  }
+
+  try {
+    const profile = await userService.setAvatar(req.session.user._id, req.body, imageType);
+    return res.json({ user: profile });
+  } catch (err) {
+    return handleUserError(res, err);
+  }
+}
+
+async function removeAvatar(req, res) {
+  try {
+    const profile = await userService.removeAvatar(req.session.user._id);
+    return res.json({ user: profile });
+  } catch (err) {
+    return handleUserError(res, err);
+  }
+}
+
+async function getAvatar(req, res) {
+  let avatar = null;
+  if (mongoose.isValidObjectId(req.params.id)) {
+    try {
+      avatar = await userService.findAvatar(req.params.id);
+    } catch (err) {
+      return handleUserError(res, err);
+    }
+  }
+  if (!avatar) return res.status(404).json({ error: 'No photo.' });
+
+  res.set({
+    'Content-Type': avatar.contentType,
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'Content-Disposition': `inline; filename="avatar.${extensionOf(avatar.contentType)}"`,
+    'Cache-Control': 'private, max-age=86400',
+  });
+  return res.send(avatar.data);
+}
+
 // DELETE /me  deletes the logged-in user's account, then logs them out
 async function deleteUser(req, res) {
   const { password } = req.body ?? {};
@@ -160,6 +206,9 @@ module.exports = {
   me,
   updateUser,
   changePassword,
+  uploadAvatar,
+  removeAvatar,
+  getAvatar,
   deleteUser,
   logout,
 };

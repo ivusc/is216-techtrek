@@ -6,7 +6,7 @@ import {
   timeAgo
 } from '@/utils/team'
 import { safeHttpUrl } from '@/utils/url'
-import TeamAvatar from './TeamAvatar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const props = defineProps({
   incoming: { type: Array, required: true },
@@ -59,7 +59,7 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
 
       <div v-for="request in sortedIncoming" :key="request._id" class="card p-3 mb-3">
         <div class="d-flex gap-3">
-          <TeamAvatar :name="getDisplayName(request.user)" :size="40" />
+          <UserAvatar :user-id="request.user._id" :name="getDisplayName(request.user)" :avatar-updated-at="request.user.avatar?.updatedAt" :size="40" />
           <div class="flex-grow-1 min-w-0">
             <div class="d-flex justify-content-between gap-2">
               <p class="mb-0">
@@ -116,7 +116,7 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
 
       <div v-if="sent.length > 0" class="card p-2">
         <div v-for="(request, index) in sent" :key="request._id" class="d-flex align-items-center gap-3 p-2" :class="{ 'border-top': index > 0 }">
-          <TeamAvatar :name="request.team.name" :size="40" square />
+          <UserAvatar :name="request.team.name" :size="40" square />
           <div class="flex-grow-1 min-w-0">
             <p class="fw-semibold mb-0 text-truncate">{{ request.team.name }} · {{ request.team.event.name }}</p>
             <p class="text-caption text-body-tertiary mb-0">
@@ -153,7 +153,7 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
         </div>
 
         <div v-for="member in team.members" :key="member.user._id" class="d-flex align-items-center gap-2 mb-2">
-          <TeamAvatar :name="getDisplayName(member.user)" :size="32" />
+          <UserAvatar :user-id="member.user._id" :name="getDisplayName(member.user)" :avatar-updated-at="member.user.avatar?.updatedAt" :size="32" />
           <div class="min-w-0">
             <p class="small fw-semibold mb-0 text-truncate">
               {{ getDisplayName(member.user) }}<template v-if="member.user._id === team.leader._id"> (you)</template>

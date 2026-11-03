@@ -35,3 +35,15 @@ export async function changePassword(currentPassword, newPassword) {
 export async function deleteMe(password) {
   await serverAPI.delete('/me', { data: { password } });
 }
+
+export async function uploadAvatar(blob) {
+  const response = await serverAPI.put('/me/avatar', blob, {
+    headers: { 'Content-Type': blob.type },
+  });
+  return response.data.user;
+}
+
+export async function removeAvatar() {
+  const response = await serverAPI.delete('/me/avatar');
+  return response.data.user;
+}
