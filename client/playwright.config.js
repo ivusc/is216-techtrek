@@ -122,7 +122,7 @@ export default defineConfig({
       command: `npm run ${process.env.CI ? 'preview' : 'dev'} -- --port ${PORT}`,
       url: `http://localhost:${PORT}`,
       reuseExistingServer: !ownApi && !process.env.CI,
-      env: { VITE_SERVER_URL: process.env.API_URL },
+      env: { VITE_SERVER_URL: process.env.API_URL, E2E: '1' },
     },
   ],
 });
