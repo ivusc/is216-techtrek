@@ -89,7 +89,9 @@ describe('POST /application', () => {
       .send({ opportunity: { ...ADZUNA_JOB, source: 'devpost', type: 'job' } })
       .expect(400);
 
-    expect(unknownStatus.body.error).toContain('status');
+    expect(unknownStatus.body.error).toBe(
+      'A job can be: saved, applied, interview, offer, rejected',
+    );
     expect(invalid.body.error).toContain("type 'job' is not allowed for source 'devpost'");
     expect(await Application.countDocuments()).toBe(0);
   });
@@ -208,7 +210,11 @@ describe('PATCH /application/:id', () => {
   it.each([
     ['a checklist that is not a list', { checklist: 'x' }, 'checklist must be an array'],
     ['a checklist item without a label', { checklist: [{ done: true }] }, 'label'],
-    ['an unknown status', { status: 'won' }, 'status'],
+    [
+      'an unknown status',
+      { status: 'won' },
+      'A job can be: saved, applied, interview, offer, rejected',
+    ],
     ['a deadline that is not a date', { deadline: 'abc' }, 'deadline'],
   ])('rejects %s', async (label, changes, message) => {
     const agent = await loginAs(app, { userName: ME });
@@ -268,5 +274,49 @@ describe('DELETE /application/:id', () => {
     await me.delete(`/application/${theirs._id}`).expect(404);
 
     expect(await Application.countDocuments()).toBe(2);
+  });
+});
+
+describe('hackathon steps', () => {
+  const HACKATHON = manualOpportunity({ type: 'hackathon', title: 'Hack&Roll' });
+
+  it('takes only a hackathon step for a hackathon and only a job step for a job', async () => {
+    const agent = await loginAs(app, { userName: ME });
+
+    const interview = await agent
+      .post('/application')
+      .send({ opportunity: HACKATHON, status: 'interview' })
+      .expect(400);
+    await agent
+      .post('/application')
+      .send({ opportunity: HACKATHON, status: 'registered' })
+      .expect(201);
+    const submitted = await agent
+      .post('/application')
+      .send({ opportunity: manualOpportunity(), status: 'submitted' })
+      .expect(400);
+
+    expect(interview.body.error).toBe(
+      'A hackathon can be: saved, registered, team, submitted, results',
+    );
+    expect(submitted.body.error).toBe('A job can be: saved, applied, interview, offer, rejected');
+    expect(await Application.countDocuments()).toBe(1);
+  });
+
+  it('keeps a result only while the hackathon is in Results', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const created = await saveApplication(agent, { opportunity: HACKATHON, status: 'submitted' });
+
+    const won = await agent
+      .patch(`/application/${created._id}`)
+      .send({ status: 'results', result: 'won' })
+      .expect(200);
+    const back = await agent
+      .patch(`/application/${created._id}`)
+      .send({ status: 'submitted' })
+      .expect(200);
+
+    expect(won.body.result).toBe('won');
+    expect(back.body.result).toBeNull();
   });
 });

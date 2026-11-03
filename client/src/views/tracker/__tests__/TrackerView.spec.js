@@ -9,9 +9,16 @@ import { NOW, applications } from '@/__tests__/fixtures/applications';
 
 process.env.TZ = 'Asia/Singapore';
 
+const route = vi.hoisted(() => ({ query: {} }));
+
+vi.mock('vue-router', () => ({
+  useRoute: () => route,
+}));
+
 const mock = new MockAdapter(serverAPI);
 
 beforeEach(() => {
+  route.query = {};
   setActivePinia(createPinia());
   vi.setSystemTime(new Date(NOW));
   mock.onGet('/application').reply(200, applications());
@@ -44,6 +51,10 @@ function button(wrapper, text) {
   return wrapper.findAll('button').find((candidate) => candidate.text() === text);
 }
 
+function boardTab(wrapper, label) {
+  return wrapper.findAll('[role="tab"]').find((tab) => tab.text().includes(label));
+}
+
 function addModal(wrapper) {
   return wrapper.find('[aria-labelledby="add-application-title"]');
 }
@@ -61,15 +72,36 @@ async function fillAddForm(modal) {
 }
 
 describe('TrackerView', () => {
-  it('groups cards by stage and counts what is due this week', async () => {
+  it('groups cards by stage on separate job and hackathon boards and counts what is due this week', async () => {
     const wrapper = await mountTracker();
 
+    expect(boardTab(wrapper, 'Jobs').attributes('aria-selected')).toBe('true');
+    expect(boardTab(wrapper, 'Jobs').text()).toContain('3');
+    expect(boardTab(wrapper, 'Hackathons').text()).toContain('1');
     expect(cardTitles(wrapper, 'Saved')).toEqual(['Frontend Intern']);
-    expect(cardTitles(wrapper, 'Applied')).toEqual(['Hack&Roll']);
+    expect(cardTitles(wrapper, 'Applied')).toEqual([]);
     expect(cardTitles(wrapper, 'Interview')).toEqual(['Data Analyst']);
     expect(cardTitles(wrapper, 'Offer')).toEqual([]);
     expect(cardTitles(wrapper, 'Rejected')).toEqual(['Backend Engineer']);
-    expect(wrapper.text()).toContain('4 applications · 1 due this week');
+    expect(wrapper.text()).toContain('3 applications · 1 due this week');
+
+    await boardTab(wrapper, 'Hackathons').trigger('click');
+
+    expect(
+      wrapper.findAll('.kanban-column').map((section) => section.attributes('aria-label')),
+    ).toEqual(['Saved', 'Registered', 'Team formed', 'Submitted', 'Results']);
+    expect(cardTitles(wrapper, 'Registered')).toEqual(['Hack&Roll']);
+    expect(wrapper.text()).toContain('1 event · 0 due this week');
+    expect(button(wrapper, 'Add event')).toBeDefined();
+  });
+
+  it('opens the hackathon board from the address', async () => {
+    route.query = { board: 'hackathons' };
+
+    const wrapper = await mountTracker();
+
+    expect(boardTab(wrapper, 'Hackathons').attributes('aria-selected')).toBe('true');
+    expect(cardTitles(wrapper)).toEqual(['Hack&Roll']);
   });
 
   it('shows a failed load as an alert', async () => {
@@ -90,10 +122,16 @@ describe('TrackerView', () => {
     expect(cardTitles(wrapper)).toEqual(['Data Analyst']);
     await search.setValue('');
 
-    await wrapper.find('select[aria-label="Type"]').setValue('hackathon');
-    expect(cardTitles(wrapper)).toEqual(['Hack&Roll']);
+    const typeSelect = wrapper.find('select[aria-label="Type"]');
+    expect(typeSelect.findAll('option').map((option) => option.element.value)).toEqual([
+      '',
+      'job',
+      'internship',
+    ]);
+    await typeSelect.setValue('internship');
+    expect(cardTitles(wrapper)).toEqual(['Frontend Intern']);
     await button(wrapper, 'Clear all').trigger('click');
-    expect(cardTitles(wrapper)).toHaveLength(4);
+    expect(cardTitles(wrapper)).toHaveLength(3);
 
     await wrapper.find('select[aria-label="Deadline"]').setValue('week');
     expect(cardTitles(wrapper)).toEqual(['Frontend Intern']);
@@ -104,7 +142,18 @@ describe('TrackerView', () => {
     await button(wrapper, 'Hide rejected').trigger('click');
     expect(column(wrapper, 'Rejected').exists()).toBe(false);
     expect(wrapper.findAll('.kanban-column')).toHaveLength(4);
-    expect(wrapper.text()).toContain('3 applications · 1 due this week');
+    expect(wrapper.text()).toContain('2 applications · 1 due this week');
+  });
+
+  it('clears a type filter and hides Hide rejected when switching to the hackathon board', async () => {
+    const wrapper = await mountTracker();
+
+    await wrapper.find('select[aria-label="Type"]').setValue('internship');
+    await boardTab(wrapper, 'Hackathons').trigger('click');
+
+    expect(wrapper.find('select[aria-label="Type"]').element.value).toBe('');
+    expect(cardTitles(wrapper)).toEqual(['Hack&Roll']);
+    expect(button(wrapper, 'Hide rejected')).toBeUndefined();
   });
 
   it('moves a card with the Move-to menu', async () => {
@@ -119,7 +168,7 @@ describe('TrackerView', () => {
 
     expect(mock.history.patch[0].url).toBe('/application/a1');
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({ status: 'applied' });
-    expect(cardTitles(wrapper, 'Applied')).toEqual(['Frontend Intern', 'Hack&Roll']);
+    expect(cardTitles(wrapper, 'Applied')).toEqual(['Frontend Intern']);
     expect(cardTitles(wrapper, 'Saved')).toEqual([]);
     expect(detailModal(wrapper).exists()).toBe(false);
   });
@@ -175,7 +224,7 @@ describe('TrackerView', () => {
       notes: 'Referred by Sam.',
     });
     expect(addModal(wrapper).exists()).toBe(false);
-    expect(cardTitles(wrapper, 'Applied')).toEqual(['Hack&Roll', 'Product Intern']);
+    expect(cardTitles(wrapper, 'Applied')).toEqual(['Product Intern']);
     expect(mock.history.get).toHaveLength(1);
   });
 
@@ -192,7 +241,7 @@ describe('TrackerView', () => {
     expect(addModal(wrapper).find('[role="alert"]').text()).toBe(
       'Could not add the application: Application already exists',
     );
-    expect(cardTitles(wrapper)).toHaveLength(4);
+    expect(cardTitles(wrapper)).toHaveLength(3);
 
     await button(addModal(wrapper), 'Cancel').trigger('click');
     await button(wrapper, 'Add application').trigger('click');
@@ -223,6 +272,7 @@ describe('TrackerView', () => {
       ],
       interviewAt: '2026-11-04T06:00:00.000Z',
       deadline: null,
+      result: null,
     });
     expect(detailModal(wrapper).exists()).toBe(false);
     expect(cardTitles(wrapper, 'Offer')).toEqual(['Data Analyst']);
