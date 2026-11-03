@@ -3,9 +3,10 @@ import { computed } from 'vue'
 import { useUserStore } from '@/store/user'
 
 const auth = useUserStore()
-const initial = computed(() => (auth.username ?? '?').charAt(0).toUpperCase())
+const initial = computed(() => (auth.displayName || auth.username || '?').charAt(0).toUpperCase())
 
-const search = defineModel({ type: String, required: true })
+// leave v-model off to hide the search box (e.g. the profile page)
+const search = defineModel({ type: String, default: null })
 
 defineProps({
   title: { type: String, default: 'Opportunities' },
@@ -21,7 +22,7 @@ defineProps({
       <h1 class="mb-1">{{ title }}</h1>
       <p class="text-body-secondary mb-0 d-none d-md-block">{{ subtitle }}</p>
     </div>
-    <div class="search position-relative order-last order-md-0">
+    <div v-if="search !== null" class="search position-relative order-last order-md-0">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"></i>
       <input
         v-model="search"
@@ -32,6 +33,12 @@ defineProps({
       >
     </div>
     <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-    <div class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold">{{ initial }}</div>
+    <!-- the avatar opens the profile page -->
+    <RouterLink
+      to="/profile"
+      class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold text-body text-decoration-none"
+      aria-label="Open your profile"
+      title="Your profile"
+    >{{ initial }}</RouterLink>
   </div>
 </template>
