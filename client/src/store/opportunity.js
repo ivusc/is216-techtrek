@@ -1,4 +1,4 @@
-import { fetchAllOpportunities, fetchJobs } from '@/services/opportunityService';
+import { fetchAllOpportunities, fetchJobs, fetchJobFilterOptions } from '@/services/opportunityService';
 import {
   createApplicationService,
   deleteApplicationService,
@@ -22,7 +22,20 @@ export const useOpportunityStore = defineStore('opportunity', () => {
 
   // job filters, '' = any
   const jobType = ref(''); // fulltime | intern
-  const jobField = ref(''); // frontend | backend | fullstack | data | ai | devops | cybersecurity | mobile
+  const jobField = ref(''); // a role key from the chosen sector, e.g. frontend (tech) or audit (finance)
+  const jobSector = ref('tech'); // tech | finance | consulting | ... | all - Tech is the default
+  // [{ key, label, roles: [{ key, label }] }] from the server
+  const sectorOptions = ref([]);
+
+  async function loadSectorOptions() {
+    if (sectorOptions.value.length > 0) return;
+    try {
+      const data = await fetchJobFilterOptions();
+      sectorOptions.value = data.sectors;
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   const savedItems = ref([]);
 
@@ -35,7 +48,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchAllOpportunities({ type: jobType.value, field: jobField.value });
+      const data = await fetchAllOpportunities({ sector: jobSector.value, type: jobType.value, field: jobField.value });
 
       // the server sends null for a source that failed, so check before using it
       if (data.jobs != null) {
@@ -85,7 +98,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchJobs(1, { type: jobType.value, field: jobField.value });
+      const data = await fetchJobs(1, { sector: jobSector.value, type: jobType.value, field: jobField.value });
       jobs.value = data.jobs;
       jobsPage.value = 1;
       hasMoreJobs.value = data.jobs.length > 0;
@@ -100,7 +113,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
   // gets the next page of jobs and adds the ones we do not have yet
   async function fetchMoreJobs() {
     try {
-      const data = await fetchJobs(jobsPage.value + 1, { type: jobType.value, field: jobField.value });
+      const data = await fetchJobs(jobsPage.value + 1, { sector: jobSector.value, type: jobType.value, field: jobField.value });
 
       let addedCount = 0;
       
@@ -188,6 +201,9 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     hasMoreJobs,
     jobType,
     jobField,
+    jobSector,
+    sectorOptions,
+    loadSectorOptions,
     savedItems,
     teamCounts,
     fetchOpportunities,

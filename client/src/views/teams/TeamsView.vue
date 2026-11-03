@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import './teams.css'
 import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
@@ -134,6 +134,10 @@ const matchCount = computed(() => {
   return teams.value.filter((team) => team.slotsOpen > 0 && getMatchingSkills(mySkills.value, team.skills).length > 0).length
 })
 
+// Browse teams = my own published teams first (so a new team shows up here straight away), then everyone else's
+const myTeamIds = computed(() => new Set(myTeams.value.map((team) => team._id)))
+const browseTeams = computed(() => [...myTeams.value.filter((team) => team.status !== 'draft'), ...teams.value])
+
 const pendingIncoming = computed(() => incoming.value.filter((request) => request.status === 'pending').length)
 const pendingSent = computed(() => sent.value.filter((request) => request.status === 'pending').length)
 
@@ -153,15 +157,15 @@ async function openTeamFromLink() {
 }
 
 const tabCounts = computed(() => ({
-  browse: teams.value.filter((team) => team.slotsOpen > 0).length,
+  browse: browseTeams.value.filter((team) => team.slotsOpen > 0).length,
   mine: myTeams.value.length,
-  requests: pendingIncoming.value + pendingSent.value
+  requests: pendingIncoming.value + pendingSent.value + myInvites.value.length
 }))
 
 const eventOptions = computed(() => {
   // keep the hackathon from the link in the list even when it has no teams yet
   const names = eventFromLink !== '' ? [eventFromLink] : []
-  for (const team of teams.value) {
+  for (const team of browseTeams.value) {
     if (!names.includes(team.event.name)) {
       names.push(team.event.name)
     }
@@ -171,7 +175,7 @@ const eventOptions = computed(() => {
 
 const skillOptions = computed(() => {
   const options = []
-  for (const team of teams.value) {
+  for (const team of browseTeams.value) {
     for (const skill of team.skills) {
       if (!options.some((option) => sameSkill(option, skill))) {
         options.push(skill)
@@ -206,7 +210,7 @@ const filteredTeams = computed(() => {
   const result = []
   const keyword = search.value.trim().toLowerCase()
 
-  for (const team of teams.value) {
+  for (const team of browseTeams.value) {
     if (keyword !== '') {
       const text = (team.name + ' ' + team.event.name + ' ' + getDisplayName(team.leader) + ' ' + team.pitch + ' ' + team.skills.join(' ')).toLowerCase()
       if (!text.includes(keyword)) {
@@ -387,7 +391,29 @@ function openSkills() {
   showSkills.value = true
 }
 
-onMounted(openTeamFromLink)
+// keep requests, invites and new teams up to date while the page is open: when the Requests or Browse tab
+// is opened, when the browser tab comes back into view, and every 20 seconds (skipped while a form is open)
+function refreshInBackground() {
+  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value
+  if (document.visibilityState === 'visible' && !formOpen && !isLoading.value) {
+    loadAll(false)
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'requests' || tab === 'browse') refreshInBackground()
+})
+
+let refreshTimer = null
+onMounted(() => {
+  openTeamFromLink()
+  refreshTimer = setInterval(refreshInBackground, 20000)
+  document.addEventListener('visibilitychange', refreshInBackground)
+})
+onUnmounted(() => {
+  clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', refreshInBackground)
+})
 </script>
 
 <template>
@@ -453,10 +479,14 @@ onMounted(openTeamFromLink)
             <div v-for="team in filteredTeams" :key="team._id" class="col">
               <TeamCard
                 :team="team"
+                :mode="myTeamIds.has(team._id) ? 'mine' : 'browse'"
                 :my-skills="matchMySkills ? mySkills : []"
                 :undoing="undoingId === team.requestId"
                 @request="openJoin(team)"
                 @undo="undoRequest(team.requestId, team)"
+                @invite="inviteTeam = team"
+                @edit="openCreate(team)"
+                @view-requests="activeTab = 'requests'"
               />
             </div>
           </div>
