@@ -119,7 +119,6 @@ function shortDate(value) {
     month: 'short',
   });
 }
-
 </script>
 
 <template>
