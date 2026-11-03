@@ -133,7 +133,14 @@ function dayLabel(day) {
 
     <!-- what's on the clicked day -->
     <div class="mini-agenda border-top mt-2 pt-2" aria-live="polite">
-      <p class="small fw-semibold mb-1">{{ selectedLabel }}</p>
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <p class="small fw-semibold mb-0">{{ selectedLabel }}</p>
+        <!-- what the dots mean -->
+        <span class="d-flex gap-2 text-caption text-body-secondary">
+          <span class="d-flex align-items-center gap-1"><span class="mini-dot rounded-circle dot-deadline"></span>Deadline</span>
+          <span class="d-flex align-items-center gap-1"><span class="mini-dot rounded-circle dot-interview"></span>Interview</span>
+        </span>
+      </div>
       <p v-if="selectedEvents.length === 0" class="text-caption text-body-tertiary mb-0">Nothing on this day.</p>
       <div v-else class="mini-agenda-list d-flex flex-column gap-1">
         <RouterLink
@@ -154,10 +161,6 @@ function dayLabel(day) {
       </div>
     </div>
 
-    <div class="d-flex gap-3 mt-2 text-caption text-body-secondary">
-      <span class="d-flex align-items-center gap-1"><span class="mini-dot rounded-circle dot-deadline"></span>Deadline</span>
-      <span class="d-flex align-items-center gap-1"><span class="mini-dot rounded-circle dot-interview"></span>Interview</span>
-    </div>
   </div>
 </template>
 

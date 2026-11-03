@@ -383,13 +383,15 @@ async function respond(request, status) {
           </div>
         </div>
 
-        <div class="card practice-card border-0 p-3 flex-shrink-0">
-          <h2 class="h6 fw-semibold mb-1"><i class="bi bi-stars me-1"></i>Daily practice</h2>
-          <p class="small mb-2">
-            Practise interview questions for the internships you are tracking.
-            <template v-if="practiceScore > 0">Your average score: {{ practiceScore }}/10.</template>
-          </p>
-          <RouterLink to="/interview" class="btn btn-sm btn-primary fw-semibold align-self-start">Start practice</RouterLink>
+        <div class="card practice-card border-0 p-3 flex-shrink-0 d-flex flex-row align-items-center gap-3">
+          <div class="flex-grow-1 min-w-0">
+            <h2 class="h6 fw-semibold mb-1"><i class="bi bi-stars me-1"></i>Daily practice</h2>
+            <p class="small mb-0">
+              Practise interview questions for the internships you are tracking.
+              <template v-if="practiceScore > 0">Your average score: {{ practiceScore }}/10.</template>
+            </p>
+          </div>
+          <RouterLink to="/interview" class="btn btn-sm btn-primary fw-semibold text-nowrap flex-shrink-0">Start practice</RouterLink>
         </div>
       </div>
     </div>
