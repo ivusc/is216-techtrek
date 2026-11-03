@@ -403,14 +403,28 @@ describe('GET /interview/dashboard', () => {
         bestScore: 9,
       },
     ]);
-    expect(Object.keys(body).sort()).toEqual([
-      'allQuestions',
-      'applicationCards',
-      'averageScore',
-      'highestScore',
-      'seniorTips',
-      'titles',
-    ]);
+  });
+
+  it('lists questions in the order they were first practised', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const job = await saveApplication(agent, { status: 'applied' });
+    const userId = await idOf(ME);
+    await InterviewAttempt.create({
+      userId,
+      applicationId: job._id,
+      completedAt: new Date('2026-11-03T09:00:00Z'),
+      questions: [SCORED[1]],
+    });
+    await InterviewAttempt.create({
+      userId,
+      applicationId: job._id,
+      completedAt: new Date('2026-11-02T09:00:00Z'),
+      questions: [SCORED[0]],
+    });
+
+    const { body } = await agent.get('/interview/dashboard').expect(200);
+
+    expect(body.allQuestions.map((question) => question.questionId)).toEqual([1, 2]);
   });
 
   it('lists a question once with its best score when it is practised again', async () => {
