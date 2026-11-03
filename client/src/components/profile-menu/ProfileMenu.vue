@@ -1,8 +1,10 @@
 <script setup lang="js">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import './profile-menu.css';
 import { useUserStore } from '@/store/user';
+
+defineProps({ collapsed: { type: Boolean, default: false } });
 
 const router = useRouter();
 const authStore = useUserStore();
@@ -19,7 +21,6 @@ const profileRoutes = [
   { label: 'Settings', location: '/profile/settings', icon: 'bi-gear' },
   { label: 'Profile', location: '/profile', icon: 'bi-person-circle' },
 ];
-const collapsed = ref(false);
 </script>
 
 <template>
@@ -36,7 +37,7 @@ const collapsed = ref(false);
         class="profile-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
         >{{ initial }}</span
       >
-      <span v-show="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
+      <span v-if="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
         <strong class="small">{{ displayName }}</strong>
         <span class="small fw-medium">{{ authStore.username }}</span>
       </span>

@@ -54,4 +54,20 @@ test.describe('app shell', () => {
     await expect(page.locator('#sidebar')).toBeHidden();
     await expect(page.locator('.bottom-nav')).toBeVisible();
   });
+
+  test('starts the sidebar collapsed below lg and open from lg up', async ({ page }) => {
+    await page.setViewportSize(TABLET);
+    await page.goto('/login');
+    await page.locator('input[type="email"]:visible').fill(userName);
+    await page.locator('input[type="password"]:visible').fill(PASSWORD);
+    await page.locator('button[type="submit"]:visible').click();
+    await page.waitForURL('**/home');
+
+    await expect(page.locator('#sidebar')).toHaveCSS('width', '80px');
+    await expect(page.locator('#profile').getByText(userName)).toBeHidden();
+
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await page.reload();
+    await expect(page.locator('#sidebar')).toHaveCSS('width', '260px');
+  });
 });
