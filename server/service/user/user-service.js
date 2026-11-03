@@ -25,12 +25,23 @@ async function createUser(userName, password) {
     const user = await User.create({
       userName: cleanedUserName,
       password: encryptedPassword,
+      displayName: displayNameFromEmail(cleanedUserName),
     });
     return user;
   } catch (err) {
     if (err.name === 'ValidationError') throw new IllegalArguementError(err.message);
     throw new DatabaseError('Database could not create new user.');
   }
+}
+
+function displayNameFromEmail(userName) {
+  return userName
+    .split('@')[0]
+    .split(/[._-]+/)
+    .filter((part) => part !== '')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+    .slice(0, 60);
 }
 
 /**
