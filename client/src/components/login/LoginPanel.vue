@@ -14,6 +14,10 @@ const password = ref('');
 const rememberUser = ref(false);
 const errorMessage = ref('');
 
+function sameOriginPath(target) {
+  return typeof target === 'string' && /^\/(?![/\\])/.test(target) ? target : '/home';
+}
+
 async function submitForm() {
   if (email.value.includes('@') == false || email.value.split('@')[1] != 'smu.edu.sg') {
     errorMessage.value = 'Please enter a valid SMU email.';
@@ -34,7 +38,7 @@ async function submitForm() {
     }
     errorMessage.value = '';
     // go back to the page the guard sent us away from, if there was one
-    router.push(route.query.redirect ?? '/home');
+    router.push(sameOriginPath(route.query.redirect));
   } catch (err) {
     switch (err.response?.status) {
       case 404:

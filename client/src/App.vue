@@ -9,7 +9,15 @@ const authStore = useUserStore();
   <div class="d-flex vh-100">
     <SideBar v-if="authStore.isLoggedIn" />
     <main class="app-main flex-grow-1 overflow-y-auto p-3 p-md-4" style="min-width: 0">
-      <RouterView />
+      <div
+        v-if="!authStore.hasCheckedSession"
+        class="d-flex flex-column justify-content-center align-items-center gap-3 h-100 text-body-secondary"
+        role="status"
+      >
+        <span class="spinner-border text-primary" aria-hidden="true"></span>
+        Loading TechTrek…
+      </div>
+      <RouterView v-else />
     </main>
   </div>
 </template>

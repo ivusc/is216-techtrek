@@ -1,12 +1,7 @@
 const userService = require('../service/user/user-service');
 const { DatabaseError, IllegalArguementError } = require('../service/user/user-service-errors');
 const bycrpt = require('bcryptjs');
-const { regenerateSession, endSession } = require('../middleware/session');
-
-// What we keep about the user in the session (never the password)
-function toSessionUser(profile) {
-  return { _id: profile._id };
-}
+const { startSession, isSessionExpired, endSession } = require('../middleware/session');
 
 function handleUserError(res, err) {
   if (err instanceof IllegalArguementError) {
@@ -30,8 +25,7 @@ async function createUser(req, res) {
     const profile = await userService.createUser(cleanedUserName, password);
 
     // log the new user in straight away
-    await regenerateSession(req);
-    req.session.user = toSessionUser(profile);
+    await startSession(req, profile);
     return res.status(201).json({ user: profile });
   } catch (err) {
     return handleUserError(res, err);
@@ -58,8 +52,7 @@ async function login(req, res) {
 
   if (!isCorrectPassword) return res.status(401).json({ error: 'Wrong password.' });
 
-  await regenerateSession(req);
-  req.session.user = toSessionUser(profile);
+  await startSession(req, profile);
   return res.status(200).json({ user: profile });
 }
 
@@ -68,11 +61,13 @@ async function me(req, res) {
     return res.json({ isAuthenticated: false, user: null });
   }
 
-  let profile;
-  try {
-    profile = await userService.findUserByUserId(req.session.user._id);
-  } catch (err) {
-    return handleUserError(res, err);
+  let profile = null;
+  if (!isSessionExpired(req.session)) {
+    try {
+      profile = await userService.findUserByUserId(req.session.user._id);
+    } catch (err) {
+      return handleUserError(res, err);
+    }
   }
 
   if (profile == null) {

@@ -1,7 +1,18 @@
-function regenerateSession(req) {
+const MAX_SESSION_AGE = 12 * 60 * 60 * 1000;
+
+function startSession(req, profile) {
   return new Promise((resolve, reject) => {
-    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      req.session.user = { _id: profile._id };
+      req.session.createdAt = Date.now();
+      resolve();
+    });
   });
+}
+
+function isSessionExpired(session) {
+  return typeof session.createdAt !== 'number' || Date.now() - session.createdAt > MAX_SESSION_AGE;
 }
 
 function endSession(req, res) {
@@ -14,4 +25,4 @@ function endSession(req, res) {
   });
 }
 
-module.exports = { regenerateSession, endSession };
+module.exports = { startSession, isSessionExpired, endSession };
