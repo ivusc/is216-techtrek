@@ -46,8 +46,14 @@ const status = ref('')
 const search = ref('')
 // "Find team" on an Opportunities hackathon card links here with ?event=<hackathon title>
 const route = useRoute()
-const eventFromLink = typeof route.query.event === 'string' ? route.query.event : ''
-const eventFilter = ref(eventFromLink)
+const eventFilter = ref('')
+watch(
+  () => route.query.event,
+  (value) => {
+    eventFilter.value = typeof value === 'string' ? value : ''
+  },
+  { immediate: true }
+)
 const skillFilter = ref([])
 const sizeFilter = ref('')
 const openOnly = ref(true)
@@ -171,7 +177,7 @@ const tabCounts = computed(() => ({
 
 const eventOptions = computed(() => {
   // keep the hackathon from the link in the list even when it has no teams yet
-  const names = eventFromLink !== '' ? [eventFromLink] : []
+  const names = eventFilter.value !== '' ? [eventFilter.value] : []
   for (const team of browseTeams.value) {
     if (!names.includes(team.event.name)) {
       names.push(team.event.name)
@@ -241,6 +247,10 @@ const filteredTeams = computed(() => {
 
   return result
 })
+
+const noTeamsForEvent = computed(
+  () => eventFilter.value !== '' && !browseTeams.value.some((team) => team.event.name === eventFilter.value)
+)
 
 const anyFilter = computed(() => {
   return search.value !== '' || eventFilter.value !== '' || skillFilter.value.length > 0 || sizeFilter.value !== '' || !openOnly.value || matchMySkills.value
@@ -479,7 +489,7 @@ onUnmounted(() => {
             @edit-skills="openSkills"
           />
 
-          <div v-if="filteredTeams.length === 0 && eventFilter !== ''" class="text-center text-body-secondary py-5">
+          <div v-if="noTeamsForEvent" class="text-center text-body-secondary py-5">
             <p class="mb-3">No teams are looking for members for <strong>{{ eventFilter }}</strong> yet.</p>
             <button class="btn btn-primary fw-semibold me-2" @click="openCreate(null, eventFilter)">
               <i class="bi bi-plus-lg"></i> Start a team
@@ -487,7 +497,7 @@ onUnmounted(() => {
             <button class="btn btn-outline-primary fw-semibold" @click="clearAll">See all teams</button>
           </div>
           <p v-else-if="filteredTeams.length === 0" class="text-center text-body-secondary py-5">
-            {{ teams.length === 0 ? 'No teams are recruiting right now. Create a team post to start one.' : 'No teams match your filters.' }}
+            {{ browseTeams.length === 0 ? 'No teams are recruiting right now. Create a team post to start one.' : 'No teams match your filters.' }}
           </p>
 
           <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">

@@ -79,13 +79,17 @@ describe('CreateTeamModal event picker', () => {
     expect(eventPart(submitted(wrapper))).toStrictEqual({ opportunity: LISTINGS[index] });
   });
 
-  it.each([
-    ['the hackathon it was opened for', 'Code for Climate', 'devpost-202'],
-    ['the first listing for an unknown hackathon', 'Hack&Roll', 'devpost-201'],
-  ])('starts a new post on %s', (label, initialEvent, key) => {
-    const wrapper = mountModal({ initialEvent });
+  it('starts a new post on the hackathon it was opened for', () => {
+    const wrapper = mountModal({ initialEvent: 'Code for Climate' });
 
-    expect(wrapper.find('#post-event').element.value).toBe(key);
+    expect(wrapper.find('#post-event').element.value).toBe('devpost-202');
+  });
+
+  it('starts a new post for a hackathon that is not listed on Other with its name', () => {
+    const wrapper = mountModal({ initialEvent: 'Hack&Roll' });
+
+    expect(wrapper.find('#post-event').element.value).toBe('other');
+    expect(wrapper.find('[aria-label="Event name"]').element.value).toBe('Hack&Roll');
   });
 
   it('lets me type an event that is not listed', async () => {

@@ -32,7 +32,7 @@ defineEmits(['clear'])
 
     <select
       v-model="event"
-      class="form-select form-select-sm rounded-pill w-auto"
+      class="form-select form-select-sm rounded-pill w-auto event-select"
       :class="{ 'bg-primary-subtle border-primary text-primary-emphasis': event !== '' }"
       aria-label="Filter by event"
     >
