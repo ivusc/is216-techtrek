@@ -37,10 +37,12 @@ async function logIn(page, { userName, password }) {
 }
 
 export async function expectNoHorizontalOverflow(page) {
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBe(0);
+  const overflow = await page.evaluate(() => {
+    const sideways = (element) => element.scrollWidth - element.clientWidth;
+    const main = document.querySelector('main');
+    return { document: sideways(document.documentElement), main: main ? sideways(main) : 0 };
+  });
+  expect(overflow).toEqual({ document: 0, main: 0 });
 }
 
 export function screenshot(target, testInfo, name) {
