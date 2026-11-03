@@ -65,7 +65,9 @@ async function postTeam(owner, { name, skills = ['Vue.js'] }) {
 }
 
 async function openTeams(page, size) {
-  await page.route('**/opportunity/all*', (route) => route.fulfill({ json: OPPORTUNITIES }));
+  await page.route('**/opportunity/hackathons*', (route) =>
+    route.fulfill({ json: OPPORTUNITIES.hackathons }),
+  );
   await page.setViewportSize(size);
   await page.goto('/teams');
   await expect(page.getByRole('heading', { name: 'Teammate finder' })).toBeVisible();
@@ -84,8 +86,21 @@ function sentRow(page, name) {
 }
 
 async function createPost(page, { name, teamSize, openSlots, draft = false, other = null }) {
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  await page.route(
+    '**/opportunity/hackathons*',
+    async (route) => {
+      await held;
+      await route.fallback();
+    },
+    { times: 1 },
+  );
   await page.getByRole('button', { name: 'Create team post' }).click();
   const dialog = page.getByRole('dialog', { name: 'Create a team post' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel('Hackathon or competition')).toBeDisabled();
+  release();
   if (other) {
     await dialog.getByLabel('Hackathon or competition').selectOption('other');
     await dialog.getByLabel('Event name').fill(other.name);

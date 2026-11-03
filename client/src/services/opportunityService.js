@@ -8,6 +8,11 @@ export async function fetchAllOpportunities(filters) {
   return response.data
 }
 
+export async function fetchHackathons() {
+  const response = await serverAPI.get(BASE_URL + '/hackathons')
+  return response.data.hackathons
+}
+
 export async function fetchJobs(page, filters) {
   const response = await serverAPI.get(BASE_URL + '/jobs', { params: { page, ...cleanFilters(filters) } })
   return response.data

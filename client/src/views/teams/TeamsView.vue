@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import './teams.css'
 import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
 from '@/services/teamService'
-import {fetchAllOpportunities} from '@/services/opportunityService'
+import { fetchHackathons } from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
 import TeamsHeader from '@/components/teams/TeamsHeader.vue'
 import TeamsTabs from '@/components/teams/TeamsTabs.vue'
@@ -33,6 +33,9 @@ const incoming = ref([])
 const sent = ref([])
 const matchesByTeam = ref({})
 const events = ref([])
+const eventsLoading = ref(false)
+const eventsError = ref(false)
+let eventsRequest = 0
 
 // /teams?tab=requests (e.g. from the dashboard's Team requests card) opens that tab
 const TAB_NAMES = ['browse', 'mine', 'requests']
@@ -262,17 +265,25 @@ const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJ
 const createForEvent = ref('')
 const openCreate = async (team = null, eventName = '') => {
   modalError.value = ''
-  try {
-    const data = await fetchAllOpportunities()
-    // only hackathons that are still open can get new teams
-    events.value = (data.hackathons?.hackathons ?? []).filter((event) => !isClosed(event))
-  } catch (error) {
-    console.error(error)
-    events.value = []
-  }
   editingTeam.value = team
   createForEvent.value = eventName
   showCreate.value = true
+  eventsError.value = false
+  eventsLoading.value = true
+  const request = ++eventsRequest
+  try {
+    const hackathons = await fetchHackathons()
+    if (request !== eventsRequest) return
+    // only hackathons that are still open can get new teams
+    events.value = hackathons.filter((event) => !isClosed(event))
+  } catch (error) {
+    if (request !== eventsRequest) return
+    console.error(error)
+    events.value = []
+    eventsError.value = true
+  } finally {
+    if (request === eventsRequest) eventsLoading.value = false
+  }
 }
 
 // after a new post is published: the "team is live" celebration, then maybe the invite pop-up
@@ -551,6 +562,8 @@ onUnmounted(() => {
     <CreateTeamModal
       v-if="showCreate"
       :events="events"
+      :events-loading="eventsLoading"
+      :events-error="eventsError"
       :team="editingTeam"
       :initial-event="createForEvent"
       :suggestions="skillSuggestions"

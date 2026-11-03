@@ -179,19 +179,6 @@ async function getMyTeams(req, res) {
   }
 }
 
-async function getEvents(req, res) {
-  try {
-    const events = await Opportunity.find({
-      type: { $in: ['hackathon', 'competition'] },
-      $or: [{ deadline: {$gte: new Date() } }, { deadline: null }],
-    }).select('title organisation location deadline').sort('deadline').lean();
-
-    res.json(events);
-  } catch (err) {
-    handleError(res, err, 'Failed to fetch events');
-  }
-}
-
 async function createTeam(req, res) {
   const userId = req.session.user._id;
   const data = req.body ?? {};
@@ -647,7 +634,6 @@ async function cancelInvite(req, res) {
 module.exports = {
   getTeams,
   getMyTeams,
-  getEvents,
   createTeam,
   updateTeam,
   deleteTeam,

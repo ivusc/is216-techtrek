@@ -45,7 +45,9 @@ async function postTeam(owner, name, tag) {
 }
 
 async function openTeams(page, width) {
-  await page.route('**/opportunity/all*', (route) => route.fulfill({ json: OPPORTUNITIES }));
+  await page.route('**/opportunity/hackathons*', (route) =>
+    route.fulfill({ json: OPPORTUNITIES.hackathons }),
+  );
   await page.setViewportSize({ width, height: 900 });
   await page.goto('/teams');
   await expect(page.getByRole('heading', { name: 'Teammate finder' })).toBeVisible();
