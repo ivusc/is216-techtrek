@@ -39,6 +39,18 @@ function isLeader(team, userId) {
   return String(team.leaderId?._id ?? team.leaderId) === String(userId);
 }
 
+function isMember(team, userId) {
+  return team.members.some(
+    (member) => String(member.userId?._id ?? member.userId) === String(userId),
+  );
+}
+
+function isTakingRequests(team) {
+  return (
+    team.status === 'open' && team.slotsOpen > 0 && (!team.closesAt || team.closesAt >= new Date())
+  );
+}
+
 function populateTeam(query) {
   return query
     .populate({ path: 'leaderId', select: PROFILE_FIELDS })
@@ -258,6 +270,12 @@ async function createRequest(req, res) {
     const team = await populateTeam(Team.findById(teamId));
     const user = await User.findById(userId);
     if (!team || !user) return res.status(404).json({ error: 'Team or User not found' });
+    if (isMember(team, userId)) {
+      return res.status(409).json({ error: 'You are already in this team' });
+    }
+    if (!isTakingRequests(team)) {
+      return res.status(409).json({ error: 'This team is not taking requests' });
+    }
 
     const request = await TeamRequest.create({
       teamId: team._id,
