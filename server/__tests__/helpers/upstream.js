@@ -43,3 +43,7 @@ export function failDevpost() {
 export function stubGemini(text) {
   return vi.spyOn(ai.models, 'generateContent').mockResolvedValue({ text });
 }
+
+export function failGemini() {
+  return vi.spyOn(ai.models, 'generateContent').mockRejectedValue(new Error('Gemini is down'));
+}
