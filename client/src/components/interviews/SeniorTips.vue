@@ -1,5 +1,4 @@
 <script setup>
-import { formatDate } from '@/utils/date';
 import { reviewDifficulties } from '@/constants';
 
 defineProps({
@@ -9,6 +8,10 @@ defineProps({
 
 function difficultyLabel(value) {
   return reviewDifficulties.find((option) => option.value === value).label;
+}
+
+function sharedIn(date) {
+  return new Date(date).toLocaleDateString('en-SG', { month: 'short', year: 'numeric' });
 }
 </script>
 
@@ -43,7 +46,7 @@ function difficultyLabel(value) {
           <p v-if="tip.rounds" class="small text-body-secondary mb-0">Rounds: {{ tip.rounds }}</p>
           <p class="mb-0 text-break">{{ tip.tips }}</p>
           <span class="text-caption text-body-tertiary">
-            An SMU senior · {{ formatDate(tip.createdAt) }}
+            An SMU senior · {{ sharedIn(tip.createdAt) }}
           </span>
         </li>
       </ul>

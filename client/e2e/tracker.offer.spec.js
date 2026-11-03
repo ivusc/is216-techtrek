@@ -190,10 +190,12 @@ test.describe('senior tips on interview prep', () => {
       senior,
     }, testInfo) => {
       const role = { organisation: 'Shopee', title: 'Product Analyst Intern' };
+      const longTips =
+        'The SQL test was window functions and joins in 45 minutes. In the case round they cared more about how you framed the problem than the final number, so say your assumptions out loud before you calculate anything.';
       await shareTips(senior, role, {
         difficulty: 4,
         rounds: 'SQL test, case interview, then a chat with the hiring manager',
-        tips: 'The SQL test was window functions and joins in 45 minutes. In the case round they cared more about how you framed the problem than the final number, so say your assumptions out loud before you calculate anything.',
+        tips: longTips,
       });
       await shareTips(
         senior,
@@ -206,17 +208,20 @@ test.describe('senior tips on interview prep', () => {
       await page.goto('/interview');
 
       const section = page.getByRole('region', { name: 'Senior tips' });
-      await expect(section.getByRole('listitem')).toHaveCount(2);
+      const tip = section.getByRole('listitem').filter({ hasText: longTips }).first();
+      await expect(tip).toBeVisible();
+      await expect(
+        section.getByRole('listitem').filter({ hasText: 'Know your CV.' }),
+      ).not.toHaveCount(0);
       await section.scrollIntoViewIfNeeded();
       await screenshot(page, testInfo, `interview-senior-tips-${width}`);
       await expectNoHorizontalOverflow(page);
       await expectInside(section, page.locator('main'));
 
-      const first = section.getByRole('listitem').first();
-      const heading = await first.getByRole('heading').boundingBox();
-      const badge = await first.locator('.badge').boundingBox();
+      const heading = await tip.getByRole('heading').boundingBox();
+      const badge = await tip.locator('.badge').boundingBox();
       expect(badge.y < heading.y + heading.height).toBe(width >= MD);
-      await expectInside(first.locator('.badge'), first);
+      await expectInside(tip.locator('.badge'), tip);
     });
   }
 });

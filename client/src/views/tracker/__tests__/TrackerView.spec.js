@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import MockAdapter from 'axios-mock-adapter';
 import serverAPI from '@/services/serverAPI';
 import TrackerView from '@/views/tracker/TrackerView.vue';
+import { useApplicationsStore } from '@/store/applications';
 import { NOW, applications } from '@/__tests__/fixtures/applications';
 
 process.env.TZ = 'Asia/Singapore';
@@ -69,16 +70,14 @@ function offerModal(wrapper) {
 
 async function moveDataAnalystToOffer(wrapper) {
   mock.onPatch('/application/a3').reply(200, { ...applications()[2], status: 'offer' });
-  mock
-    .onPost('/application/a3/review')
-    .reply((config) => [
-      201,
-      {
-        ...applications()[2],
-        status: 'offer',
-        review: { ...JSON.parse(config.data), createdAt: NOW },
-      },
-    ]);
+  mock.onPost('/application/a3/review').reply((config) => [
+    201,
+    {
+      ...applications()[2],
+      status: 'offer',
+      review: { ...JSON.parse(config.data), createdAt: NOW },
+    },
+  ]);
   await button(column(wrapper, 'Interview').find('.dropdown-menu'), 'Offer').trigger('click');
   await flushPromises();
 }
@@ -227,6 +226,15 @@ describe('TrackerView', () => {
 
     expect(detailModal(wrapper).exists()).toBe(false);
     expect(offerModal(wrapper).find('h2').text()).toBe('Share your interview tips');
+  });
+
+  it('drops an unanswered congratulations when the tracker is left', async () => {
+    const wrapper = await mountTracker();
+    await moveDataAnalystToOffer(wrapper);
+
+    wrapper.unmount();
+
+    expect(useApplicationsStore().celebration).toBeNull();
   });
 
   it('dropping a card on its own column does nothing', async () => {

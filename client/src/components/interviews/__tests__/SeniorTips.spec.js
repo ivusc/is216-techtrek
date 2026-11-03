@@ -33,7 +33,7 @@ describe('SeniorTips', () => {
     expect(grab.find('.badge').text()).toBe('Difficulty 4/5 · Hard');
     expect(grab.text()).toContain('Rounds: Online assessment, then two technical interviews');
     expect(grab.text()).toContain('Revise graphs and talk through your thinking out loud.');
-    expect(grab.text()).toContain('An SMU senior · 2 Nov');
+    expect(grab.text()).toContain('An SMU senior · Nov 2026');
     expect(dbs.find('.badge').text()).toBe('Difficulty 1/5 · Easy');
     expect(dbs.text()).not.toContain('Rounds:');
   });

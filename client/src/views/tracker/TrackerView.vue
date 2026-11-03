@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import './tracker.css';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
@@ -43,6 +43,7 @@ watch(board, () => {
 });
 
 onMounted(fetchApplications);
+onUnmounted(dismissCelebration);
 
 function clearFilters() {
   search.value = '';
