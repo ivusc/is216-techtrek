@@ -134,19 +134,22 @@ async function getOpportunityFromApplication(applicationId, userId) {
 //for them to retry the previous questions
 async function getQuestion(req, res) {
   try {
-    const  questionId  = req.params.questionId
+    const { applicationId } = req.params;
+    const questionId = Number(req.params.questionId);
+    if (!mongoose.isValidObjectId(applicationId) || !Number.isInteger(questionId)) {
+      return res.status(404).json({ error: 'Question not found' });
+    }
     const interviewAttempt = await InterviewAttempt.findOne({
       userId: req.session.user._id,
-      'questions.questionId': questionId
-    })
+      applicationId,
+      'questions.questionId': questionId,
+    });
     if (!interviewAttempt) {
       return res.status(404).json({
         error: 'Question not found'
       })
     }
-    const question = interviewAttempt.questions.find(
-      q => q.questionId.toString() === questionId
-    )
+    const question = interviewAttempt.questions.find((q) => q.questionId === questionId);
     res.json(question)
   } catch (error) {
     console.log(error)
