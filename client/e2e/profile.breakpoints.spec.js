@@ -1,41 +1,18 @@
-import process from 'node:process';
-import { expect, test } from '@playwright/test';
+import { WIDTHS, expect, expectNoHorizontalOverflow, screenshot, test } from './fixtures.js';
 
 const LG = 992;
-const PASSWORD = 'Password1!';
-const WIDTHS = [320, 375, 576, 768, 992, 1200, 1440];
 
 test.describe('profile page', () => {
-  const userName = `profile.${Date.now()}@smu.edu.sg`;
-
-  test.skip(!process.env.API_URL, 'needs a running API, set API_URL');
-
-  test.beforeAll(async ({ request }) => {
-    const response = await request.post(`${process.env.API_URL}/register`, {
-      data: { userName, password: PASSWORD },
-    });
-    expect(response.status()).toBe(201);
-  });
-
-  test.afterAll(async ({ request }) => {
-    await request.post(`${process.env.API_URL}/login`, { data: { userName, password: PASSWORD } });
-    await request.delete(`${process.env.API_URL}/me`, { data: { password: PASSWORD } });
-  });
-
   for (const width of WIDTHS) {
-    test(`${width} lays out the profile and keeps unsaved changes in reach`, async ({ page }) => {
+    test(`${width} lays out the profile and keeps unsaved changes in reach`, async ({
+      loggedIn: page,
+    }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.request.post(`${process.env.API_URL}/login`, {
-        data: { userName, password: PASSWORD },
-      });
       await page.goto('/profile');
       await expect(page.getByRole('heading', { name: 'Your profile' })).toBeVisible();
-      await page.screenshot({ path: `e2e/__screenshots__/profile/profile-${width}.png` });
+      await screenshot(page, testInfo, `profile/profile-${width}`);
 
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow).toBe(0);
+      await expectNoHorizontalOverflow(page);
 
       const identity = await page.locator('.identity-card').boundingBox();
       const about = await page.locator('.card', { hasText: 'About' }).first().boundingBox();
