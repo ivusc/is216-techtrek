@@ -3,22 +3,11 @@ const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
 const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
+const { cleanSkills } = require('../service/skills');
 
 const PROFILE_FIELDS = 'userName displayName year course skills githubUrl linkedinUrl';
-const MAX_SKILLS = 12;
 
 // --- Helper Functions ---
-function cleanSkills(skills) {
-  if (!Array.isArray(skills)) return [];
-  const cleaned = [];
-  for (const skill of skills) {
-    const text = String(skill).trim().slice(0, 40);
-    const alreadyThere = cleaned.some((item) => item.toLowerCase() === text.toLowerCase());
-    if (text !== '' && !alreadyThere) cleaned.push(text);
-  }
-  return cleaned.slice(0, MAX_SKILLS);
-}
-
 function hasSkillMatch(userSkills = [], teamSkills = []) {
   const wanted = teamSkills.map((skill) => skill.toLowerCase());
   return userSkills.some((skill) => wanted.includes(skill.toLowerCase()));
