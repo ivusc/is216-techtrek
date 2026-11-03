@@ -4,6 +4,7 @@ import './interview.css';
 import serverAPI from '@/services/serverAPI';
 import PageHeader from '@/components/PageHeader.vue';
 import TrekLoader from '@/components/TrekLoader.vue';
+import SeniorTips from '@/components/interviews/SeniorTips.vue';
 
 const search = ref('');
 const difficulties = ['Easy', 'Medium', 'Hard'];
@@ -17,6 +18,7 @@ const applicationCards = ref([]);
 const titles = ref([]);
 const questions = ref([]);
 const questionScores = ref({});
+const seniorTips = ref([]);
 const isLoading = ref(true);
 const errorMessage = ref('');
 
@@ -31,6 +33,7 @@ const loadData = async () => {
     questionScores.value = response.data.questionScores;
     averageScore.value = response.data.averageScore;
     highestScore.value = response.data.highestScore;
+    seniorTips.value = response.data.seniorTips;
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Failed to load interview dashboard.';
@@ -49,6 +52,19 @@ const filteredQuestions = computed(() => {
       (selectedTitle.value === '' || q.title === selectedTitle.value) &&
       (selectedTypes.value.length === 0 || selectedTypes.value.includes(q.type)) &&
       (selectedDifficulty.value === '' || q.difficulty === selectedDifficulty.value),
+  );
+});
+
+const visibleTips = computed(() => {
+  const keyword = search.value.toLowerCase();
+  return seniorTips.value.filter(
+    (tip) =>
+      (selectedTitle.value === '' ||
+        tip.title.toLowerCase() === selectedTitle.value.toLowerCase()) &&
+      (keyword === '' ||
+        [tip.organisation, tip.title, tip.tips].some((text) =>
+          text.toLowerCase().includes(keyword),
+        )),
   );
 });
 
@@ -301,6 +317,12 @@ function bestScore(question) {
             </div>
           </div>
         </div>
+
+        <SeniorTips
+          v-if="applicationCards.length"
+          :tips="visibleTips"
+          :filtered="seniorTips.length > 0"
+        />
 
         <section aria-labelledby="interview-bank-title">
           <h2 id="interview-bank-title" class="h3 mb-1">Question bank</h2>

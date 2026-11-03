@@ -70,7 +70,8 @@ async function moveToOffer(page, title) {
 }
 
 async function fillTips(form, tips) {
-  await form.getByRole('radio', { name: '4 · Hard' }).check();
+  await form.locator('label', { hasText: '4 · Hard' }).click();
+  await expect(form.getByRole('radio', { name: '4 · Hard' })).toBeChecked();
   await form.getByLabel('What were the rounds?').fill('Online assessment, then two interviews');
   await form.getByLabel('Your tips').fill(tips);
   await form.getByRole('button', { name: 'Share tips' }).click();

@@ -32,6 +32,11 @@ export async function updateApplicationService(id, payload){
   return response.data;
 }
 
+export async function addReviewService(id, review){
+  const response = await serverAPI.post(`${BASE_URL}/${id}/review`, review);
+  return response.data;
+}
+
 export async function deleteApplicationService(id){
   const response = await serverAPI.delete(`${BASE_URL}/${id}`);
   return response.data;

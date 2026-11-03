@@ -86,6 +86,11 @@ async function markTeamFormed(userId, opportunityId) {
   );
 }
 
+async function addReview(application, review) {
+  application.review = review;
+  return application.save();
+}
+
 async function deleteApplication(id, userId) {
   const deletedApplication = await Application.findOneAndDelete({ _id: id, userId: userId });
   return deletedApplication;
@@ -98,4 +103,5 @@ module.exports = {
   updateApplication,
   deleteApplication,
   markTeamFormed,
+  addReview,
 };
