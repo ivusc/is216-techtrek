@@ -23,8 +23,8 @@ const authStore = useUserStore();
 </template>
 
 <style scoped>
-/* below lg, leave room so the bottom tab bar doesn't cover the end of the page */
-@media (max-width: 991.98px) {
+/* below md, leave room so the bottom tab bar doesn't cover the end of the page */
+@media (max-width: 767.98px) {
   .app-main {
     padding-bottom: 96px !important;
   }

@@ -15,8 +15,8 @@ function switchToSignUp() {
 
 <template>
   <div class="row g-0 min-vh-100">
-    <!-- banner, only from lg up; on phones the form takes the whole screen -->
-    <div id="banner" class="col-lg-6 d-none d-lg-flex bg-primary text-white rounded-4 p-5">
+    <!-- banner, only from md up; on phones the form takes the whole screen -->
+    <div id="banner" class="col-md-6 d-none d-md-flex bg-primary text-white rounded-4 p-5">
       <div style="max-width: 440px">
         <div class="d-flex align-items-center gap-2 mb-4">
           <i class="bi bi-bootstrap-fill fs-1"></i>
@@ -32,7 +32,7 @@ function switchToSignUp() {
         </ul>
       </div>
     </div>
-    <div id="loginPanel" class="col-12 col-lg-6 py-4 px-2">
+    <div id="loginPanel" class="col-12 col-md-6 py-4 px-2">
       <div id="panel">
         <div id="slider">
           <button class="slider-button btn" :class="{selected : isLogin}" @click="switchToLogin()">Log in</button>
