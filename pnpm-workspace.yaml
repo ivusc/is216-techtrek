@@ -14,3 +14,4 @@ allowBuilds:
   '@google/genai': true
   '@parcel/watcher': true
   protobufjs: true
+  mongodb-memory-server: false
