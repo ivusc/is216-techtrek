@@ -278,14 +278,20 @@ describe('POST /interview/attempt', () => {
 });
 
 describe('GET /interview/question/:applicationId/:questionId', () => {
-  it('returns a saved question', async () => {
+  it('returns the saved question without a score after it was practised again', async () => {
     const agent = await loginAs(app, { userName: ME });
     const application = await saveApplication(agent);
     await saveAttempt(agent, application._id);
+    await saveAttempt(agent, application._id, [{ ...SCORED[2], score: 10 }]);
 
     const response = await agent.get(`/interview/question/${application._id}/3`).expect(200);
 
-    expect(response.body).toMatchObject(SCORED[2]);
+    expect(response.body).toEqual({
+      questionId: 3,
+      question: SCORED[2].question,
+      type: 'System Design',
+      difficulty: 'Hard',
+    });
   });
 
   it('returns a question only for its own application', async () => {
@@ -334,7 +340,7 @@ describe('GET /interview/question/:applicationId/:questionId', () => {
 });
 
 describe('GET /interview/dashboard', () => {
-  it('lists applied and interview-stage jobs once per title with their scores', async () => {
+  it('lists applied and interview-stage jobs once per title with their best scores', async () => {
     const agent = await loginAs(app, { userName: ME });
     const job = await saveApplication(agent, { status: 'applied' });
     await saveApplication(agent, {
@@ -370,7 +376,6 @@ describe('GET /interview/dashboard', () => {
 
     const { body } = await agent.get('/interview/dashboard').expect(200);
 
-    expect(body.interviewAttempts).toHaveLength(1);
     expect(body.applicationCards.map((card) => [card.title, card.company, card.status])).toEqual([
       ['Frontend Intern', 'Acme', 'applied'],
       ['Data Intern', 'Grab', 'interview'],
@@ -378,14 +383,37 @@ describe('GET /interview/dashboard', () => {
     expect(body.titles).toEqual(['Frontend Intern', 'Data Intern']);
     expect(body.highestScore).toBe(9);
     expect(body.averageScore).toBe('7.5');
-    expect(body.questionScores).toEqual({ 1: { highScore: 6 }, 2: { highScore: 9 } });
-    expect(body.allQuestions).toHaveLength(2);
-    for (const question of body.allQuestions) {
-      expect(question).toMatchObject({ applicationId: job._id, title: 'Frontend Intern' });
-    }
+    expect(body.allQuestions).toEqual([
+      {
+        questionId: 1,
+        question: SCORED[0].question,
+        type: 'Behavioural',
+        difficulty: 'Easy',
+        applicationId: job._id,
+        title: 'Frontend Intern',
+        bestScore: 6,
+      },
+      {
+        questionId: 2,
+        question: SCORED[1].question,
+        type: 'Technical',
+        difficulty: 'Medium',
+        applicationId: job._id,
+        title: 'Frontend Intern',
+        bestScore: 9,
+      },
+    ]);
+    expect(Object.keys(body).sort()).toEqual([
+      'allQuestions',
+      'applicationCards',
+      'averageScore',
+      'highestScore',
+      'seniorTips',
+      'titles',
+    ]);
   });
 
-  it('lists a question once and keeps its best score when it is practised again', async () => {
+  it('lists a question once with its best score when it is practised again', async () => {
     const agent = await loginAs(app, { userName: ME });
     const job = await saveApplication(agent, { status: 'applied' });
     await saveAttempt(agent, job._id, [
@@ -399,8 +427,10 @@ describe('GET /interview/dashboard', () => {
 
     const { body } = await agent.get('/interview/dashboard').expect(200);
 
-    expect(body.allQuestions).toHaveLength(2);
-    expect(body.questionScores).toEqual({ 1: { highScore: 6 }, 2: { highScore: 10 } });
+    expect(body.allQuestions.map((question) => [question.questionId, question.bestScore])).toEqual([
+      [1, 6],
+      [2, 10],
+    ]);
     expect(body.highestScore).toBe(10);
     expect(body.averageScore).toBe('8.0');
   });
@@ -412,10 +442,8 @@ describe('GET /interview/dashboard', () => {
 
     expect(body).toEqual({
       applicationCards: [],
-      interviewAttempts: [],
       titles: [],
       allQuestions: [],
-      questionScores: {},
       highestScore: 0,
       averageScore: 0,
       seniorTips: [],
@@ -431,6 +459,5 @@ describe('GET /interview/dashboard', () => {
     const { body } = await agent.get('/interview/dashboard').expect(200);
 
     expect(body.allQuestions).toEqual([]);
-    expect(body.questionScores).toEqual({});
   });
 });

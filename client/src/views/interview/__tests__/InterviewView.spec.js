@@ -35,33 +35,31 @@ const DASHBOARD = {
       question: 'Tell me about a trade-off you explained.',
       type: 'Behavioural',
       difficulty: 'Medium',
-      score: 8,
       applicationId: 'a1',
       title: 'Frontend Intern',
+      bestScore: 8,
     },
     {
       questionId: 2,
       question: 'How would you keep search responsive?',
       type: 'Technical',
       difficulty: 'Hard',
-      score: 4,
       applicationId: 'a1',
       title: 'Frontend Intern',
+      bestScore: 4,
     },
     {
       questionId: 3,
       question: 'How would you clean messy dates?',
       type: 'Case',
       difficulty: 'Easy',
-      score: 9,
       applicationId: 'a2',
       title: 'Data Analyst',
+      bestScore: 9,
     },
   ],
-  questionScores: { 1: { highScore: 8 }, 2: { highScore: 4 }, 3: { highScore: 9 } },
   highestScore: 9,
   averageScore: '7.0',
-  interviewAttempts: [],
   seniorTips: [
     {
       organisation: 'Acme',
@@ -229,9 +227,7 @@ describe('InterviewView', () => {
   });
 
   it('says the bank is empty before the first session', async () => {
-    mock
-      .onGet('/interview/dashboard')
-      .reply(200, { ...DASHBOARD, allQuestions: [], questionScores: {} });
+    mock.onGet('/interview/dashboard').reply(200, { ...DASHBOARD, allQuestions: [] });
     const wrapper = await mountDashboard();
 
     expect(wrapper.findAll('article')).toHaveLength(2);
