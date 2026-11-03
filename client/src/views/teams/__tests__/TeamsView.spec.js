@@ -501,6 +501,15 @@ describe('TeamsView event link', () => {
     expect(titles(wrapper)).toEqual(['Byte Me']);
   });
 
+  it('says the filters hide your own post instead of saying nobody is recruiting', async () => {
+    route.query = { event: 'Hack&Roll' };
+    mockLists({ teams: [], mine: [ledTeam({ slotsOpen: 0, status: 'closed' })] });
+    const wrapper = await mountTeams();
+
+    expect(wrapper.text()).toContain('No teams match your filters.');
+    expect(wrapper.text()).not.toContain('No teams are recruiting right now');
+  });
+
   it('shows every team again when the address drops the event', async () => {
     route.query = { event: 'Lifehack' };
     mockLists();

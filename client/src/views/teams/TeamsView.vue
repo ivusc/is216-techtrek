@@ -497,7 +497,7 @@ onUnmounted(() => {
             <button class="btn btn-outline-primary fw-semibold" @click="clearAll">See all teams</button>
           </div>
           <p v-else-if="filteredTeams.length === 0" class="text-center text-body-secondary py-5">
-            {{ teams.length === 0 ? 'No teams are recruiting right now. Create a team post to start one.' : 'No teams match your filters.' }}
+            {{ browseTeams.length === 0 ? 'No teams are recruiting right now. Create a team post to start one.' : 'No teams match your filters.' }}
           </p>
 
           <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">

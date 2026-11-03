@@ -55,6 +55,8 @@
 
 .event-select {
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .skills-menu {
