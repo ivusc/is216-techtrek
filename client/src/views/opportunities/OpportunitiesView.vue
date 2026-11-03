@@ -7,6 +7,7 @@ import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
+import FindTeamPanel from '@/components/opportunities/FindTeamPanel.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
 import {
   getDaysLeft,
@@ -41,6 +42,8 @@ const visibleCount = ref(PAGE_SIZE)
 
 // the opportunity shown in the details panel (null = panel is closed)
 const selectedItem = ref(null)
+// the hackathon whose teams are shown in the "Find team" panel (null = closed)
+const findTeamItem = ref(null)
 
 onMounted(opportunityStore.fetchOpportunities)
 
@@ -316,6 +319,8 @@ const loadMore = async () => {
           :items="section.shownItems"
           :view-mode="viewMode"
           :saved-items="savedItems"
+          :team-counts="opportunityStore.teamCounts"
+          @find-team="findTeamItem = $event"
           @details="openDetails"
           @toggle-save="opportunityStore.toggleSave"
         />
@@ -330,6 +335,8 @@ const loadMore = async () => {
         :items="visibleItems"
         :view-mode="viewMode"
         :saved-items="savedItems"
+        :team-counts="opportunityStore.teamCounts"
+        @find-team="findTeamItem = $event"
         @details="openDetails"
         @toggle-save="opportunityStore.toggleSave"
       />
@@ -338,6 +345,8 @@ const loadMore = async () => {
         <button class="btn btn-outline-primary fw-semibold px-4" @click="loadMore">Load more opportunities</button>
       </div>
     </template>
+
+    <FindTeamPanel v-if="findTeamItem" :item="findTeamItem" @close="findTeamItem = null" />
 
     <OpportunityDetails
       v-if="selectedItem"

@@ -3,6 +3,7 @@ const TeamRequest = require('../models/TeamRequest');
 const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
 const { cleanSkills } = require('../service/skills');
+const opportunityService = require('../service/opportunity-service');
 
 const PROFILE_FIELDS = 'userName displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
@@ -88,13 +89,17 @@ async function getTeams(req, res) {
       }).sort('closesAt')
     );
 
-    const requests = await TeamRequest.find({ userId, teamId: { $in: teams.map((t) => t._id) } });
-    const statusByTeam = {};
-    for (const r of requests) statusByTeam[String(r.teamId)] = r.status;
+    const requests = await TeamRequest.find({ userId, kind: { $ne: 'invite' }, teamId: { $in: teams.map((t) => t._id) } });
+    // my request to each team, so the page can show "Request sent" and undo it
+    const requestByTeam = {};
+    for (const r of requests) requestByTeam[String(r.teamId)] = r;
 
     const result = teams
       .filter((t) => t.leaderId)
-      .map((t) => formatTeam(t, userId, statusByTeam[String(t._id)]));
+      .map((t) => {
+        const request = requestByTeam[String(t._id)];
+        return { ...formatTeam(t, userId, request?.status), requestId: request?._id ?? null };
+      });
 
     res.json(result);
   } catch (err) {
@@ -137,11 +142,20 @@ async function createTeam(req, res) {
     let eventData = { name: data.eventName, location: data.eventLocation };
     let closesAt = data.closesAt;
 
-    if (data.opportunityId) {
-      const opportunity = await Opportunity.findById(data.opportunityId);
+    // data.opportunity: a hackathon straight from the Devpost list (not saved yet), so save it first
+    let opportunity = null;
+    if (data.opportunity) {
+      opportunity = await opportunityService.findOrCreateOpportunity(data.opportunity);
+    } else if (data.opportunityId) {
+      opportunity = await Opportunity.findById(data.opportunityId);
       if (!opportunity) return res.status(404).json({ error: 'Event not found' });
+    }
+    if (opportunity) {
       eventData = { opportunityId: opportunity._id, name: opportunity.title, location: opportunity.location };
       closesAt = closesAt || opportunity.deadline;
+    }
+    if (!eventData.name || String(eventData.name).trim() === '') {
+      return res.status(400).json({ error: 'Pick a hackathon or type in the event name.' });
     }
 
     const teamSize = Number(data.teamSize);
@@ -346,7 +360,7 @@ async function getIncomingRequests(req, res) {
   const userId = req.session.user._id;
   try {
     const teamIds = await Team.find({ leaderId: userId }).distinct('_id');
-    const requests = await TeamRequest.find({ teamId: { $in: teamIds } })
+    const requests = await TeamRequest.find({ teamId: { $in: teamIds }, kind: { $ne: 'invite' } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
       .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
       .sort('-createdAt');
@@ -360,12 +374,178 @@ async function getIncomingRequests(req, res) {
 async function getSentRequests(req, res) {
   const userId = req.session.user._id;
   try {
-    const requests = await TeamRequest.find({ userId })
+    const requests = await TeamRequest.find({ userId, kind: { $ne: 'invite' } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
       .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// --- Invites ---
+
+function formatInvite(invite) {
+  const team = invite.teamId;
+  return {
+    _id: invite._id,
+    status: invite.status,
+    role: invite.role,
+    message: invite.message,
+    createdAt: invite.createdAt,
+    user: invite.userId, // the invited person
+    team: team
+      ? {
+          _id: team._id,
+          name: team.name,
+          event: team.event,
+          pitch: team.pitch,
+          skills: team.skills,
+          leader: team.leaderId,
+        }
+      : null,
+  };
+}
+
+// POST /teams/:id/invites  body: { userName (SMU email), role?, message? } - leader only
+async function createInvite(req, res) {
+  const { id: teamId } = req.params;
+  const userId = req.session.user._id;
+  const { userName, role, message } = req.body ?? {};
+  const email = String(userName ?? '').trim().toLowerCase();
+
+  if (!/^[^@\s]+@smu\.edu\.sg$/.test(email)) {
+    return res.status(400).json({ error: 'Type your friend\'s @smu.edu.sg email.' });
+  }
+
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can invite people' });
+    if (team.slotsOpen === 0) return res.status(409).json({ error: 'Your team is already full' });
+
+    const friend = await User.findOne({ userName: email }).select('_id displayName userName');
+    if (!friend) {
+      return res.status(404).json({ error: 'No TechTrek account uses that email yet. Send them your invite link instead!' });
+    }
+    if (String(friend._id) === String(userId)) return res.status(400).json({ error: 'You are already in this team' });
+    if (team.members.some((member) => String(member.userId) === String(friend._id))) {
+      return res.status(409).json({ error: (friend.displayName || email) + ' is already in your team' });
+    }
+
+    const existing = await TeamRequest.findOne({ teamId: team._id, userId: friend._id });
+    if (existing && existing.status === 'pending') {
+      return res.status(409).json({
+        error: existing.kind === 'invite'
+          ? 'You already invited ' + (friend.displayName || email)
+          : (friend.displayName || email) + ' already asked to join - check your Requests',
+      });
+    }
+    // an old answered request or invite would block a new one, so clear it
+    if (existing) await TeamRequest.deleteOne({ _id: existing._id });
+
+    const invite = await TeamRequest.create({
+      teamId: team._id,
+      userId: friend._id,
+      kind: 'invite',
+      role,
+      message,
+    });
+
+    res.status(201).json({ _id: invite._id, status: invite.status, user: friend });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /teams/:id/invites - leader only: who this team has invited
+async function getTeamInvites(req, res) {
+  const { id: teamId } = req.params;
+  const userId = req.session.user._id;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can see invites' });
+
+    const invites = await TeamRequest.find({ teamId, kind: 'invite' })
+      .populate({ path: 'userId', select: 'displayName userName avatar.updatedAt' })
+      .sort('-createdAt');
+    res.json(invites.filter((invite) => invite.userId).map(formatInvite));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /teams/invites - invites sent to me that I have not answered
+async function getMyInvites(req, res) {
+  const userId = req.session.user._id;
+  try {
+    const invites = await TeamRequest.find({ userId, kind: 'invite', status: 'pending' })
+      .populate({
+        path: 'teamId',
+        select: 'name event pitch skills leaderId',
+        populate: { path: 'leaderId', select: 'displayName userName avatar.updatedAt' },
+      })
+      .sort('-createdAt');
+    res.json(invites.filter((invite) => invite.teamId).map(formatInvite));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// PATCH /teams/invites/:id  body: { status: accepted | declined } - the invited person answers
+async function respondToInvite(req, res) {
+  const { id: inviteId } = req.params;
+  const userId = req.session.user._id;
+  const { status } = req.body ?? {};
+  if (!ANSWER_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Status must be accepted or declined' });
+  }
+
+  try {
+    const invite = await TeamRequest.findById(inviteId);
+    if (!invite || invite.kind !== 'invite') return res.status(404).json({ error: 'Invite not found' });
+    if (String(invite.userId) !== String(userId)) return res.status(403).json({ error: 'This invite is for someone else' });
+
+    const team = await Team.findById(invite.teamId);
+    if (!team) return res.status(404).json({ error: 'This team no longer exists' });
+    if (status === 'accepted' && team.slotsOpen === 0) {
+      return res.status(409).json({ error: 'Sorry, this team filled up before you answered' });
+    }
+
+    const answered = await TeamRequest.findOneAndUpdate(
+      { _id: inviteId, status: 'pending' },
+      { status },
+      { returnDocument: 'after' },
+    );
+    if (!answered) return res.status(409).json({ error: 'You already answered this invite' });
+
+    if (status === 'accepted') {
+      team.members.push({ userId, role: answered.role });
+      team.syncStatus();
+      await team.save();
+    }
+
+    res.json({ _id: answered._id, status: answered.status, team: { _id: team._id, name: team.name } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// DELETE /teams/invites/:id - the leader takes back an invite that has not been answered
+async function cancelInvite(req, res) {
+  const { id: inviteId } = req.params;
+  const userId = req.session.user._id;
+  try {
+    const invite = await TeamRequest.findById(inviteId);
+    if (!invite || invite.kind !== 'invite') return res.status(404).json({ error: 'Invite not found' });
+    const team = await Team.findById(invite.teamId);
+    if (!team || !isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can cancel invites' });
+
+    await TeamRequest.deleteOne({ _id: inviteId });
+    res.status(204).end();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -384,4 +564,9 @@ module.exports = {
   getSentRequests,
   respondToRequest,
   withdrawRequest,
+  createInvite,
+  getTeamInvites,
+  getMyInvites,
+  respondToInvite,
+  cancelInvite,
 };

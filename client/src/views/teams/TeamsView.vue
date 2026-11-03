@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import './teams.css'
-import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
+import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
 from '@/services/teamService'
 import {fetchAllOpportunities} from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
@@ -16,6 +17,13 @@ import CreateTeamModal from '@/components/teams/CreateTeamModal.vue'
 import EditSkillsModal from '@/components/teams/EditSkillsModal.vue'
 import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
 import TrekLoader from '@/components/TrekLoader.vue'
+import RequestSentToast from '@/components/teams/RequestSentToast.vue'
+import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue'
+import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue'
+import InvitesBanner from '@/components/teams/InvitesBanner.vue'
+import { fetchMyInvites, answerInvite } from '@/services/teamService'
+import { isClosed } from '@/utils/opportunity'
+import { useJoinRequests } from '@/composables/useJoinRequests'
 
 const auth = useUserStore()
 
@@ -31,12 +39,14 @@ const isLoading = ref(true)
 const status = ref('')
 
 const search = ref('')
-const eventFilter = ref('')
+// "Find team" on an Opportunities hackathon card links here with ?event=<hackathon title>
+const route = useRoute()
+const eventFromLink = typeof route.query.event === 'string' ? route.query.event : ''
+const eventFilter = ref(eventFromLink)
 const skillFilter = ref([])
 const sizeFilter = ref('')
 const openOnly = ref(true)
 
-const joinTarget = ref(null)
 const showCreate = ref(false)
 const editingTeam = ref(null)
 const showSkills = ref(false)
@@ -44,7 +54,9 @@ const isBusy = ref(false)
 const modalError = ref('')
 const busyRequestId = ref('')
 
-let skillFilterReady = false
+// off by default: every team is shown. "Match my skills" turns on the skill filter, the match banner
+// and the highlighted skills on each card
+const matchMySkills = ref(false)
 
 const loadAll = async (showLoading = true) => {
   if (showLoading) {
@@ -94,19 +106,21 @@ const loadAll = async (showLoading = true) => {
   }
 
   try {
-    if (!skillFilterReady) {
-      skillFilter.value = matchedSkills.value
-      skillFilterReady = true
-    }
+    myInvites.value = await fetchMyInvites()
   } catch (error) {
-    console.error(error)
+    console.error('Invites load failed:', error)
+    myInvites.value = []
   }
 
   isLoading.value = false
 }
-onMounted(loadAll)
 
 const mySkills = computed(() => auth.skills)
+
+// switching "Match my skills" on filters by my skills; switching it off shows every team again
+watch(matchMySkills, (on) => {
+  skillFilter.value = on ? [...mySkills.value] : []
+})
 
 const matchedSkills = computed(() => {
   const wanted = []
@@ -123,6 +137,21 @@ const matchCount = computed(() => {
 const pendingIncoming = computed(() => incoming.value.filter((request) => request.status === 'pending').length)
 const pendingSent = computed(() => sent.value.filter((request) => request.status === 'pending').length)
 
+// opened from an invite link (/teams?team=<id>): show that team's join form once the teams have loaded
+const teamFromLink = typeof route.query.team === 'string' ? route.query.team : ''
+async function openTeamFromLink() {
+  await loadAll()
+  if (teamFromLink === '') return
+  const team = teams.value.find((t) => t._id === teamFromLink)
+  if (team) {
+    openJoin(team)
+  } else if (myTeams.value.some((t) => t._id === teamFromLink)) {
+    activeTab.value = 'mine'
+  } else {
+    status.value = 'That team is not taking new members right now.'
+  }
+}
+
 const tabCounts = computed(() => ({
   browse: teams.value.filter((team) => team.slotsOpen > 0).length,
   mine: myTeams.value.length,
@@ -130,7 +159,8 @@ const tabCounts = computed(() => ({
 }))
 
 const eventOptions = computed(() => {
-  const names = []
+  // keep the hackathon from the link in the list even when it has no teams yet
+  const names = eventFromLink !== '' ? [eventFromLink] : []
   for (const team of teams.value) {
     if (!names.includes(team.event.name)) {
       names.push(team.event.name)
@@ -202,49 +232,71 @@ const filteredTeams = computed(() => {
 })
 
 const anyFilter = computed(() => {
-  return search.value !== '' || eventFilter.value !== '' || skillFilter.value.length > 0 || sizeFilter.value !== '' || !openOnly.value
+  return search.value !== '' || eventFilter.value !== '' || skillFilter.value.length > 0 || sizeFilter.value !== '' || !openOnly.value || matchMySkills.value
 })
 
 function clearAll() {
   search.value = ''
   eventFilter.value = ''
   skillFilter.value = []
+  matchMySkills.value = false
   sizeFilter.value = ''
   openOnly.value = true
 }
 
 const ledTeams = computed(() => myTeams.value.filter((team) => team.isLeader && team.status !== 'draft'))
 
-function openJoin(team) {
-  modalError.value = ''
-  joinTarget.value = team
-}
+// send a request, show the "Request sent" toast, undo it
+const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, undoRequest } =
+  useJoinRequests(() => loadAll(false))
 
-const submitJoin = async (request) => {
-  isBusy.value = true
-  modalError.value = ''
-  try {
-    await sendRequest(joinTarget.value._id, request)
-    joinTarget.value = null
-    await loadAll(false)
-  } catch (error) {
-    console.error(error)
-    modalError.value = getErrorMessage(error)
-  }
-  isBusy.value = false
-}
-
-const openCreate = async (team = null) => {
+// eventName: the hackathon to start the form on (e.g. the one being filtered)
+const createForEvent = ref('')
+const openCreate = async (team = null, eventName = '') => {
   modalError.value = ''
   try {
     const data = await fetchAllOpportunities()
-    events.value = data.hackathons.hackathons
+    // only hackathons that are still open can get new teams
+    events.value = (data.hackathons?.hackathons ?? []).filter((event) => !isClosed(event))
   } catch (error) {
     console.error(error)
     events.value = []
   }
   editingTeam.value = team
+  createForEvent.value = eventName
   showCreate.value = true
+}
+
+// after a new post is published: the "team is live" celebration, then maybe the invite pop-up
+const celebrateTeam = ref(null)
+const inviteTeam = ref(null)
+
+function inviteFromCelebration() {
+  inviteTeam.value = celebrateTeam.value
+  celebrateTeam.value = null
+}
+
+// invites sent to me
+const myInvites = ref([])
+const inviteBusyId = ref('')
+const joinedMessage = ref('')
+
+async function answerMyInvite(invite, answer) {
+  inviteBusyId.value = invite._id
+  status.value = ''
+  try {
+    await answerInvite(invite._id, answer)
+    if (answer === 'accepted') {
+      joinedMessage.value = 'You joined ' + invite.team.name + '!'
+      activeTab.value = 'mine'
+      setTimeout(() => (joinedMessage.value = ''), 5000)
+    }
+    await loadAll(false)
+  } catch (error) {
+    console.error(error)
+    status.value = 'Could not answer the invite: ' + getErrorMessage(error)
+  }
+  inviteBusyId.value = ''
 }
 
 function closeCreate() {
@@ -259,8 +311,12 @@ const submitTeam = async (post) => {
     if (editingTeam.value) {
       await updateTeam(editingTeam.value._id, post)
     } else {
-      await createTeam(post)
+      const created = await createTeam(post)
       activeTab.value = 'mine'
+      // drafts are not public yet, so only celebrate published posts
+      if (post.status !== 'draft') {
+        celebrateTeam.value = created
+      }
     }
     closeCreate()
     await loadAll(false)
@@ -315,8 +371,10 @@ const saveSkills = async (skills) => {
   try {
     await auth.updateMe({ skills })
     showSkills.value = false
-    skillFilterReady = false
     await loadAll(false)
+    if (matchMySkills.value) {
+      skillFilter.value = [...mySkills.value]
+    }
   } catch (error) {
     console.error(error)
     modalError.value = getErrorMessage(error)
@@ -328,6 +386,8 @@ function openSkills() {
   modalError.value = ''
   showSkills.value = true
 }
+
+onMounted(openTeamFromLink)
 </script>
 
 <template>
@@ -338,6 +398,11 @@ function openSkills() {
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />
 
+      <InvitesBanner v-if="myInvites.length > 0" :invites="myInvites" :busy-id="inviteBusyId" @answer="answerMyInvite" />
+      <div v-if="joinedMessage" class="alert alert-success d-flex align-items-center gap-2 py-2" role="status">
+        <i class="bi bi-people-fill"></i>{{ joinedMessage }}
+      </div>
+      <div v-if="undoError" class="alert alert-danger py-2" role="alert">{{ undoError }}</div>
       <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2">
         {{ status }}
         <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="loadAll()">Retry</button>
@@ -357,6 +422,7 @@ function openSkills() {
             v-model:skills="skillFilter"
             v-model:size="sizeFilter"
             v-model:open-only="openOnly"
+            v-model:match-my-skills="matchMySkills"
             :event-options="eventOptions"
             :skill-options="skillOptions"
             :count="filteredTeams.filter((team) => team.slotsOpen > 0).length"
@@ -365,19 +431,33 @@ function openSkills() {
           />
 
           <SkillMatchBanner
+            v-if="matchMySkills"
             :my-skills="mySkills"
             :matched-skills="matchedSkills"
             :match-count="matchCount"
             @edit-skills="openSkills"
           />
 
-          <p v-if="filteredTeams.length === 0" class="text-center text-body-secondary py-5">
+          <div v-if="filteredTeams.length === 0 && eventFilter !== ''" class="text-center text-body-secondary py-5">
+            <p class="mb-3">No teams are looking for members for <strong>{{ eventFilter }}</strong> yet.</p>
+            <button class="btn btn-primary fw-semibold me-2" @click="openCreate(null, eventFilter)">
+              <i class="bi bi-plus-lg"></i> Start a team
+            </button>
+            <button class="btn btn-outline-primary fw-semibold" @click="clearAll">See all teams</button>
+          </div>
+          <p v-else-if="filteredTeams.length === 0" class="text-center text-body-secondary py-5">
             {{ teams.length === 0 ? 'No teams are recruiting right now. Create a team post to start one.' : 'No teams match your filters.' }}
           </p>
 
           <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
             <div v-for="team in filteredTeams" :key="team._id" class="col">
-              <TeamCard :team="team" :my-skills="mySkills" @request="openJoin(team)" />
+              <TeamCard
+                :team="team"
+                :my-skills="matchMySkills ? mySkills : []"
+                :undoing="undoingId === team.requestId"
+                @request="openJoin(team)"
+                @undo="undoRequest(team.requestId, team)"
+              />
             </div>
           </div>
         </template>
@@ -396,6 +476,7 @@ function openSkills() {
                 :matches="matchesByTeam[team._id]"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
+                @invite="inviteTeam = team"
               />
             </div>
           </div>
@@ -418,16 +499,26 @@ function openSkills() {
       v-if="joinTarget"
       :team="joinTarget"
       :my-skills="mySkills"
-      :busy="isBusy"
-      :error="modalError"
-      @close="joinTarget = null"
+      :busy="isSending"
+      :error="joinError"
+      @close="closeJoin"
       @submit="submitJoin"
+    />
+
+    <RequestSentToast
+      v-if="sentToast"
+      :key="sentToast.requestId"
+      :team-name="sentToast.teamName"
+      :busy="undoingId === sentToast.requestId"
+      @undo="undoRequest(sentToast.requestId, sentToast.team)"
+      @close="sentToast = null"
     />
 
     <CreateTeamModal
       v-if="showCreate"
       :events="events"
       :team="editingTeam"
+      :initial-event="createForEvent"
       :suggestions="skillSuggestions"
       :busy="isBusy"
       :error="modalError"
@@ -435,6 +526,16 @@ function openSkills() {
       @submit="submitTeam"
       @remove="removeTeam"
     />
+
+    <TeamCreatedCelebration
+      v-if="celebrateTeam"
+      :team-name="celebrateTeam.name"
+      :event-name="celebrateTeam.event?.name"
+      @invite="inviteFromCelebration"
+      @close="celebrateTeam = null"
+    />
+
+    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" @close="inviteTeam = null" />
 
     <EditSkillsModal
       v-if="showSkills"

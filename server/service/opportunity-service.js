@@ -37,12 +37,55 @@ async function getJobs({ type, field, page }) {
   };
 }
 
+// Devpost's own API (HACKATHONS_API_URL=https://devpost.com/api/hackathons) gives 9 open hackathons per page,
+// so read the first page, then the rest at the same time. Kept for 10 minutes so every page view
+// does not make 6 calls to Devpost.
+const MAX_HACKATHON_PAGES = 8;
+const HACKATHON_CACHE_MS = 10 * 60 * 1000;
+let hackathonCache = null; // { savedAt, result }
+
+async function fetchHackathonPage(page) {
+  const response = await axios.get(process.env.HACKATHONS_API_URL, {
+    params: { 'status[]': 'open', page },
+    headers: { 'User-Agent': 'TechTrek (SMU IS216 student project)' },
+  });
+  return response.data;
+}
+
 async function getHackathons() {
-  const response = await axios.get(process.env.HACKATHONS_API_URL);
-  return {
-    count: response.data.hackathons.length,
-    hackathons: response.data.hackathons.map(normaliseHackathon),
-  };
+  if (hackathonCache && Date.now() - hackathonCache.savedAt < HACKATHON_CACHE_MS) {
+    return hackathonCache.result;
+  }
+
+  const firstPage = await fetchHackathonPage(1);
+  const perPage = firstPage.meta?.per_page || firstPage.hackathons.length || 1;
+  const pageCount = Math.min(Math.ceil((firstPage.meta?.total_count ?? 0) / perPage), MAX_HACKATHON_PAGES);
+
+  const otherPages = [];
+  for (let page = 2; page <= pageCount; page++) {
+    otherPages.push(fetchHackathonPage(page));
+  }
+  // one page failing should not lose the others
+  const results = await Promise.allSettled(otherPages);
+
+  const all = [...firstPage.hackathons];
+  for (const result of results) {
+    if (result.status === 'fulfilled') all.push(...result.value.hackathons);
+  }
+
+  // the same hackathon can move between pages while we read them, so keep each id once
+  const seen = new Set();
+  const hackathons = [];
+  for (const h of all) {
+    if (!seen.has(h.id)) {
+      seen.add(h.id);
+      hackathons.push(normaliseHackathon(h));
+    }
+  }
+
+  const result = { count: hackathons.length, hackathons };
+  hackathonCache = { savedAt: Date.now(), result };
+  return result;
 }
 
 function removeOrganisationFromTitle(title, organisation) {
@@ -88,13 +131,14 @@ function normaliseHackathon(h) {
     type: 'hackathon',
     title: h.title,
     organisation: h.organization_name,
-    location: h.displayed_location,
+    // Devpost sends { icon, location }; older copies of the list sent plain text
+    location: typeof h.displayed_location === 'object' ? h.displayed_location?.location : h.displayed_location,
     dates: h.submission_period_dates,
     deadline: parseDeadline(h.submission_period_dates),
-    prize: h.prizeText.replace(/<[^>]*>/g, '').trim(), //extract only the price
-    themes: h.themes.map((t) => t.name),
+    prize: (h.prize_amount ?? h.prizeText ?? '').replace(/<[^>]*>/g, '').trim(), //extract only the price
+    themes: (h.themes ?? []).map((t) => t.name),
     url: h.url,
-    thumbnail: h.thumbnail_url.startsWith('//') ? `https:${h.thumbnail_url}` : h.thumbnail_url,
+    thumbnail: h.thumbnail_url?.startsWith('//') ? `https:${h.thumbnail_url}` : h.thumbnail_url,
     registrations: h.registrations_count,
     featured: h.featured,
   };

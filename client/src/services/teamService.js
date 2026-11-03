@@ -60,6 +60,32 @@ export async function withdrawRequest(requestId) {
   await serverAPI.delete(BASE_URL + '/requests/' + requestId);
 }
 
+// invites: a team lead invites a friend by SMU email
+export async function inviteToTeam(teamId, invite) {
+  const response = await serverAPI.post(BASE_URL + '/' + teamId + '/invites', invite);
+  return response.data;
+}
+
+export async function fetchTeamInvites(teamId) {
+  const response = await serverAPI.get(BASE_URL + '/' + teamId + '/invites');
+  return response.data;
+}
+
+export async function cancelInvite(inviteId) {
+  await serverAPI.delete(BASE_URL + '/invites/' + inviteId);
+}
+
+// invites sent to me
+export async function fetchMyInvites() {
+  const response = await serverAPI.get(BASE_URL + '/invites');
+  return response.data;
+}
+
+export async function answerInvite(inviteId, status) {
+  const response = await serverAPI.patch(BASE_URL + '/invites/' + inviteId, { status });
+  return response.data;
+}
+
 export function getErrorMessage(error) {
   return error.response?.data?.error ?? error.message;
 }

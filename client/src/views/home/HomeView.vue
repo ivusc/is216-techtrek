@@ -323,6 +323,8 @@ async function respond(request, status) {
               <OpportunityCard
                 :item="item"
                 :saved="opportunityStore.isSaved(item)"
+                :team-count="opportunityStore.teamCountFor(item)"
+                @find-team="router.push({ path: '/teams', query: { event: item.title } })"
                 @details="router.push('/opportunities')"
                 @toggle-save="opportunityStore.toggleSave(item)"
               />

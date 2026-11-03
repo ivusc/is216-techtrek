@@ -4,6 +4,7 @@ import {
   deleteApplicationService,
   fetchAllApplications,
 } from '@/services/trackerService';
+import { fetchTeams } from '@/services/teamService';
 import { getKey } from '@/utils/opportunity';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -24,6 +25,9 @@ export const useOpportunityStore = defineStore('opportunity', () => {
   const jobField = ref(''); // frontend | backend | fullstack | data | ai | devops | cybersecurity | mobile
 
   const savedItems = ref([]);
+
+  // { "Hackathon title": 3 } - how many teams with open slots each hackathon has, for the "Find team" buttons
+  const teamCounts = ref({});
 
   // gets all jobs and hackathons from our express server
   async function fetchOpportunities() {
@@ -51,6 +55,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
       lastUpdated.value = new Date().toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
 
       await fetchSavedItems();
+      fetchTeamCounts();
     } catch (error) {
       console.error(error);
       status.value = 'There was an error: ' + error.message;
@@ -153,6 +158,26 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     }
   }
 
+  // counted by event name, the same way the Teams page filters by event
+  async function fetchTeamCounts() {
+    try {
+      const teams = await fetchTeams();
+      const counts = {};
+      for (const team of teams) {
+        if (team.slotsOpen > 0) {
+          counts[team.event.name] = (counts[team.event.name] ?? 0) + 1;
+        }
+      }
+      teamCounts.value = counts;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  function teamCountFor(item) {
+    return teamCounts.value[item.title] ?? 0;
+  }
+
   return {
     jobs,
     hackathons,
@@ -164,7 +189,10 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     jobType,
     jobField,
     savedItems,
+    teamCounts,
     fetchOpportunities,
+    fetchTeamCounts,
+    teamCountFor,
     reloadJobs,
     fetchMoreJobs,
     isSaved,

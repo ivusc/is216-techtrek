@@ -3,9 +3,13 @@ import { ref, computed, watch } from 'vue'
 import { formatDate } from '@/utils/date'
 import TeamModal from './TeamModal.vue'
 import SkillInput from './SkillInput.vue'
+import { getKey } from '@/utils/opportunity'
 
+// events: open hackathons from the Devpost list (they have no database _id yet, so they are picked by getKey)
 const props = defineProps({
   events: { type: Array, required: true },
+  // the hackathon title to start with, e.g. when "Start a team" is pressed on a hackathon
+  initialEvent: { type: String, default: '' },
   team: { type: Object, default: null },
   suggestions: { type: Array, default: () => [] },
   busy: { type: Boolean, default: false },
@@ -25,9 +29,9 @@ const otherLocation = ref('')
 const otherCloses = ref('')
 
 if (isEditing) {
-  const savedEvent = props.events.find((event) => event._id === props.team.event.opportunityId)
+  const savedEvent = props.events.find((event) => event.title === props.team.event.name)
   if (savedEvent) {
-    eventChoice.value = savedEvent._id
+    eventChoice.value = getKey(savedEvent)
   } else {
     eventChoice.value = 'other'
     otherName.value = props.team.event.name
@@ -35,7 +39,8 @@ if (isEditing) {
     otherCloses.value = props.team.closesAt ? props.team.closesAt.slice(0, 10) : ''
   }
 } else {
-  eventChoice.value = props.events.length > 0 ? props.events[0]._id : 'other'
+  const startEvent = props.events.find((event) => event.title === props.initialEvent) ?? props.events[0]
+  eventChoice.value = startEvent ? getKey(startEvent) : 'other'
 }
 
 const name = ref(isEditing ? props.team.name : '')
@@ -100,7 +105,8 @@ function submit(status) {
     post.eventLocation = otherLocation.value
     post.closesAt = otherCloses.value
   } else {
-    post.opportunityId = eventChoice.value
+    // the server saves the hackathon (if it is new) and links the team to it
+    post.opportunity = props.events.find((event) => getKey(event) === eventChoice.value)
   }
 
   emit('submit', post)
@@ -121,9 +127,10 @@ const showDelete = isEditing && props.team.status !== 'draft'
     <div class="mb-3">
       <label class="small fw-semibold mb-1" for="post-event">Hackathon or competition</label>
       <select id="post-event" v-model="eventChoice" class="form-select">
-        <option v-for="event in events" :key="event._id" :value="event._id">
+        <option v-for="event in events" :key="getKey(event)" :value="getKey(event)">
           {{ event.title }}<template v-if="event.deadline"> · closes {{ formatDate(event.deadline) }}</template>
         </option>
+        <option value="other">Other event (not on the list)</option>
       </select>
 
       <div v-if="eventChoice === 'other'" class="row g-2 mt-1">

@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "seed:teams": "node scripts/seed-teams.js",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },

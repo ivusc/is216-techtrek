@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 
 const STATUS_TYPES = ['pending', 'accepted', 'declined'];
+// request: the user asked to join the team; invite: the team leader asked the user to join
+const KIND_TYPES = ['request', 'invite'];
 
 const teamRequestSchema = new mongoose.Schema(
   {
@@ -10,6 +12,7 @@ const teamRequestSchema = new mongoose.Schema(
     message: { type: String, trim: true, maxlength: 500 },
     shareProfile: { type: Boolean, default: true },
     status: { type: String, enum: STATUS_TYPES, required: true, default: 'pending' },
+    kind: { type: String, enum: KIND_TYPES, required: true, default: 'request' },
   },
   { timestamps: true },
 );
