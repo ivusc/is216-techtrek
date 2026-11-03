@@ -6,9 +6,10 @@ const authStore = useUserStore();
 </script>
 
 <template>
-  <div class="d-flex vh-100">
+  <!-- the page itself never scrolls: the sidebar stays put and only <main> scrolls -->
+  <div class="d-flex vh-100 overflow-hidden">
     <SideBar v-if="authStore.isLoggedIn" />
-    <main class="app-main flex-grow-1 p-3 p-md-4" style="min-width: 0">
+    <main class="app-main flex-grow-1 overflow-y-auto p-3 p-md-4" style="min-width: 0">
       <RouterView />
     </main>
   </div>
