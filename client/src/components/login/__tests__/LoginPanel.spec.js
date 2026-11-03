@@ -168,17 +168,23 @@ describe('LoginPanel remember me', () => {
     expect(next.find('#login-remember').element.checked).toBe(true);
   });
 
-  it('forgets the stored email when logging in without it', async () => {
+  it('forgets the remember me choice when it is unticked', async () => {
     localStorage.setItem('email', 'someone.else@smu.edu.sg');
     localStorage.setItem('rememberUser', 'true');
     const wrapper = mount(LoginPanel);
     await flushPromises();
     expect(wrapper.find('#login-email').element.value).toBe('someone.else@smu.edu.sg');
+    expect(wrapper.find('#login-remember').element.checked).toBe(true);
 
     await wrapper.find('#login-remember').setValue(false);
     await submit(wrapper);
 
     expect(localStorage.getItem('email')).toBeNull();
+    expect(localStorage.getItem('rememberUser')).toBeNull();
+    const next = mount(LoginPanel);
+    await flushPromises();
+    expect(next.find('#login-email').element.value).toBe('');
+    expect(next.find('#login-remember').element.checked).toBe(false);
   });
 
   it('starts empty when nothing was remembered', async () => {

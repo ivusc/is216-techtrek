@@ -60,7 +60,7 @@ describe('SignUpPanel', () => {
     [
       'the length third',
       { password: 'abc' },
-      'Your password should be at least 8 charcters long with 1 number, uppercase alphabet and symbol.',
+      'Your password should be at least 8 characters long with 1 number, uppercase alphabet and symbol.',
     ],
     ['a symbol fourth', { password: 'abcdefgh' }, 'Your password should be at least 1 symbol.'],
     ['a digit fifth', { password: 'abcdefg!' }, 'Your password should be at least 1 digit.'],
