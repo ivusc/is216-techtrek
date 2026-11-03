@@ -1,51 +1,69 @@
-const { Document } = require('mongoose');
 const { IllegalArguementError, DatabaseError } = require('./user-service-errors');
 const User = require('../../models/User');
+const Application = require('../../models/Application');
+const InterviewAttempt = require('../../models/interviewAttempt');
 const bycrpt = require('bcryptjs');
 
 const SALT_ROUNDS = 12;
+const MIN_PASSWORD_LENGTH = 8;
 
 /**
  *
- * @param {String} userId
+ * @param {String} userName
  * @param {String} password
  * @throws {DatabaseError, IllegalArguementError}
- * @returns {void}
+ * @returns {Promise<Document>} the new user
  */
-async function createUser(userName,password) {
-  const {cleanedUserName, cleanedPassword}= await validateUserNameAndPassword(userName, password);
-
+async function createUser(userName, password) {
+  const cleanedUserName = validateUserName(userName);
+  validatePassword(password);
+  await checkUserNameIsFree(cleanedUserName);
 
   const encryptedPassword = await bycrpt.hash(password, SALT_ROUNDS);
   try {
-    await User.create({
+    const user = await User.create({
       userName: cleanedUserName,
-      password: encryptedPassword
-    })
+      password: encryptedPassword,
+    });
+    return user;
   } catch (err) {
-    throw new DatabaseError("Database could not create new user.")
+    if (err.name === 'ValidationError') throw new IllegalArguementError(err.message);
+    throw new DatabaseError('Database could not create new user.');
   }
 }
 
 /**
- *
- * @param {*} userName
- * @param {*} password
- * @throws {IllegalArguementError, DataBaseError}
- * @returns {Promise<{cleanedUserName: String, cleanedPassword: String}>} an object containing trimmed username and password
+ * @param {String} userName
+ * @throws {IllegalArguementError}
+ * @returns {String} trimmed username
  */
-async function validateUserNameAndPassword(userName, password) {
-  const cleanedUserName = userName.trim();
-  if (cleanedUserName.length == 0 ) throw new IllegalArguementError("Username cannot be blank!");
+function validateUserName(userName) {
+  const cleanedUserName = String(userName ?? '').trim();
+  if (cleanedUserName.length == 0) throw new IllegalArguementError('Username cannot be blank!');
+  return cleanedUserName;
+}
 
-  const cleanedPassword = password.trim();
-  if (cleanedPassword.length == 0) throw new IllegalArguementError("Password cannot be blank or only contain spaces!")
+/**
+ * The password is checked here because the database only ever sees the hash,
+ * so the length rules in the User model cannot check the real password.
+ * @param {String} password
+ * @throws {IllegalArguementError}
+ */
+function validatePassword(password) {
+  const text = String(password ?? '');
+  if (text.trim().length == 0) throw new IllegalArguementError('Password cannot be blank or only contain spaces!');
+  if (text.length < MIN_PASSWORD_LENGTH) {
+    throw new IllegalArguementError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long!`);
+  }
+}
 
-  const result = await findUserByUserName(cleanedUserName);
-  if (result != null) throw new IllegalArguementError("Username already exists.");
-
-
-  return {cleanedUserName, cleanedPassword};
+/**
+ * @param {String} userName
+ * @throws {IllegalArguementError, DatabaseError}
+ */
+async function checkUserNameIsFree(userName) {
+  const result = await findUserByUserName(userName);
+  if (result != null) throw new IllegalArguementError('Username already exists.');
 }
 
 /**
@@ -56,10 +74,10 @@ async function validateUserNameAndPassword(userName, password) {
  */
 async function findUserByUserName(userName) {
   try {
-    const user = await User.findOne({userName: userName});
+    const user = await User.findOne({ userName: userName });
     return user;
   } catch (err) {
-    throw new DatabaseError("Database could not find user by username.");
+    throw new DatabaseError('Database could not find user by username.');
   }
 }
 
@@ -74,57 +92,61 @@ async function findUserByUserId(userId) {
     const user = await User.findById(userId);
     return user;
   } catch (err) {
-    throw new DatabaseError("Database could not find user by userId.");
+    throw new DatabaseError('Database could not find user by userId.');
   }
 }
 
 /**
- * @param {String} oldUserName
- * @param {String} newUserName
- * @param {String} password
- * @param {[String]} skill
- * @param {String} linkedinUrl
- * @param {String} githubUrl
- * @throws {IllegalArguementError, DataBaseError}
- * @returns {void}
+ * Only the fields that were sent are changed.
+ * @param {Schema.Types.ObjectId} userId
+ * @param {{newUserName?: String, password?: String, skills?: [String], linkedinUrl?: String, githubUrl?: String}} changes
+ * @throws {IllegalArguementError, DatabaseError}
+ * @returns {Promise<Document | null>} the updated user, or null if not found
  */
-async function updateUser(oldUserName, newUserName, password, skills=[], linkedinUrl=undefined, githubUrl=undefined) {
-  let cleanedUserName;
-  let cleanedPassword;
-  try {
-    cleanedUserName, cleanedPassword = validateUserNameAndPassword(newUserName, password)
-  } catch (err) {
-    throw err;
+async function updateUser(userId, changes) {
+  const update = {};
+
+  if (changes.newUserName !== undefined) {
+    const cleanedUserName = validateUserName(changes.newUserName).toLowerCase();
+    const existing = await findUserByUserName(cleanedUserName);
+    if (existing != null && String(existing._id) !== String(userId)) {
+      throw new IllegalArguementError('Username already exists.');
+    }
+    update.userName = cleanedUserName;
   }
 
-  const encryptedPassword = await bycrpt.hash(cleanedPassword, SALT_ROUNDS);
+  if (changes.password !== undefined) {
+    validatePassword(changes.password);
+    update.password = await bycrpt.hash(changes.password, SALT_ROUNDS);
+  }
+
+  if (changes.skills !== undefined) update.skills = changes.skills;
+  if (changes.linkedinUrl !== undefined) update.linkedinUrl = changes.linkedinUrl;
+  if (changes.githubUrl !== undefined) update.githubUrl = changes.githubUrl;
+
   try {
-    User.updateOne(
-      {userName : oldUserName},
-      {
-        userName : newUserName,
-        password : encryptedPassword,
-        skills : skills,
-        linkedinUrl : linkedinUrl,
-        githubUrl : githubUrl
-      }
-    )
+    const user = await User.findByIdAndUpdate(userId, update, { returnDocument: 'after', runValidators: true });
+    return user;
   } catch (err) {
-    throw new DatabaseError("Database could not update user.")
+    if (err.name === 'ValidationError') throw new IllegalArguementError(err.message);
+    throw new DatabaseError('Database could not update user.');
   }
 }
 
 /**
- *
- * @param {String} userName
+ * Deletes the user with their applications and interview attempts.
+ * @param {Schema.Types.ObjectId} userId
  * @throws {DatabaseError}
  * @returns {void}
  */
-async function deleteUserByUserName(userName){
+async function deleteUserById(userId) {
   try {
-    User.deleteOne({userName : userName});
+    // remove the user's own data too, so nothing is left pointing at a deleted user
+    await Application.deleteMany({ userId: userId });
+    await InterviewAttempt.deleteMany({ userId: userId });
+    await User.findByIdAndDelete(userId);
   } catch (err) {
-    throw new DatabaseError("Database could not delete user.")
+    throw new DatabaseError('Database could not delete user.');
   }
 }
 
@@ -133,5 +155,5 @@ module.exports = {
   findUserByUserName,
   findUserByUserId,
   updateUser,
-  deleteUserByUserName
-}
+  deleteUserById,
+};

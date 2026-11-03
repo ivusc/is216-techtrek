@@ -1,10 +1,13 @@
 <script setup>
 import '@/views/login/LoginView.css';
 import { onMounted, ref } from 'vue';
-import router from '@/router';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
-import serverAPI from '@/services/serverAPI';
 
+defineEmits(['switch-to-signup']);
+
+const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 const email = ref('');
 const password = ref('');
@@ -19,13 +22,9 @@ async function submitForm() {
   }
 
   const cleanEmail = email.value.trim().toLowerCase();
-  const body = {
-    userName: cleanEmail,
-    password: password.value,
-  };
 
   try {
-    await serverAPI.post('/login', body);
+    await userStore.login(cleanEmail, password.value);
 
     if (rememberUser.value) {
       localStorage.setItem('email', email.value);
@@ -33,11 +32,11 @@ async function submitForm() {
     } else {
       localStorage.removeItem('email');
     }
-    userStore.isLoggedIn = true;
-    await userStore.setInfo();
-    router.push('/home');
+    errorMessage.value = '';
+    // go back to the page the guard sent us away from, if there was one
+    router.push(route.query.redirect ?? '/home');
   } catch (err) {
-    switch (err.status) {
+    switch (err.response?.status) {
       case 404:
         errorMessage.value =
           'This email has not been registered with us. Click on Sign up to create an account!';
@@ -45,11 +44,14 @@ async function submitForm() {
       case 401:
         errorMessage.value = 'Wrong password!';
         break;
+      case 400:
+        errorMessage.value = err.response.data.error;
+        break;
       case 500:
         errorMessage.value = 'Something unexpected went wrong. Please try again.';
         break;
       default:
-        errorMessage.value = 'Something extremely unique has happened. Hurry grab the camera!!!';
+        errorMessage.value = 'Could not reach the server. Is it running?';
         break;
     }
     console.error(err.response?.data?.error);
@@ -109,9 +111,10 @@ onMounted(() => {
       <button type="submit" class="btn btn-primary">Log in</button>
       <div class="d-flex justify-content-center">
         <a
-          href=""
+          href="#"
           class="link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
           style="color: grey"
+          @click.prevent="$emit('switch-to-signup')"
           >New to TechTrek? Create an account</a
         >
       </div>

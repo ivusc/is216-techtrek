@@ -1,36 +1,72 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import serverAPI from '@/services/serverAPI';
 
 export const useUserStore = defineStore('user', () => {
-  const isLoggedIn = ref(false);
-  const userInfo = ref(null);
+  // states
   const username = ref(null);
   const _id = ref(null);
   const skills = ref([]);
   const linkedinUrl = ref(null);
   const githubUrl = ref(null);
+  const hasCheckedSession = ref(false); // true once we have asked the server who is logged in
 
-  async function setInfo() {
-    const response = await serverAPI.get("/me");
-    if (!response.data.isAuthenticated) {
-      throw new Error("Backend says this user is not authenticated?");
+  // getters
+  const isLoggedIn = computed(() => !!_id.value);
+
+  // actions
+  function setUser(user) {
+    _id.value = user?._id ?? null;
+    username.value = user?.userName ?? null;
+    skills.value = user?.skills ?? [];
+    linkedinUrl.value = user?.linkedinUrl ?? null;
+    githubUrl.value = user?.githubUrl ?? null;
+  }
+
+  // asks the server who is logged in (the session cookie survives a page refresh, the store does not)
+  async function fetchMe() {
+    try {
+      const response = await serverAPI.get('/me');
+      setUser(response.data.isAuthenticated ? response.data.user : null);
+    } catch (error) {
+      console.error(error);
+      setUser(null);
+    } finally {
+      hasCheckedSession.value = true;
     }
-    _id.value = response.data.user._id;
-    username.value = response.data.user.userName;
-    skills.value = response.data.user.skills;
-    linkedinUrl.value = response.data.user.linkedinUrl;
-    githubUrl.value = response.data.user.githubUrl;
-  };
+  }
+
+  // errors are left for the login / sign up panel to show
+  async function login(userName, password) {
+    const response = await serverAPI.post('/login', { userName, password });
+    setUser(response.data.user);
+  }
+
+  async function register(userName, password) {
+    const response = await serverAPI.post('/register', { userName, password });
+    setUser(response.data.user);
+  }
+
+  async function logout() {
+    try {
+      await serverAPI.post('/logout');
+    } catch (error) {
+      console.error(error);
+    }
+    setUser(null);
+  }
 
   return {
-    isLoggedIn,
-    userInfo,
     username,
     _id,
     skills,
     linkedinUrl,
     githubUrl,
-    setInfo,
+    hasCheckedSession,
+    isLoggedIn,
+    fetchMe,
+    login,
+    register,
+    logout,
   };
 });

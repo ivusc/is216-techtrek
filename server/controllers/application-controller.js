@@ -8,14 +8,11 @@ function handleError(res, err, fallback) {
   res.status(500).json({ error: fallback });
 }
 
-// POST /application  body: { userId, opportunity, status?, notes?, deadline?, interviewAt?, contactName? }
-// `opportunity` = the full listing object from /jobs or /hackathons.
+// POST /application  body: { opportunity, status?, notes?, deadline?, interviewAt?, contactName? }
+// `opportunity` = the full listing object from /jobs or /hackathons. The user comes from the session.
 async function createApplication(req, res) {
-  const { userId, opportunity, status, notes, deadline, interviewAt, contactName } = req.body ?? {};
-
-  if (!mongoose.isValidObjectId(userId)) {
-    return res.status(400).json({ error: 'Valid userId required' });
-  }
+  const { opportunity, status, notes, deadline, interviewAt, contactName } = req.body ?? {};
+  const userId = req.session.user._id;
 
   if (!opportunity) {
     return res.status(400).json({ error: 'Opportunity is required' });
@@ -31,11 +28,10 @@ async function createApplication(req, res) {
   }
 }
 
-// GET /application?userId=...&status=applied
+// GET /application?status=applied  (only the logged-in user's applications)
 async function getApplications(req, res) {
-  const { userId, status } = req.query;
-  if (!mongoose.isValidObjectId(userId))
-    return res.status(400).json({ error: 'Valid userId required' });
+  const { status } = req.query;
+  const userId = req.session.user._id;
 
   try {
     const userApplications = await applicationService.getApplications(userId, status);
@@ -53,7 +49,7 @@ async function getApplication(req, res) {
     return res.status(400).json({ error: 'Invalid ID' });
 
   try {
-    const application = await applicationService.getApplicationById(applicationId)
+    const application = await applicationService.getApplicationById(applicationId, req.session.user._id);
     if (!application) return res.status(404).json({ error: 'Application not found' });
     res.json(application);
   } catch (err) {
@@ -72,7 +68,7 @@ async function updateApplication(req, res) {
 
   try {
     const changes = { status, notes, deadline, interviewAt, contactName };
-    const application = await applicationService.updateApplication(applicationId, changes);
+    const application = await applicationService.updateApplication(applicationId, req.session.user._id, changes);
 
     if (!application) {
       return res.status(404).json({ error: 'Application not found' });
@@ -92,7 +88,7 @@ async function deleteApplication(req, res) {
   }
 
   try {
-    const deletedApplication = await applicationService.deleteApplication(applicationId);
+    const deletedApplication = await applicationService.deleteApplication(applicationId, req.session.user._id);
 
     if (!deletedApplication) {
       return res.status(404).json({ error: 'Application not found' });

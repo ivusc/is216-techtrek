@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,8 +9,8 @@ const applicationRouter = require('./routes/application');
 const userRouter = require('./routes/user');
 const interviewRouter = require('./routes/interview')
 const teamRouter = require('./routes/teams')
+const { requireLogin } = require('./middleware/auth');
 const app = express();
-require('dotenv').config();
 const PORT = process.env.PORT || 8000;
 
 app.use(cors({
@@ -43,9 +44,9 @@ app.get('/', (req, res) => {
 
 app.use('/',userRouter)
 app.use('/opportunity', opportunityRouter);
-app.use('/application', applicationRouter);
-app.use('/interview', interviewRouter);
-app.use('/teams',teamRouter)
+app.use('/application', requireLogin, applicationRouter);
+app.use('/interview', requireLogin, interviewRouter);
+app.use('/teams', requireLogin, teamRouter)
 
 
 app.listen(PORT, () => {

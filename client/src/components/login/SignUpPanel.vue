@@ -1,10 +1,10 @@
 <script setup>
 import '@/views/login/LoginView.css';
 import { ref } from 'vue';
-import router from '@/router';
+import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
-import serverAPI from '@/services/serverAPI';
 
+const router = useRouter();
 const userStore = useUserStore();
 const email = ref('');
 const password = ref('');
@@ -41,25 +41,25 @@ async function submitForm() {
     return;
   }
   const cleanEmail = email.value.trim().toLowerCase();
-  const body = {
-    userName: cleanEmail,
-    password: password.value,
-  };
   try {
-    await serverAPI.post('/register', body);
-    userStore.isLoggedIn = true;
-    await userStore.setInfo();
+    // the server logs the new account in straight away
+    await userStore.register(cleanEmail, password.value);
+    errorMessage.value = '';
     router.push('/home');
   } catch (err) {
-    switch (err.status) {
+    switch (err.response?.status) {
       case 400:
-        errorMessage.value = 'This email is already in use.';
+        if (err.response.data.error === 'Username already exists.') {
+          errorMessage.value = 'This email is already in use.';
+        } else {
+          errorMessage.value = err.response.data.error;
+        }
         break;
       case 500:
         errorMessage.value = 'Something unexpected went wrong. Please try again.';
         break;
       default:
-        errorMessage.value = 'Something extremely unique has happened. Hurry grab the camera!!!';
+        errorMessage.value = 'Could not reach the server. Is it running?';
         break;
     }
     console.error(err.response?.data?.error);

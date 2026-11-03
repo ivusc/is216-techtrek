@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       minlength: [5, 'Username must be at least 5 characters long!'],
-      maxlength: [32, 'Username exceeds 32 characters!']
+      maxlength: [254, 'Username exceeds 254 characters!']
     },
     password : {
       type: String,

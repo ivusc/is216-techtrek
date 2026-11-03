@@ -1,4 +1,10 @@
 <script setup>
+import { computed } from 'vue'
+import { useUserStore } from '@/store/user'
+
+const auth = useUserStore()
+const initial = computed(() => (auth.username ?? '?').charAt(0).toUpperCase())
+
 const search = defineModel({ type: String, required: true })
 
 defineProps({
@@ -26,6 +32,6 @@ defineProps({
       >
     </div>
     <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-    <div class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold">J</div>
+    <div class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold">{{ initial }}</div>
   </div>
 </template>

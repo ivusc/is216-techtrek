@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import './interview.css'
-import axios from 'axios'
+import serverAPI from '@/services/serverAPI'
 import PageHeader from '@/components/PageHeader.vue'
 
 const search = ref("")
@@ -22,8 +22,8 @@ const errorMessage = ref('')
 const loadData = async () => {
   isLoading.value = true
   try {
-    const response = await axios.get(
-      'http://localhost:8000/interview/dashboard'
+    const response = await serverAPI.get(
+      '/interview/dashboard'
     )
     applicationCards.value = response.data.applicationCards
     titles.value = response.data.titles

@@ -1,7 +1,7 @@
 <script setup>
 const route = useRoute()
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import serverAPI from '@/services/serverAPI'
 import { useRoute } from 'vue-router'
 import FeedbackCard from '@/components/interviews/FeedbackCard.vue'
 import QuestionCard from '@/components/interviews/QuestionCard.vue'
@@ -20,8 +20,8 @@ const feedback = ref(null)
 async function getQuestions() {
   if (questionId) {
     try {
-      const response = await axios.get(
-        `http://localhost:8000/interview/question/${applicationId}/${questionId}`
+      const response = await serverAPI.get(
+        `/interview/question/${applicationId}/${questionId}`
       )
       practiceQuestions.value = [response.data]
     } catch (error) {
@@ -32,8 +32,8 @@ async function getQuestions() {
   else if (applicationId) {
     try {
       errorMessage.value = ''
-      const response = await axios.post(
-        'http://localhost:8000/interview/questions',
+      const response = await serverAPI.post(
+        '/interview/questions',
         {
           applicationId
         }
@@ -52,8 +52,8 @@ async function submitAnswer() {
   submitted.value = true
   errorMessage.value = ''
   try {
-    const response = await axios.post(
-      'http://localhost:8000/interview/feedback',
+    const response = await serverAPI.post(
+      '/interview/feedback',
       {
         applicationId,
         question: practiceQuestions.value[currentQuestionIndex.value].question,
@@ -77,7 +77,7 @@ async function submitAnswer() {
   }
 
   if (currentQuestionIndex.value === practiceQuestions.value.length - 1 && completedQuestions.value.length != 0) {
-    await axios.post('http://localhost:8000/interview/attempt', {
+    await serverAPI.post('/interview/attempt', {
       applicationId,
       questions: completedQuestions.value
     })

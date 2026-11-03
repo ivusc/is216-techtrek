@@ -1,9 +1,20 @@
 <script setup lang="js">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import './profile-menu.css';
 import { useUserStore } from '@/store/user';
 
+const router = useRouter();
 const authStore = useUserStore();
+
+// username is the SMU email, show the part before the @ as the name
+const displayName = computed(() => (authStore.username ?? '').split('@')[0]);
+const initial = computed(() => displayName.value.charAt(0).toUpperCase() || '?');
+
+async function signOut() {
+  await authStore.logout();
+  router.push('/login');
+}
 const profileRoutes = [
   { label: 'Settings', location: '/profile/settings', icon: 'bi-gear' },
   { label: 'Profile', location: '/profile', icon: 'bi-person-circle' },
@@ -23,11 +34,11 @@ const collapsed = ref(false);
     >
       <span
         class="profile-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-        >J</span
+        >{{ initial }}</span
       >
       <span v-show="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm">
-        <strong class="small">{{ authStore.username }}</strong>
-        <span class="small fw-medium">{{ authStore.userInfo}}</span>
+        <strong class="small">{{ displayName }}</strong>
+        <span class="small fw-medium">{{ authStore.username }}</span>
       </span>
     </button>
 
@@ -40,10 +51,10 @@ const collapsed = ref(false);
       </li>
       <li><hr class="dropdown-divider" /></li>
       <li>
-        <RouterLink class="dropdown-item sign-out" to="#">
+        <button type="button" class="dropdown-item sign-out" @click="signOut">
           <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
           Sign out
-        </RouterLink>
+        </button>
       </li>
     </ul>
   </div>

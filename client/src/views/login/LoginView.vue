@@ -24,7 +24,7 @@ function switchToSignUp() {
           <button class="slider-button btn" :class="{selected : isLogin}" @click="switchToLogin()">Log in</button>
           <button class="slider-button btn" :class="{selected : !isLogin}" @click="switchToSignUp()">Sign up</button>
         </div>
-        <LoginPanel v-show="isLogin"/>
+        <LoginPanel v-show="isLogin" @switch-to-signup="switchToSignUp()"/>
         <SignUpPanel v-show="!isLogin"/>
       </div>
     </div>
