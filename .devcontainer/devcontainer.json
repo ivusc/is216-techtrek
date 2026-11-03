@@ -3,9 +3,10 @@
 // What is installed in the image, and available tags: https://github.com/bare-devcontainer/images
 {
   "name": "Node.js (pnpm)",
-  // Recommended: pin to a digest (e.g. "ghcr.io/bare-devcontainer/pnpm:12-trixie@sha256:<digest>").
-  // See https://github.com/bare-devcontainer/templates#pinning-images-to-a-digest
-  "image": "ghcr.io/bare-devcontainer/pnpm:12-trixie",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": { "WORKSPACE_FOLDER": "${containerWorkspaceFolder}" }
+  },
   "remoteUser": "dev",
   "runArgs": ["--cap-drop=ALL", "--name=tech-trekk"],
   // Remove "no-new-privileges" if users need to gain elevated privileges inside the container (e.g., su, sudo).
@@ -38,6 +39,21 @@
     {
       "source": "${devcontainerId}-bash-history",
       "target": "/home/dev/.local/state/bash",
+      "type": "volume"
+    },
+    {
+      "source": "${devcontainerId}-node-modules",
+      "target": "${containerWorkspaceFolder}/node_modules",
+      "type": "volume"
+    },
+    {
+      "source": "${devcontainerId}-client-node-modules",
+      "target": "${containerWorkspaceFolder}/client/node_modules",
+      "type": "volume"
+    },
+    {
+      "source": "${devcontainerId}-server-node-modules",
+      "target": "${containerWorkspaceFolder}/server/node_modules",
       "type": "volume"
     }
   ],
