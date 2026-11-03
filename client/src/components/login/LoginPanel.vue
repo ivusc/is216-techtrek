@@ -75,44 +75,68 @@ onMounted(() => {
 <template>
   <form @submit.prevent="submitForm">
     <div class="form-field">
-      <div>
-        <h1>Welcome back!</h1>
-        <p>Log in with your SMU account to pick up where you left off.</p>
+      <div class="d-flex flex-column gap-1">
+        <h1 class="mb-0">Welcome back</h1>
+        <p class="text-body-secondary mb-0">
+          Log in with your SMU account to pick up where you left off.
+        </p>
       </div>
       <div>
-        <label for="login-email" class="form-label">SMU Email</label>
-        <input
-          id="login-email"
-          type="email"
-          class="form-control"
-          v-model="email"
-          autocomplete="username"
-          inputmode="email"
-          placeholder="✉ john.doe.2025@smu.edu.sg"
-        />
+        <label for="login-email" class="form-label small fw-semibold">SMU email</label>
+        <div class="position-relative">
+          <i
+            class="bi bi-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
+            aria-hidden="true"
+          ></i>
+          <input
+            id="login-email"
+            type="email"
+            class="form-control ps-5"
+            v-model="email"
+            autocomplete="username"
+            inputmode="email"
+            placeholder="you@smu.edu.sg"
+          />
+        </div>
       </div>
       <div>
-        <label for="login-password" class="form-label">Password</label>
-        <input
-          id="login-password"
-          type="password"
-          class="form-control"
-          v-model="password"
-          autocomplete="current-password"
-          placeholder="🔒︎ **********"
-        />
+        <label for="login-password" class="form-label small fw-semibold">Password</label>
+        <div class="position-relative">
+          <i
+            class="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
+            aria-hidden="true"
+          ></i>
+          <input
+            id="login-password"
+            type="password"
+            class="form-control ps-5"
+            v-model="password"
+            autocomplete="current-password"
+            placeholder="••••••••••"
+          />
+        </div>
       </div>
       <div class="form-check">
-        <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
-        <label class="form-check-label" for="login-remember"> Remember me </label>
+        <input
+          id="login-remember"
+          class="form-check-input"
+          type="checkbox"
+          v-model="rememberUser"
+        />
+        <label class="form-check-label fw-normal" for="login-remember">Remember me</label>
       </div>
       <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
-      <button type="submit" class="btn btn-primary">Log in</button>
+      <button type="submit" class="btn btn-primary fw-semibold">Log in</button>
+      <p
+        class="d-flex align-items-center gap-2 bg-primary-subtle text-primary rounded-2 small fw-medium px-3 py-2 mb-0"
+      >
+        <i class="bi bi-lock" aria-hidden="true"></i>
+        Sign-up is limited to @smu.edu.sg emails.
+      </p>
       <div class="d-flex justify-content-center">
         <a
           href="#"
-          class="link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
-          style="color: grey"
+          class="small text-body-secondary link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
           @click.prevent="$emit('switch-to-signup')"
           >New to TechTrek? Create an account</a
         >

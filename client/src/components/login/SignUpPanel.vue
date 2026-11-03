@@ -71,48 +71,76 @@ async function submitForm() {
 <template>
   <form @submit.prevent="submitForm">
     <div class="form-field">
-      <div>
-        <h1>Welcome to Tech Trek!</h1>
-        <p>Create an account using your SMU email to being your trek into tech!</p>
+      <div class="d-flex flex-column gap-1">
+        <h1 class="mb-0">Welcome to TechTrek</h1>
+        <p class="text-body-secondary mb-0">
+          Create an account with your SMU email to begin your trek into tech.
+        </p>
       </div>
       <div>
-        <label for="signup-email" class="form-label">Your SMU Email</label>
-        <input
-          id="signup-email"
-          type="email"
-          class="form-control"
-          v-model="email"
-          autocomplete="username"
-          inputmode="email"
-          placeholder="✉ john.doe.2025@smu.edu.sg"
-        />
-      </div>
-      <div>
-        <label for="signup-password" class="form-label">Password</label>
-        <input
-          id="signup-password"
-          type="password"
-          class="form-control"
-          v-model="password"
-          autocomplete="new-password"
-          placeholder="🔒︎ **********"
-          aria-describedby="signup-password-hint"
-        />
-        <div id="signup-password-hint" class="form-text mb-3">
-          Your password should include at least 1 number, uppercase alphabet and symbol
+        <label for="signup-email" class="form-label small fw-semibold">SMU email</label>
+        <div class="position-relative">
+          <i
+            class="bi bi-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
+            aria-hidden="true"
+          ></i>
+          <input
+            id="signup-email"
+            type="email"
+            class="form-control ps-5"
+            v-model="email"
+            autocomplete="username"
+            inputmode="email"
+            placeholder="you@smu.edu.sg"
+          />
         </div>
-        <label for="signup-confirm" class="form-label">Re-Enter Password</label>
-        <input
-          id="signup-confirm"
-          type="password"
-          class="form-control"
-          v-model="reEnteredPassword"
-          autocomplete="new-password"
-          placeholder="🔒︎ **********"
-        />
+      </div>
+      <div>
+        <label for="signup-password" class="form-label small fw-semibold">Password</label>
+        <div class="position-relative">
+          <i
+            class="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
+            aria-hidden="true"
+          ></i>
+          <input
+            id="signup-password"
+            type="password"
+            class="form-control ps-5"
+            v-model="password"
+            autocomplete="new-password"
+            placeholder="••••••••••"
+            aria-describedby="signup-password-hint"
+          />
+        </div>
+        <div id="signup-password-hint" class="form-text">
+          At least 8 characters with a number, an uppercase letter and a symbol.
+        </div>
+      </div>
+      <div>
+        <label for="signup-confirm" class="form-label small fw-semibold">Re-enter password</label>
+        <div class="position-relative">
+          <i
+            class="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
+            aria-hidden="true"
+          ></i>
+          <input
+            id="signup-confirm"
+            type="password"
+            class="form-control ps-5"
+            v-model="reEnteredPassword"
+            autocomplete="new-password"
+            placeholder="••••••••••"
+          />
+        </div>
       </div>
       <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
-      <button type="submit" class="btn btn-primary">Create account</button>
+      <button type="submit" class="btn btn-primary fw-semibold">Create account</button>
+      <p
+        class="d-flex align-items-center gap-2 bg-primary-subtle text-primary rounded-2 small fw-medium px-3 py-2 mb-0"
+      >
+        <i class="bi bi-lock" aria-hidden="true"></i>
+        Sign-up is limited to @smu.edu.sg emails.
+      </p>
     </div>
   </form>
 </template>
