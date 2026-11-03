@@ -19,6 +19,7 @@ const MAX_PITCH = 300
 const isEditing = props.team !== null
 
 const memberCount = isEditing ? props.team.members.length : 1
+const fewestSlots = isEditing && props.team.status !== 'draft' ? 0 : 1
 
 const eventChoice = ref('')
 const otherName = ref('')
@@ -78,7 +79,7 @@ function changedEventFields() {
 
 const name = ref(isEditing ? props.team.name : '')
 const teamSize = ref(isEditing ? props.team.teamSize : 5)
-const openSlots = ref(isEditing ? props.team.slotsOpen : 1)
+const openSlots = ref(isEditing ? Math.max(props.team.slotsOpen, fewestSlots) : 1)
 const pitch = ref(isEditing ? props.team.pitch : '')
 const skills = ref(isEditing ? [...props.team.skills] : [])
 const autoAccept = ref(isEditing ? props.team.autoAccept : false)
@@ -94,7 +95,7 @@ const teamSizeOptions = computed(() => {
 
 const openSlotOptions = computed(() => {
   const options = []
-  for (let slots = isEditing ? 0 : 1; slots <= teamSize.value - memberCount; slots++) {
+  for (let slots = fewestSlots; slots <= teamSize.value - memberCount; slots++) {
     options.push(slots)
   }
   return options
