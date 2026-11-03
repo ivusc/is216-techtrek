@@ -105,6 +105,12 @@ test.describe('opportunities layout', () => {
       expect(Math.round(box.width)).toBe(Math.min(DRAWER_WIDTH, width));
       expect(Math.round(box.x + box.width)).toBe(width);
       await expect(drawer.getByRole('link', { name: /Apply on Adzuna/ })).toBeInViewport();
+      const overflowingBoxes = await drawer
+        .locator('.details-info-box')
+        .evaluateAll((boxes) =>
+          boxes.filter((box) => box.scrollWidth > box.clientWidth).map((box) => box.innerText),
+        );
+      expect(overflowingBoxes).toEqual([]);
       await expectNoHorizontalOverflow(page);
       await screenshot(page, testInfo, `opportunities-drawer-${width}`);
 
