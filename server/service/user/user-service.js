@@ -2,6 +2,8 @@ const { IllegalArguementError, DatabaseError, WrongPasswordError } = require('./
 const User = require('../../models/User');
 const Application = require('../../models/Application');
 const InterviewAttempt = require('../../models/interviewAttempt');
+const Team = require('../../models/Team');
+const TeamRequest = require('../../models/TeamRequest');
 const bycrpt = require('bcryptjs');
 const { MAX_SKILLS, cleanSkills } = require('../skills');
 
@@ -173,8 +175,21 @@ async function changePassword(userId, currentPassword, newPassword) {
  * @throws {DatabaseError}
  * @returns {void}
  */
-async function deleteUserById(userId) {
+async function deleteUserById(userId, password) {
+  const user = await findUserByUserId(userId);
+  await checkPassword(user, password);
+
   try {
+    await TeamRequest.deleteMany({ userId: userId });
+    const ledTeamIds = await Team.find({ leaderId: userId }).distinct('_id');
+    await TeamRequest.deleteMany({ teamId: { $in: ledTeamIds } });
+    await Team.deleteMany({ _id: { $in: ledTeamIds } });
+    const joinedTeams = await Team.find({ 'members.userId': userId });
+    for (const team of joinedTeams) {
+      team.members = team.members.filter((member) => String(member.userId) !== String(userId));
+      team.syncStatus();
+      await team.save();
+    }
     // remove the user's own data too, so nothing is left pointing at a deleted user
     await Application.deleteMany({ userId: userId });
     await InterviewAttempt.deleteMany({ userId: userId });

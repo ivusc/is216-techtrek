@@ -47,6 +47,14 @@ teamSchema.virtual('slotsOpen').get(function () {
   return Math.max(0, this.teamSize - this.members.length - this.externalMembers);
 });
 
+teamSchema.methods.syncStatus = function () {
+  if (this.status === 'open' && this.slotsOpen === 0) {
+    this.status = 'closed';
+  } else if (this.status === 'closed' && this.slotsOpen > 0) {
+    this.status = 'open';
+  }
+};
+
 teamSchema.pre('validate', function () {
   if (this.members.length + this.externalMembers > this.teamSize) {
     this.invalidate('teamSize', 'teamSize is smaller than the number of members already in the team');

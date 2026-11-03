@@ -130,8 +130,9 @@ async function changePassword(req, res) {
 
 // DELETE /me  deletes the logged-in user's account, then logs them out
 async function deleteUser(req, res) {
+  const { password } = req.body ?? {};
   try {
-    await userService.deleteUserById(req.session.user._id);
+    await userService.deleteUserById(req.session.user._id, password);
   } catch (err) {
     return handleUserError(res, err);
   }
