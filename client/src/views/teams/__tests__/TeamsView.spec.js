@@ -16,7 +16,7 @@ vi.mock('vue-router', () => ({
 
 const mock = new MockAdapter(serverAPI);
 
-const NO_EVENTS = { jobs: null, hackathons: { count: 0, hackathons: [] } };
+const NO_EVENTS = { count: 0, hackathons: [] };
 
 beforeEach(() => {
   route.query = {};
@@ -158,7 +158,7 @@ describe('TeamsView', () => {
 
   it('creates a team post and lands on My teams', async () => {
     mockLists();
-    mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
+    mock.onGet('/opportunity/hackathons').reply(200, NO_EVENTS);
     mock.onPost('/teams').reply(201, ledTeam({ _id: 'm2', name: 'Pixel Pushers' }));
     const wrapper = await mountTeams();
 
@@ -172,7 +172,8 @@ describe('TeamsView', () => {
     await dialogButton(wrapper, 'Publish post').trigger('click');
     await flushPromises();
 
-    expect(requestsTo('/opportunity/all')).toHaveLength(1);
+    expect(requestsTo('/opportunity/hackathons')).toHaveLength(1);
+    expect(requestsTo('/opportunity/all')).toHaveLength(0);
     expect(JSON.parse(mock.history.post[0].data)).toEqual({
       name: 'Pixel Pushers',
       teamSize: 5,
@@ -195,8 +196,8 @@ describe('TeamsView', () => {
   it('creates a team post for a listed hackathon', async () => {
     mockLists();
     mock
-      .onGet('/opportunity/all')
-      .reply(200, { jobs: null, hackathons: { count: HACKATHONS.length, hackathons: HACKATHONS } });
+      .onGet('/opportunity/hackathons')
+      .reply(200, { count: HACKATHONS.length, hackathons: HACKATHONS });
     mock.onPost('/teams').reply(201, ledTeam({ _id: 'm2', name: 'Pixel Pushers' }));
     const wrapper = await mountTeams();
 
@@ -218,9 +219,45 @@ describe('TeamsView', () => {
     expect(wrapper.find('#post-name').exists()).toBe(false);
   });
 
+  it('opens the post form before the hackathons arrive and lists them once they do', async () => {
+    mockLists();
+    let answer;
+    mock.onGet('/opportunity/hackathons').reply(() => new Promise((resolve) => (answer = resolve)));
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Create team post').trigger('click');
+    await flushPromises();
+
+    expect(dialog(wrapper).exists()).toBe(true);
+    expect(wrapper.find('#post-event').attributes('disabled')).toBeDefined();
+
+    answer([200, { count: HACKATHONS.length, hackathons: HACKATHONS }]);
+    await flushPromises();
+
+    const options = wrapper.findAll('#post-event option').map((option) => option.element.value);
+    expect(wrapper.find('#post-event').attributes('disabled')).toBeUndefined();
+    expect(options).toEqual(expect.arrayContaining(['devpost-203', 'devpost-204', 'other']));
+    expect(options).not.toContain('devpost-202');
+  });
+
+  it('says when the hackathons could not be loaded and starts on Other', async () => {
+    mockLists();
+    mock.onGet('/opportunity/hackathons').reply(500, { error: 'Failed to fetch hackathons.' });
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'Create team post').trigger('click');
+    await flushPromises();
+
+    expect(dialog(wrapper).text()).toContain(
+      "Couldn't load Devpost hackathons. Pick Other and type the event's name.",
+    );
+    expect(wrapper.find('#post-event').element.value).toBe('other');
+    expect(wrapper.find('[aria-label="Event name"]').exists()).toBe(true);
+  });
+
   it('edits and deletes a post', async () => {
     mockLists();
-    mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
+    mock.onGet('/opportunity/hackathons').reply(200, NO_EVENTS);
     mock.onPatch('/teams/m1').reply(200, ledTeam({ name: 'Night Owls 2' }));
     mock.onDelete('/teams/m1').reply(204);
     const wrapper = await mountTeams();
@@ -255,7 +292,7 @@ describe('TeamsView', () => {
 
   it('edits a post while the event list is down without resending its close date', async () => {
     mockLists();
-    mock.onGet('/opportunity/all').reply(200, { jobs: { count: 0, jobs: [] }, hackathons: null });
+    mock.onGet('/opportunity/hackathons').reply(500, { error: 'Failed to fetch hackathons.' });
     mock.onPatch('/teams/m1').reply(200, ledTeam({ name: 'Night Owls 2' }));
     const wrapper = await mountTeams();
 
@@ -276,7 +313,7 @@ describe('TeamsView', () => {
 
   it('publishes a draft', async () => {
     mockLists({ mine: [ledTeam({ status: 'draft' })] });
-    mock.onGet('/opportunity/all').reply(200, NO_EVENTS);
+    mock.onGet('/opportunity/hackathons').reply(200, NO_EVENTS);
     mock.onPatch('/teams/m1').reply(200, ledTeam());
     const wrapper = await mountTeams();
 

@@ -180,6 +180,61 @@ describe('CreateTeamModal event picker', () => {
   });
 });
 
+describe('CreateTeamModal while the hackathons load', () => {
+  it('waits for the list with the picker and the post buttons disabled, then starts on the first listing', async () => {
+    const wrapper = mountModal({ events: [], eventsLoading: true });
+
+    expect(optionTexts(wrapper, '#post-event')).toEqual(['Loading hackathons…']);
+    expect(wrapper.find('#post-event').attributes('disabled')).toBeDefined();
+    expect(button(wrapper, 'Save draft').attributes('disabled')).toBeDefined();
+    expect(button(wrapper, 'Publish post').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[aria-label="Event name"]').exists()).toBe(false);
+
+    await wrapper.setProps({ events: LISTINGS, eventsLoading: false });
+
+    expect(optionTexts(wrapper, '#post-event')).toEqual([
+      'Build for Good · closes 1 Dec',
+      'Code for Climate',
+      'Other event (not on the list)',
+    ]);
+    expect(wrapper.find('#post-event').element.value).toBe('devpost-201');
+    expect(wrapper.find('#post-event').attributes('disabled')).toBeUndefined();
+    expect(button(wrapper, 'Publish post').attributes('disabled')).toBeUndefined();
+  });
+
+  it('explains a failed load and starts on Other', async () => {
+    const wrapper = mountModal({ events: [], eventsLoading: true });
+
+    await wrapper.setProps({ eventsLoading: false, eventsError: true });
+
+    expect(wrapper.text()).toContain(
+      "Couldn't load Devpost hackathons. Pick Other and type the event's name.",
+    );
+    expect(wrapper.find('#post-event').element.value).toBe('other');
+    expect(wrapper.find('[aria-label="Event name"]').exists()).toBe(true);
+  });
+
+  it('preselects the listing of the post being edited once the list arrives and sends no event fields when it is left alone', async () => {
+    const wrapper = mountModal({
+      team: ledTeam({ event: { name: 'Code for Climate' } }),
+      events: [],
+      eventsLoading: true,
+    });
+
+    expect(button(wrapper, 'Save changes').attributes('disabled')).toBeDefined();
+    expect(button(wrapper, 'Delete post').attributes('disabled')).toBeUndefined();
+
+    await wrapper.setProps({ events: LISTINGS, eventsLoading: false });
+
+    expect(wrapper.find('#post-event').element.value).toBe('devpost-202');
+    await wrapper.find('#post-name').setValue('Renamed');
+    await button(wrapper, 'Save changes').trigger('click');
+
+    expect(submitted(wrapper).name).toBe('Renamed');
+    expect(eventPart(submitted(wrapper))).toStrictEqual({});
+  });
+});
+
 describe('CreateTeamModal open slots', () => {
   it('starts the open slots at one when publishing a draft', () => {
     const draft = mountModal({ team: ledTeam({ status: 'draft' }) });

@@ -61,8 +61,9 @@ describe('teamService', () => {
     expect(config.data === undefined ? undefined : JSON.parse(config.data)).toEqual(body);
   });
 
-  it('no longer has its own profile calls', () => {
+  it('no longer has its own profile or events calls', () => {
     expect(teamService).not.toHaveProperty('fetchProfile');
     expect(teamService).not.toHaveProperty('updateSkills');
+    expect(teamService).not.toHaveProperty('fetchEvents');
   });
 });
