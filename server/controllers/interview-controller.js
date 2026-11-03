@@ -33,47 +33,41 @@ function summariseQuestions(attempts, titleByApplication) {
 
 async function getInterviewDashboard(req, res) {
   try {
-    const userId = req.session.user._id
-    const applications = await Application.find({ userId: userId })
-    const applicationCards = []
-    const titles = []
-    const wanted = []
-
-    for (const application of applications) {
-      const opportunity = await Opportunity.findById(
-        application.opportunityId
-      )
-      const preparing = opportunity && (opportunity.type === "internship" || opportunity.type === "job") && (application.status === "applied" || application.status === "interview")
-      if (preparing) {
-        wanted.push(matchKey(opportunity))
-      }
-      
-    if (preparing && !titles.includes(opportunity.title)) {
-        titles.push(opportunity.title)
-
-        applicationCards.push({
-          applicationId: application._id,
-          title: opportunity.title,
-          company: opportunity.organisation,
-          createdAt: application.createdAt,
-          interviewAt:application.interviewAt,
-          status: application.status
-        })
-      }
+    const userId = req.session.user._id;
+    const applications = await Application.find({ userId, status: { $in: ['applied', 'interview'] } });
+    const opportunities = await Opportunity.find({
+      _id: { $in: applications.map((application) => application.opportunityId) },
+      type: { $in: ['job', 'internship'] },
+    });
+    const opportunityById = new Map(
+      opportunities.map((opportunity) => [String(opportunity._id), opportunity]),
+    );
+    const opportunityOf = (application) => opportunityById.get(String(application.opportunityId));
+    const preparing = applications.filter((application) => opportunityOf(application));
+    const wanted = preparing.map((application) => matchKey(opportunityOf(application)));
+    const titleByApplication = new Map(
+      preparing.map((application) => [String(application._id), opportunityOf(application).title]),
+    );
+    const applicationCards = [];
+    for (const application of preparing) {
+      const opportunity = opportunityOf(application);
+      if (applicationCards.some((card) => card.title === opportunity.title)) continue;
+      applicationCards.push({
+        applicationId: application._id,
+        title: opportunity.title,
+        company: opportunity.organisation,
+        createdAt: application.createdAt,
+        interviewAt: application.interviewAt,
+        status: application.status,
+      });
     }
+    const titles = applicationCards.map((card) => card.title);
 
-    const interviewAttempts = await InterviewAttempt.find({ userId }).sort({ completedAt: 1, _id: 1 });
-    const titleByApplication = new Map();
-    const preparingAttempts = [];
-    for (const attempt of interviewAttempts) {
-      const data = await getOpportunityFromApplication(attempt.applicationId, userId);
-      if (!data || (data.application.status !== 'applied' && data.application.status !== 'interview')) {
-        continue;
-      }
-      titleByApplication.set(String(attempt.applicationId), data.opportunity.title);
-      preparingAttempts.push(attempt);
-    }
-    const allQuestions = summariseQuestions(preparingAttempts, titleByApplication);
+    const attempts = await InterviewAttempt.find({
+      userId,
+      applicationId: { $in: preparing.map((application) => application._id) },
+    }).sort({ completedAt: 1, _id: 1 });
+    const allQuestions = summariseQuestions(attempts, titleByApplication);
     const highestScore = Math.max(0, ...allQuestions.map((question) => question.bestScore));
     const averageScore = allQuestions.length
       ? (
