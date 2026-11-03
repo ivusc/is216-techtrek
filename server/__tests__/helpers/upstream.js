@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 
 const require = createRequire(import.meta.url);
 const axios = require('axios');
+const ai = require('../../ai/gemini-config');
 
 const replies = new Map();
 
@@ -37,4 +38,12 @@ export function failDevpost() {
   return reply(process.env.HACKATHONS_API_URL, async () => {
     throw new Error('Devpost is down');
   });
+}
+
+export function stubGemini(text) {
+  return vi.spyOn(ai.models, 'generateContent').mockResolvedValue({ text });
+}
+
+export function failGemini() {
+  return vi.spyOn(ai.models, 'generateContent').mockRejectedValue(new Error('Gemini is down'));
 }
