@@ -30,6 +30,15 @@ const userSchema = new mongoose.Schema(
       type : String,
       default : undefined
     }
+  },
+  {
+    toJSON: {
+      versionKey: false,
+      transform(doc, ret) {
+        delete ret.password;
+        return ret;
+      },
+    },
   }
 );
 

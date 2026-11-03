@@ -1,24 +1,13 @@
-const mongoose = require('mongoose');
 const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
 const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
+const { cleanSkills } = require('../service/skills');
 
 const PROFILE_FIELDS = 'userName displayName year course skills githubUrl linkedinUrl';
-const MAX_SKILLS = 12;
+const ANSWER_STATUSES = ['accepted', 'declined'];
 
 // --- Helper Functions ---
-function cleanSkills(skills) {
-  if (!Array.isArray(skills)) return [];
-  const cleaned = [];
-  for (const skill of skills) {
-    const text = String(skill).trim().slice(0, 40);
-    const alreadyThere = cleaned.some((item) => item.toLowerCase() === text.toLowerCase());
-    if (text !== '' && !alreadyThere) cleaned.push(text);
-  }
-  return cleaned.slice(0, MAX_SKILLS);
-}
-
 function hasSkillMatch(userSkills = [], teamSkills = []) {
   const wanted = teamSkills.map((skill) => skill.toLowerCase());
   return userSkills.some((skill) => wanted.includes(skill.toLowerCase()));
@@ -92,8 +81,7 @@ function formatRequest(request) {
 // --- Controller Actions ---
 
 async function getTeams(req, res) {
-  const { userId } = req.query;
-  if (!mongoose.isValidObjectId(userId)) return res.status(400).json({ error: 'Valid userId required' });
+  const userId = req.session.user._id;
 
   try {
     const teams = await populateTeam(
@@ -120,8 +108,7 @@ async function getTeams(req, res) {
 }
 
 async function getMyTeams(req, res) {
-  const { userId } = req.query;
-  if (!mongoose.isValidObjectId(userId)) return res.status(400).json({ error: 'Valid userId required' });
+  const userId = req.session.user._id;
 
   try {
     const teams = await populateTeam(
@@ -147,40 +134,9 @@ async function getEvents(req, res) {
   }
 }
 
-async function getProfile(req, res) {
-  const { userId } = req.query;
-  if (!mongoose.isValidObjectId(userId)) return res.status(400).json({ error: 'Valid userId required' });
-
-  try {
-    const user = await User.findById(userId).select(PROFILE_FIELDS);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
-
-async function updateSkills(req, res) {
-  const { userId, skills } = req.body ?? {};
-  if (!mongoose.isValidObjectId(userId)) return res.status(400).json({ error: 'Valid userId required' });
-
-  try {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { skills: cleanSkills(skills) },
-      { returnDocument: 'after', runValidators: true }
-    ).select(PROFILE_FIELDS);
-
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
-
 async function createTeam(req, res) {
-  const { userId, ...data } = req.body ?? {};
-  if (!mongoose.isValidObjectId(userId)) return res.status(400).json({ error: 'Valid userId required' });
+  const userId = req.session.user._id;
+  const data = req.body ?? {};
 
   try {
     let eventData = { name: data.eventName, location: data.eventLocation };
@@ -222,7 +178,8 @@ async function createTeam(req, res) {
 
 async function updateTeam(req, res) {
   const { id: teamId } = req.params;
-  const { userId, ...data } = req.body ?? {};
+  const userId = req.session.user._id;
+  const data = req.body ?? {};
 
   try {
     const team = await populateTeam(Team.findById(teamId));
@@ -254,7 +211,7 @@ async function updateTeam(req, res) {
 
 async function deleteTeam(req, res) {
   const { id: teamId } = req.params;
-  const { userId } = req.query;
+  const userId = req.session.user._id;
 
   try {
     const team = await Team.findById(teamId);
@@ -271,7 +228,8 @@ async function deleteTeam(req, res) {
 
 async function createRequest(req, res) {
   const { id: teamId } = req.params;
-  const { userId, role, message, shareProfile } = req.body ?? {};
+  const userId = req.session.user._id;
+  const { role, message, shareProfile } = req.body ?? {};
 
   try {
     const team = await populateTeam(Team.findById(teamId));
@@ -302,7 +260,11 @@ async function createRequest(req, res) {
 
 async function respondToRequest(req, res) {
   const { id: requestId } = req.params;
-  const { userId, status } = req.body ?? {};
+  const userId = req.session.user._id;
+  const { status } = req.body ?? {};
+  if (!ANSWER_STATUSES.includes(status)) {
+    return res.status(400).json({ error: 'Status must be accepted or declined' });
+  }
 
   try {
     const request = await TeamRequest.findById(requestId);
@@ -310,16 +272,24 @@ async function respondToRequest(req, res) {
 
     const team = await populateTeam(Team.findById(request.teamId));
     if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only leader can respond' });
+    if (status === 'accepted' && team.slotsOpen === 0) {
+      return res.status(409).json({ error: 'This team is already full' });
+    }
+
+    const answered = await TeamRequest.findOneAndUpdate(
+      { _id: requestId, status: 'pending' },
+      { status },
+      { returnDocument: 'after' },
+    );
+    if (!answered) return res.status(409).json({ error: 'This request has already been answered' });
 
     if (status === 'accepted') {
-      team.members.push({ userId: request.userId, role: request.role });
+      team.members.push({ userId: answered.userId, role: answered.role });
       syncStatus(team);
       await team.save();
     }
-    request.status = status;
-    await request.save();
 
-    res.json({ _id: request._id, status: request.status });
+    res.json({ _id: answered._id, status: answered.status });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -327,7 +297,7 @@ async function respondToRequest(req, res) {
 
 async function withdrawRequest(req, res) {
   const { id: requestId } = req.params;
-  const { userId } = req.query;
+  const userId = req.session.user._id;
 
   try {
     const request = await TeamRequest.findById(requestId);
@@ -342,12 +312,12 @@ async function withdrawRequest(req, res) {
 }
 
 async function getIncomingRequests(req, res) {
-  const { userId } = req.query;
+  const userId = req.session.user._id;
   try {
     const teamIds = await Team.find({ leaderId: userId }).distinct('_id');
     const requests = await TeamRequest.find({ teamId: { $in: teamIds } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
-      .populate({ path: 'teamId', select: 'name event' })
+      .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
@@ -357,11 +327,11 @@ async function getIncomingRequests(req, res) {
 }
 
 async function getSentRequests(req, res) {
-  const { userId } = req.query;
+  const userId = req.session.user._id;
   try {
     const requests = await TeamRequest.find({ userId })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
-      .populate({ path: 'teamId', select: 'name event' })
+      .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
@@ -374,8 +344,6 @@ module.exports = {
   getTeams,
   getMyTeams,
   getEvents,
-  getProfile,
-  updateSkills,
   createTeam,
   updateTeam,
   deleteTeam,

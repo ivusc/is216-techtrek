@@ -1,33 +1,30 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import serverAPI from '@/services/serverAPI';
+import * as userService from '@/services/userService';
 
 export const useUserStore = defineStore('user', () => {
   // states
-  const username = ref(null);
-  const _id = ref(null);
-  const skills = ref([]);
-  const linkedinUrl = ref(null);
-  const githubUrl = ref(null);
+  const user = ref(null);
   const hasCheckedSession = ref(false); // true once we have asked the server who is logged in
 
   // getters
+  const _id = computed(() => user.value?._id ?? null);
+  const username = computed(() => user.value?.userName ?? null);
+  const skills = computed(() => user.value?.skills ?? []);
+  const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
+  const githubUrl = computed(() => user.value?.githubUrl ?? null);
   const isLoggedIn = computed(() => !!_id.value);
 
   // actions
-  function setUser(user) {
-    _id.value = user?._id ?? null;
-    username.value = user?.userName ?? null;
-    skills.value = user?.skills ?? [];
-    linkedinUrl.value = user?.linkedinUrl ?? null;
-    githubUrl.value = user?.githubUrl ?? null;
+  function setUser(profile) {
+    user.value = profile ?? null;
   }
 
   // asks the server who is logged in (the session cookie survives a page refresh, the store does not)
   async function fetchMe() {
     try {
-      const response = await serverAPI.get('/me');
-      setUser(response.data.isAuthenticated ? response.data.user : null);
+      const session = await userService.fetchMe();
+      setUser(session.isAuthenticated ? session.user : null);
     } catch (error) {
       console.error(error);
       setUser(null);
@@ -38,25 +35,28 @@ export const useUserStore = defineStore('user', () => {
 
   // errors are left for the login / sign up panel to show
   async function login(userName, password) {
-    const response = await serverAPI.post('/login', { userName, password });
-    setUser(response.data.user);
+    setUser(await userService.login(userName, password));
   }
 
   async function register(userName, password) {
-    const response = await serverAPI.post('/register', { userName, password });
-    setUser(response.data.user);
+    setUser(await userService.register(userName, password));
   }
 
   async function logout() {
     try {
-      await serverAPI.post('/logout');
+      await userService.logout();
     } catch (error) {
       console.error(error);
     }
     setUser(null);
   }
 
+  async function updateMe(changes) {
+    setUser(await userService.updateMe(changes));
+  }
+
   return {
+    user,
     username,
     _id,
     skills,
@@ -68,5 +68,6 @@ export const useUserStore = defineStore('user', () => {
     login,
     register,
     logout,
+    updateMe,
   };
 });

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import './teams.css'
-import {getErrorMessage,createTeam,fetchProfile,updateSkills,fetchTeams,fetchMyTeams,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
+import {getErrorMessage,createTeam,fetchTeams,fetchMyTeams,updateTeam,deleteTeam,sendRequest,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
 from '@/services/teamService'
 import {fetchAllOpportunities} from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
@@ -18,7 +18,6 @@ import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
 
 const auth = useUserStore()
 
-const profile = ref(null)
 const teams = ref([])
 const myTeams = ref([])
 const incoming = ref([])
@@ -52,38 +51,29 @@ const loadAll = async (showLoading = true) => {
 
   status.value = ''
 
-  const userId = auth._id
-
   try {
-    profile.value = await fetchProfile(userId)
-  } catch (error) {
-    console.error('Profile load failed:', error)
-    profile.value = null
-  }
-
-  try {
-    teams.value = await fetchTeams(userId)
+    teams.value = await fetchTeams()
   } catch (error) {
     console.error('Teams load failed:', error)
     teams.value = []
   }
 
   try {
-    myTeams.value = await fetchMyTeams(userId)
+    myTeams.value = await fetchMyTeams()
   } catch (error) {
     console.error('My teams load failed:', error)
     myTeams.value = []
   }
 
   try {
-    incoming.value = await fetchIncomingRequests(userId)
+    incoming.value = await fetchIncomingRequests()
   } catch (error) {
     console.error('Incoming requests load failed:', error)
     incoming.value = []
   }
 
   try {
-    sent.value = await fetchSentRequests(userId)
+    sent.value = await fetchSentRequests()
   } catch (error) {
     console.error('Sent requests load failed:', error)
     sent.value = []
@@ -102,8 +92,8 @@ const loadAll = async (showLoading = true) => {
 }
 onMounted(loadAll)
 
-const mySkills = computed(() => profile.value?.skills ?? [])
-const myName = computed(() => (profile.value ? getDisplayName(profile.value) : ''))
+const mySkills = computed(() => auth.skills)
+const myName = computed(() => getDisplayName(auth.user))
 
 const matchedSkills = computed(() => {
   const wanted = []
@@ -221,7 +211,7 @@ const submitJoin = async (request) => {
   isBusy.value = true
   modalError.value = ''
   try {
-    await sendRequest(auth._id, joinTarget.value._id, request)
+    await sendRequest(joinTarget.value._id, request)
     joinTarget.value = null
     await loadAll(false)
   } catch (error) {
@@ -254,9 +244,9 @@ const submitTeam = async (post) => {
   modalError.value = ''
   try {
     if (editingTeam.value) {
-      await updateTeam(auth._id, editingTeam.value._id, post)
+      await updateTeam(editingTeam.value._id, post)
     } else {
-      await createTeam(auth._id, post)
+      await createTeam(post)
       activeTab.value = 'mine'
     }
     closeCreate()
@@ -272,7 +262,7 @@ const removeTeam = async () => {
   isBusy.value = true
   modalError.value = ''
   try {
-    await deleteTeam(auth._id, editingTeam.value._id)
+    await deleteTeam(editingTeam.value._id)
     closeCreate()
     await loadAll(false)
   } catch (error) {
@@ -285,7 +275,7 @@ const removeTeam = async () => {
 const answer = async (request, newStatus) => {
   busyRequestId.value = request._id
   try {
-    await answerRequest(auth._id, request._id, newStatus)
+    await answerRequest(request._id, newStatus)
     await loadAll(false)
   } catch (error) {
     console.error(error)
@@ -297,7 +287,7 @@ const answer = async (request, newStatus) => {
 const withdraw = async (request) => {
   busyRequestId.value = request._id
   try {
-    await withdrawRequest(auth._id, request._id)
+    await withdrawRequest(request._id)
     await loadAll(false)
   } catch (error) {
     console.error(error)
@@ -310,7 +300,7 @@ const saveSkills = async (skills) => {
   isBusy.value = true
   modalError.value = ''
   try {
-    await updateSkills(auth._id, skills)
+    await auth.updateMe({ skills })
     showSkills.value = false
     skillFilterReady = false
     await loadAll(false)
