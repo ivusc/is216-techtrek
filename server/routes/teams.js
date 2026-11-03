@@ -11,6 +11,7 @@ router.patch('/:id', teamsController.updateTeam);
 router.delete('/:id', teamsController.deleteTeam);
 
 router.post('/:id/requests', teamsController.createRequest);
+router.get('/:id/matches', teamsController.getMatches);
 router.get('/requests/incoming', teamsController.getIncomingRequests);
 router.get('/requests/sent', teamsController.getSentRequests);
 router.patch('/requests/:id', teamsController.respondToRequest);

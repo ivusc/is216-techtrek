@@ -6,11 +6,13 @@ const { cleanSkills } = require('../service/skills');
 
 const PROFILE_FIELDS = 'userName displayName year course skills githubUrl linkedinUrl';
 const ANSWER_STATUSES = ['accepted', 'declined'];
+const MATCH_FIELDS = 'displayName year course skills githubUrl linkedinUrl';
+const MAX_MATCHES = 20;
 
 // --- Helper Functions ---
-function hasSkillMatch(userSkills = [], teamSkills = []) {
-  const wanted = teamSkills.map((skill) => skill.toLowerCase());
-  return userSkills.some((skill) => wanted.includes(skill.toLowerCase()));
+function matchedTeamSkills(userSkills = [], teamSkills = []) {
+  const mine = userSkills.map((skill) => skill.toLowerCase());
+  return teamSkills.filter((skill) => mine.includes(skill.toLowerCase()));
 }
 
 function isLeader(team, userId) {
@@ -236,7 +238,7 @@ async function createRequest(req, res) {
       shareProfile: shareProfile !== false,
     });
 
-    if (team.autoAccept && hasSkillMatch(user.skills, team.skills)) {
+    if (team.autoAccept && matchedTeamSkills(user.skills, team.skills).length > 0) {
       team.members.push({ userId, role });
       team.syncStatus();
       await team.save();
@@ -303,6 +305,42 @@ async function withdrawRequest(req, res) {
   }
 }
 
+async function getMatches(req, res) {
+  const userId = req.session.user._id;
+
+  try {
+    const team = await Team.findById(req.params.id);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only leader can see matches' });
+    if (team.status !== 'open') {
+      return res.status(409).json({ error: 'Only open teams get suggestions' });
+    }
+    if (team.skills.length === 0) return res.json([]);
+
+    const candidates = await User.find({
+      openToTeams: true,
+      _id: { $nin: [team.leaderId, ...team.members.map((member) => member.userId)] },
+      skills: { $in: team.skills },
+    })
+      .collation({ locale: 'en', strength: 2 })
+      .select(MATCH_FIELDS)
+      .lean();
+
+    const matches = candidates
+      .map(({ skills, ...candidate }) => ({
+        ...candidate,
+        matchedSkills: matchedTeamSkills(skills, team.skills),
+      }))
+      .filter((candidate) => candidate.matchedSkills.length > 0)
+      .sort((a, b) => b.matchedSkills.length - a.matchedSkills.length)
+      .slice(0, MAX_MATCHES);
+
+    res.json(matches);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 async function getIncomingRequests(req, res) {
   const userId = req.session.user._id;
   try {
@@ -340,6 +378,7 @@ module.exports = {
   updateTeam,
   deleteTeam,
   createRequest,
+  getMatches,
   getIncomingRequests,
   getSentRequests,
   respondToRequest,
