@@ -9,8 +9,7 @@ defineProps({ collapsed: { type: Boolean, default: false } });
 const router = useRouter();
 const authStore = useUserStore();
 
-// username is the SMU email, show the part before the @ as the name
-const displayName = computed(() => (authStore.username ?? '').split('@')[0]);
+const displayName = computed(() => authStore.displayName ?? '');
 const initial = computed(() => displayName.value.charAt(0).toUpperCase() || '?');
 
 async function signOut() {

@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue'
 import { useUserStore } from '@/store/user'
+import { getInitials } from '@/utils/team'
 
 const auth = useUserStore()
-const initial = computed(() => (auth.username ?? '?').charAt(0).toUpperCase())
+const initials = computed(() => getInitials(auth.displayName ?? auth.username ?? ''))
 
 const search = defineModel({ type: String, default: '' })
 
@@ -33,6 +34,11 @@ defineProps({
       >
     </div>
     <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-    <div class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold">{{ initial }}</div>
+    <RouterLink
+      to="/profile"
+      class="size-36 flex-shrink-0 rounded-circle bg-tt-peach d-flex justify-content-center align-items-center small fw-semibold text-body text-decoration-none"
+      :title="auth.displayName"
+      aria-label="Your profile"
+    >{{ initials }}</RouterLink>
   </div>
 </template>
