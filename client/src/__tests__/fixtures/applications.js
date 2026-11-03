@@ -1,0 +1,82 @@
+export const NOW = '2026-11-03T08:00:00+08:00';
+
+export function applications() {
+  return [
+    {
+      _id: 'a1',
+      userId: 'u1',
+      status: 'saved',
+      notes: 'Saved via techtrek.',
+      deadline: '2026-11-06T15:59:00.000Z',
+      opportunityId: {
+        _id: 'o1',
+        source: 'adzuna',
+        externalId: '1',
+        type: 'internship',
+        title: 'Frontend Intern',
+        organisation: 'Acme',
+        location: 'Singapore',
+        url: 'https://adzuna.test/jobs/1',
+      },
+      createdAt: '2026-10-28T02:00:00.000Z',
+      updatedAt: '2026-10-28T02:00:00.000Z',
+    },
+    {
+      _id: 'a2',
+      userId: 'u1',
+      status: 'applied',
+      notes: 'Team of three.',
+      opportunityId: {
+        _id: 'o2',
+        source: 'devpost',
+        externalId: '101',
+        type: 'hackathon',
+        title: 'Hack&Roll',
+        organisation: 'NUS Hackers',
+        location: 'Singapore',
+        deadline: '2026-11-20T23:59:59.000Z',
+        url: 'https://devpost.test/hack-and-roll',
+      },
+      createdAt: '2026-10-29T02:00:00.000Z',
+      updatedAt: '2026-10-30T02:00:00.000Z',
+    },
+    {
+      _id: 'a3',
+      userId: 'u1',
+      status: 'interview',
+      interviewAt: '2026-11-04T06:00:00.000Z',
+      contactName: 'Priya Tan',
+      checklist: [
+        { label: 'Research the company', done: true },
+        { label: 'Prepare questions', done: false },
+      ],
+      opportunityId: {
+        _id: 'o3',
+        source: 'manual',
+        type: 'job',
+        title: 'Data Analyst',
+        organisation: 'Grab',
+        location: 'Singapore',
+      },
+      createdAt: '2026-10-20T02:00:00.000Z',
+      updatedAt: '2026-11-01T02:00:00.000Z',
+    },
+    {
+      _id: 'a4',
+      userId: 'u1',
+      status: 'rejected',
+      deadline: '2026-10-30T15:59:00.000Z',
+      opportunityId: {
+        _id: 'o4',
+        source: 'adzuna',
+        externalId: '2',
+        type: 'job',
+        title: 'Backend Engineer',
+        organisation: 'Shopee',
+        location: 'Singapore',
+      },
+      createdAt: '2026-10-10T02:00:00.000Z',
+      updatedAt: '2026-10-31T02:00:00.000Z',
+    },
+  ];
+}
