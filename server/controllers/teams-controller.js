@@ -342,6 +342,9 @@ async function withdrawRequest(req, res) {
     const request = await TeamRequest.findById(requestId);
     if (!request) return res.status(404).json({ error: 'Request not found' });
     if (String(request.userId) !== String(userId)) return res.status(403).json({ error: 'Forbidden' });
+    if (request.status !== 'pending') {
+      return res.status(409).json({ error: 'This request has already been answered' });
+    }
 
     await TeamRequest.findByIdAndDelete(requestId);
     res.status(204).end();
