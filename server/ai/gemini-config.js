@@ -1,5 +1,3 @@
-// Load environment variables before anything else
-require('dotenv').config();
 const { GoogleGenAI } = require('@google/genai');
 
 if (!process.env.GEMINI_API_KEY) {
