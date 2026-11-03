@@ -34,10 +34,11 @@ export function getMonthlySalary(item) {
 
 //convert to price number only
 export function getPrizeAmount(item) {
-  if (!item.prize) {
+  const amount = item.prize?.match(/\d[\d,]*(\.\d+)?(?!\d|st|nd|rd|th)/i)
+  if (!amount) {
     return 0
   }
-  return Number(item.prize.replace(/[^0-9.]/g, ''))
+  return Number(amount[0].replace(/,/g, ''))
 }
 
 //  "Paid only" filter
