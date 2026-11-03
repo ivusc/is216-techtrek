@@ -5,9 +5,8 @@ const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
 const { cleanSkills } = require('../service/skills');
 
-const PROFILE_FIELDS = 'userName displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
+const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
-const MATCH_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const MAX_MATCHES = 20;
 
 // --- Helper Functions ---
@@ -85,7 +84,6 @@ function formatRequest(request) {
     ? user
     : {
         _id: user?._id,
-        userName: user?.userName,
         displayName: user?.displayName,
         year: user?.year,
         course: user?.course,
@@ -370,7 +368,7 @@ async function getMatches(req, res) {
       skills: { $in: team.skills },
     })
       .collation({ locale: 'en', strength: 2 })
-      .select(MATCH_FIELDS)
+      .select(PROFILE_FIELDS)
       .lean();
 
     const matches = candidates
