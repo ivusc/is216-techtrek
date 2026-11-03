@@ -17,10 +17,7 @@ async function signOut() {
   await authStore.logout();
   router.push('/login');
 }
-const profileRoutes = [
-  { label: 'Settings', location: '/profile/settings', icon: 'bi-gear' },
-  { label: 'Profile', location: '/profile', icon: 'bi-person-circle' },
-];
+const profileRoutes = [{ label: 'Profile', location: '/profile', icon: 'bi-person-circle' }];
 </script>
 
 <template>

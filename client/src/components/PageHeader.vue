@@ -5,12 +5,13 @@ import { useUserStore } from '@/store/user'
 const auth = useUserStore()
 const initial = computed(() => (auth.username ?? '?').charAt(0).toUpperCase())
 
-const search = defineModel({ type: String, required: true })
+const search = defineModel({ type: String, default: '' })
 
 defineProps({
   title: { type: String, default: 'Opportunities' },
   subtitle: { type: String, default: 'Internships, jobs and hackathons — pulled live from Adzuna and Devpost.' },
-  type: { type: String, default: 'opportunities' }
+  type: { type: String, default: 'opportunities' },
+  showSearch: { type: Boolean, default: true }
 })
 </script>
 
@@ -21,7 +22,7 @@ defineProps({
       <h1 class="mb-1">{{ title }}</h1>
       <p class="text-body-secondary mb-0 d-none d-md-block">{{ subtitle }}</p>
     </div>
-    <div class="search position-relative order-last order-md-0">
+    <div v-if="showSearch" class="search position-relative order-last order-md-0">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"></i>
       <input
         v-model="search"
