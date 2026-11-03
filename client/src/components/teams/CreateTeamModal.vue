@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { formatDate } from '@/utils/date'
+import { getKey } from '@/utils/opportunity'
 import TeamModal from './TeamModal.vue'
 import SkillInput from './SkillInput.vue'
 
@@ -25,9 +26,9 @@ const otherLocation = ref('')
 const otherCloses = ref('')
 
 if (isEditing) {
-  const savedEvent = props.events.find((event) => event._id === props.team.event.opportunityId)
+  const savedEvent = props.events.find((event) => event.title === props.team.event.name)
   if (savedEvent) {
-    eventChoice.value = savedEvent._id
+    eventChoice.value = getKey(savedEvent)
   } else {
     eventChoice.value = 'other'
     otherName.value = props.team.event.name
@@ -35,7 +36,44 @@ if (isEditing) {
     otherCloses.value = props.team.closesAt ? props.team.closesAt.slice(0, 10) : ''
   }
 } else {
-  eventChoice.value = props.events.length > 0 ? props.events[0]._id : 'other'
+  eventChoice.value = props.events.length > 0 ? getKey(props.events[0]) : 'other'
+}
+
+function locationText(location) {
+  return typeof location === 'string' ? location : (location?.location ?? '')
+}
+
+function eventFields() {
+  if (eventChoice.value === 'other') {
+    return {
+      opportunityId: null,
+      eventName: otherName.value,
+      eventLocation: otherLocation.value,
+      closesAt: otherCloses.value
+    }
+  }
+  const event = props.events.find((candidate) => getKey(candidate) === eventChoice.value)
+  return {
+    opportunityId: null,
+    eventName: event.title,
+    eventLocation: locationText(event.location),
+    closesAt: event.deadline
+  }
+}
+
+const savedEventFields = eventFields()
+
+function changedEventFields() {
+  const fields = eventFields()
+  const changed = Object.keys(fields).filter((key) => fields[key] !== savedEventFields[key])
+  if (changed.length === 0) {
+    return {}
+  }
+  const sent = { opportunityId: null }
+  for (const key of changed) {
+    sent[key] = fields[key]
+  }
+  return sent
 }
 
 const name = ref(isEditing ? props.team.name : '')
@@ -94,14 +132,7 @@ function submit(status) {
     status: status
   }
 
-  if (eventChoice.value === 'other') {
-    post.opportunityId = null
-    post.eventName = otherName.value
-    post.eventLocation = otherLocation.value
-    post.closesAt = otherCloses.value
-  } else {
-    post.opportunityId = eventChoice.value
-  }
+  Object.assign(post, isEditing ? changedEventFields() : eventFields())
 
   emit('submit', post)
 }
@@ -121,9 +152,10 @@ const showDelete = isEditing && props.team.status !== 'draft'
     <div class="mb-3">
       <label class="small fw-semibold mb-1" for="post-event">Hackathon or competition</label>
       <select id="post-event" v-model="eventChoice" class="form-select">
-        <option v-for="event in events" :key="event._id" :value="event._id">
+        <option v-for="event in events" :key="getKey(event)" :value="getKey(event)">
           {{ event.title }}<template v-if="event.deadline"> · closes {{ formatDate(event.deadline) }}</template>
         </option>
+        <option value="other">Other event (type it in)</option>
       </select>
 
       <div v-if="eventChoice === 'other'" class="row g-2 mt-1">
