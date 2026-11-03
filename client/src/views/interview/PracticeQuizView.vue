@@ -133,7 +133,7 @@ onMounted(() => {
         <textarea v-model="answer" class="answer-box" placeholder="Type your answer here..." />
 
         <div class="submit">
-          <button class="submit-btn" @click="submitAnswer" :disabled="submitted">
+          <button class="submit-btn" @click="submitAnswer" :disabled="submitted || !answer.trim()">
             {{ submitted ? 'Answer Submitted' : 'Submit for Feedback' }}
           </button>
         </div>
