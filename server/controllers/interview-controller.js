@@ -40,6 +40,11 @@ async function getInterviewDashboard(req, res) {
     const questionScores = {}
     for (const attempt of interviewAttempts) {
       for (const q of attempt.questions) {
+        const application = await Application.findById(attempt.applicationId)
+
+        if (!application || (application.status !== 'applied' && application.status !== 'interview')) {
+          continue
+        }
         let found = false
         for (const existingQuestion of allQuestions) {
           if (existingQuestion.question === q.question) {

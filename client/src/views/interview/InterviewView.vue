@@ -62,7 +62,7 @@ const filteredQuestions = computed(() => {
       subtitle="Practice by role and question type.Gemini gives instant feedback on every answer" type="questions" />
     <div class="container">
       <div>
-        <div class="filter-card" style="background-color:white">
+        <div v-if = "applicationCards.length !=0" class="filter-card" style="background-color:white">
           <div class="card-body">
 
             <p class="filter-title">Filters</p>
@@ -86,7 +86,8 @@ const filteredQuestions = computed(() => {
         </div>
       </div>
       <div>
-        <div class="interview-list">
+        <div v-if = "questions.length==0 && applicationCards.length == 0">No ongoing applications to prepare for or questions yet.Come back later!</div>
+        <div class="interview-list" v-else>
           <div class="interview-card" v-for="application in applicationCards" :key="application.title">
             <p class="job-title">{{ application.title }} at {{ application.company }}</p>
             <p class="interview-date">
@@ -102,7 +103,7 @@ const filteredQuestions = computed(() => {
           </div>
 
         </div>
-        <div class="stats-container">
+        <div v-if = "applicationCards.length !=0"  class="stats-container">
           <div class="stat-card">
             <div class="stat-icon">↝</div>
 
@@ -130,8 +131,8 @@ const filteredQuestions = computed(() => {
         </div>
         <div class="question-bank">
           <p class="question-bank-title">Question Bank</p>
-
-          <div class="question-card" v-for="question in filteredQuestions" :key="question.questionId">
+          <div v-if = "questions.length==0 && applicationCards.length !=0" >No questions generated yet</div>
+          <div v-else class="question-card" v-for="question in filteredQuestions" :key="question.questionId">
 
             <div>
               <p class="question-text">
