@@ -57,17 +57,21 @@ async function getApplication(req, res) {
   }
 }
 
-// PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName
+// PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName, checklist ([{ label, done }])
 async function updateApplication(req, res) {
   const { id: applicationId } = req.params;
-  const { status, notes, deadline, interviewAt, contactName } = req.body ?? {};
+  const { status, notes, deadline, interviewAt, contactName, checklist } = req.body ?? {};
 
   if (!mongoose.isValidObjectId(applicationId)) {
     return res.status(400).json({ error: 'Invalid ID' });
   }
 
+  if (checklist !== undefined && !Array.isArray(checklist)) {
+    return res.status(400).json({ error: 'checklist must be an array' });
+  }
+
   try {
-    const changes = { status, notes, deadline, interviewAt, contactName };
+    const changes = { status, notes, deadline, interviewAt, contactName, checklist };
     const application = await applicationService.updateApplication(applicationId, req.session.user._id, changes);
 
     if (!application) {

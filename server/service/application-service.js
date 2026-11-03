@@ -46,6 +46,7 @@ async function updateApplication(id, userId, changes) {
       deadline: changes.deadline,
       interviewAt: changes.interviewAt,
       contactName: changes.contactName,
+      checklist: changes.checklist,
     },
     { returnDocument: 'after', runValidators: true },
   ).populate('opportunityId');

@@ -2,6 +2,15 @@ const mongoose = require('mongoose');
 
 const STATUS_TYPES = ['saved', 'applied', 'interview', 'offer', 'rejected'];
 
+// one tick box in the tracker's "Prep checklist"
+const checklistItemSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true, trim: true, maxlength: 200 },
+    done: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
 const applicationSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -11,6 +20,9 @@ const applicationSchema = new mongoose.Schema(
     deadline: { type: Date },
     interviewAt: { type: Date },
     contactName: { type: String, trim: true, maxlength: 200 },
+    // left out until the first save from the detail modal, which fills in the default items;
+    // no [] default, so a checklist the user emptied stays empty instead of getting the defaults back
+    checklist: { type: [checklistItemSchema], default: undefined },
   },
   { timestamps: true },
 );
