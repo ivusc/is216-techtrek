@@ -352,6 +352,13 @@ Return JSON in this format:
         error: 'Invalid AI response'
       })
     }
+    if (
+      typeof feedback?.score !== 'number' ||
+      !Array.isArray(feedback.strengths) ||
+      !Array.isArray(feedback.improvements)
+    ) {
+      return res.status(500).json({ error: 'Invalid AI response' });
+    }
     res.json({
       feedback
     })
