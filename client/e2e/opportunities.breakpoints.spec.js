@@ -3,13 +3,15 @@ import {
   DESKTOP,
   PHONE,
   WIDTHS,
+  test as base,
   expect,
   expectNoHorizontalOverflow,
+  registerAccount,
   screenshot,
-  test,
 } from './fixtures.js';
 
 const MD = 768;
+const LG = 992;
 const XL = 1200;
 const DRAWER_WIDTH = 540;
 const READABLE_TITLE_WIDTH = 200;
@@ -19,21 +21,33 @@ const OPPORTUNITIES = JSON.parse(
   readFileSync(new URL('./fixtures/opportunities.json', import.meta.url), 'utf8'),
 );
 const URGENT_TITLE = 'International Collegiate Sustainability Innovation Grand Finals';
-const WITH_URGENT_HACKATHON = {
-  ...OPPORTUNITIES,
-  hackathons: {
-    count: OPPORTUNITIES.hackathons.count + 1,
-    hackathons: [
-      {
-        ...OPPORTUNITIES.hackathons.hackathons[0],
-        externalId: '9199',
-        title: URGENT_TITLE,
-        deadline: new Date(Date.now() + 3 * DAY).toISOString(),
-      },
-      ...OPPORTUNITIES.hackathons.hackathons,
-    ],
+
+function withHackathon(fields) {
+  return {
+    ...OPPORTUNITIES,
+    hackathons: {
+      count: OPPORTUNITIES.hackathons.count + 1,
+      hackathons: [
+        { ...OPPORTUNITIES.hackathons.hackathons[0], ...fields },
+        ...OPPORTUNITIES.hackathons.hackathons,
+      ],
+    },
+  };
+}
+
+const WITH_URGENT_HACKATHON = withHackathon({
+  externalId: '9199',
+  title: URGENT_TITLE,
+  deadline: new Date(Date.now() + 3 * DAY).toISOString(),
+});
+
+const test = base.extend({
+  leader: async ({ playwright }, use) => {
+    const leader = await registerAccount(playwright, 'opportunities.leader');
+    await use(leader);
+    await leader.dispose();
   },
-};
+});
 
 async function openOpportunities(page, size, payload = OPPORTUNITIES) {
   const total = payload.jobs.jobs.length + payload.hackathons.hackathons.length;
@@ -70,6 +84,24 @@ async function columnCount(cards) {
 async function settle(locator) {
   await locator.evaluate((element) =>
     Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
+}
+
+async function cardsSpillingPastPadding(page) {
+  return page.locator('.opp-card').evaluateAll((cards) =>
+    cards
+      .filter((card) => {
+        const box = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        const left = box.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+        const right =
+          box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+        return [...card.querySelectorAll('*')].some((element) => {
+          const inner = element.getBoundingClientRect();
+          return inner.left < left - 0.5 || inner.right > right + 0.5;
+        });
+      })
+      .map((card) => card.querySelector('h3').textContent),
   );
 }
 
@@ -116,6 +148,43 @@ test.describe('opportunities layout', () => {
 
       await page.keyboard.press('Escape');
       await expect(drawer).toBeHidden();
+    });
+
+    test(`${width} keeps the hackathon buttons inside their cards`, async ({
+      leader,
+      loggedIn: page,
+    }, testInfo) => {
+      const tag = `w${testInfo.workerIndex}.${Date.now()}`;
+      const title = `Card Fit ${tag}`;
+      const team = await leader.api.post('/teams', {
+        data: {
+          name: `Fit ${tag}`,
+          eventName: title,
+          teamSize: 4,
+          openSlots: 2,
+          pitch: 'We ship a working demo every weekend.',
+          skills: ['Vue.js'],
+        },
+      });
+      expect(team.status()).toBe(201);
+      await openOpportunities(
+        page,
+        { width: Math.max(width, LG), height: 900 },
+        withHackathon({ externalId: tag, title }),
+      );
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible({
+        visible: !phone,
+      });
+
+      const card = page.locator('.opp-card', { hasText: title });
+      await card.getByRole('button', { name: /Track$/ }).click();
+      await expect(card.getByRole('button', { name: /Tracked$/ })).toBeVisible();
+      await expect(card.getByRole('button', { name: 'Find team, 1 open' })).toBeVisible();
+
+      expect(await cardsSpillingPastPadding(page)).toEqual([]);
+      await expectNoHorizontalOverflow(page);
+      await screenshot(page, testInfo, `opportunities-hackathon-cards-${width}`);
     });
   }
 
