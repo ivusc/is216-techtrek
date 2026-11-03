@@ -18,6 +18,7 @@ const LONG_TITLE = 'Codegeist 2026: Build with context. Ship with confidence.';
 const test = base.extend({
   leaderPosts: async ({ playwright }, use, testInfo) => {
     const tag = `w${testInfo.workerIndex}.${Date.now()}`;
+    const fullEvent = `AI Builders Challenge ${tag}`;
     const leader = await registerAccount(playwright, 'teams.leader');
     const joiner = await registerAccount(playwright, 'teams.joiner');
     const open = await postTeam(leader, {
@@ -28,7 +29,7 @@ const test = base.extend({
     });
     const full = await postTeam(leader, {
       name: `Full ${tag}`,
-      eventName: 'AI Builders Challenge',
+      eventName: fullEvent,
       teamSize: 2,
       openSlots: 1,
     });
@@ -43,7 +44,7 @@ const test = base.extend({
     });
     expect(accepted.status()).toBe(200);
 
-    await use({ open: open.name, full: full.name });
+    await use({ open: open.name, full: full.name, fullEvent });
 
     await joiner.dispose();
     await leader.dispose();
@@ -65,12 +66,19 @@ async function postTeam(owner, { name, eventName, teamSize, openSlots }) {
   return response.json();
 }
 
-async function mockOpportunities(page) {
+function renameHackathon(externalId, title) {
+  const hackathons = OPPORTUNITIES.hackathons.hackathons.map((hackathon) =>
+    hackathon.externalId === externalId ? { ...hackathon, title } : hackathon,
+  );
+  return { ...OPPORTUNITIES, hackathons: { ...OPPORTUNITIES.hackathons, hackathons } };
+}
+
+async function mockOpportunities(page, opportunities) {
   await page.route('**/opportunity/**', (route) => route.abort());
-  await page.route('**/opportunity/all*', (route) => route.fulfill({ json: OPPORTUNITIES }));
-  await page.route('**/opportunity/jobs*', (route) => route.fulfill({ json: OPPORTUNITIES.jobs }));
+  await page.route('**/opportunity/all*', (route) => route.fulfill({ json: opportunities }));
+  await page.route('**/opportunity/jobs*', (route) => route.fulfill({ json: opportunities.jobs }));
   await page.route('**/opportunity/hackathons*', (route) =>
-    route.fulfill({ json: OPPORTUNITIES.hackathons }),
+    route.fulfill({ json: opportunities.hackathons }),
   );
 }
 
@@ -113,7 +121,7 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
     loggedIn: page,
     leaderPosts,
   }) => {
-    await mockOpportunities(page);
+    await mockOpportunities(page, renameHackathon('9102', leaderPosts.fullEvent));
     await page.setViewportSize(size);
 
     const campus = await findTeam(page, 'Campus Makers');
@@ -132,7 +140,7 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
     await openInTeams(page, await findTeam(page, 'Build for Good'), 'Build for Good');
     await expect(teamCard(page, leaderPosts.open)).toBeVisible();
 
-    await openInTeams(page, await findTeam(page, 'AI Builders Challenge'), 'AI Builders Challenge');
+    await openInTeams(page, await findTeam(page, leaderPosts.fullEvent), leaderPosts.fullEvent);
     await expect(page.getByText('No teams match your filters.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start a team' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Open slots only' }).click();
