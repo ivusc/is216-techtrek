@@ -1,13 +1,14 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import './tracker.css';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
 import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
 import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
 import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
 import AddApplicationModal from '@/components/tracker/AddApplicationModal.vue';
-import { trackerStages } from '@/constants';
-import { isDueThisWeek, isOverdue } from '@/utils/application';
+import { trackerStages, hackathonStages } from '@/constants';
+import { isDueThisWeek, isOverdue, isEventType } from '@/utils/application';
 import { storeToRefs } from 'pinia';
 import { useApplicationsStore } from '@/store/applications';
 import { buildIcsFile } from '@/utils/calendar';
@@ -23,6 +24,14 @@ const viewMode = ref('board'); // 'board' or 'calendar'
 const typeFilter = ref(''); // '' = all types
 const deadlineFilter = ref(''); // '' | 'week' | 'overdue'
 const hideRejected = ref(false);
+// which board: jobs & internships, or hackathons & competitions (they have different steps).
+// /tracker?board=hackathons opens the hackathon board
+const board = ref(useRoute().query.board === 'hackathons' ? 'hackathons' : 'jobs');
+
+// a type filter from the other board would hide everything, so clear it when switching
+watch(board, () => {
+  typeFilter.value = '';
+});
 
 onMounted(fetchApplications);
 
@@ -61,18 +70,33 @@ const filteredApplications = computed(() => {
   });
 });
 
-// "Hide rejected" also removes the Rejected column
+function onBoard(application, name) {
+  return isEventType(application.opportunityId.type) === (name === 'hackathons');
+}
+
+// the board only shows its own kind; the calendar shows both
+const boardApplications = computed(() => filteredApplications.value.filter((application) => onBoard(application, board.value)));
+const boardCounts = computed(() => ({
+  jobs: filteredApplications.value.filter((application) => onBoard(application, 'jobs')).length,
+  hackathons: filteredApplications.value.filter((application) => onBoard(application, 'hackathons')).length,
+}));
+
+// hackathons have their own columns; "Hide rejected" removes the jobs' Rejected column
 const visibleStages = computed(() => {
+  if (board.value === 'hackathons') {
+    return hackathonStages;
+  }
   if (hideRejected.value) {
     return trackerStages.filter((stage) => stage.status !== 'rejected');
   }
   return trackerStages;
 });
 
-const dueThisWeekCount = computed(() => filteredApplications.value.filter(isDueThisWeek).length);
+const shownApplications = computed(() => (viewMode.value === 'board' ? boardApplications.value : filteredApplications.value));
+const dueThisWeekCount = computed(() => shownApplications.value.filter(isDueThisWeek).length);
 
 function applicationsInStage(status) {
-  return filteredApplications.value.filter((application) => application.status === status);
+  return boardApplications.value.filter((application) => application.status === status);
 }
 
 //move to a diff status type
@@ -80,8 +104,9 @@ async function moveApplication(applicationId, newStatus) {
   await updateApplicationStatus(applicationId, newStatus);
 }
 
-// stage the add form starts in (null = form is closed)
+// stage the add form starts in (null = form is closed); the form opens on the board's own tab
 const addFormStatus = ref(null);
+const addFormKind = computed(() => (board.value === 'hackathons' ? 'event' : 'job'));
 
 // "Add application", a column's + button or its "Add" button (stage = the column, or 'saved' from the toolbar)
 function openAddForm(stage) {
@@ -151,8 +176,8 @@ async function deleteSelected() {
     />
 
     <div v-else class="d-flex flex-column flex-grow-1 min-h-0">
-      <TrackerToolbar v-model:view-mode="viewMode" v-model:type="typeFilter" v-model:deadline="deadlineFilter"
-        v-model:hide-rejected="hideRejected" :total="filteredApplications.length" :due-this-week="dueThisWeekCount"
+      <TrackerToolbar v-model:view-mode="viewMode" v-model:board="board" v-model:type="typeFilter" v-model:deadline="deadlineFilter"
+        v-model:hide-rejected="hideRejected" :board-counts="boardCounts" :total="shownApplications.length" :due-this-week="dueThisWeekCount"
         @add="openAddForm('saved')" @clear="clearFilters" />
 
       <div v-if="viewMode === 'board'" class="kanban-board d-flex gap-3 pb-2 flex-grow-1 min-h-0">
@@ -163,7 +188,7 @@ async function deleteSelected() {
 
       <CalendarView v-else class="flex-grow-1 min-h-0 overflow-auto" :applications="filteredApplications" @open="openDetails" @export="exportCalendar" />
 
-      <AddApplicationModal v-if="addFormStatus" :status="addFormStatus" :is-saving="isSaving" :error="status ?? ''"
+      <AddApplicationModal v-if="addFormStatus" :status="addFormStatus" :kind="addFormKind" :is-saving="isSaving" :error="status ?? ''"
         @close="closeAddForm" @add="addNewApplication" />
 
       <!-- Details Modal -->

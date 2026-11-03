@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import { getErrorMessage } from '@/services/teamService';
+import PasswordInput from '@/components/PasswordInput.vue';
 
 const auth = useUserStore();
 const router = useRouter();
@@ -61,21 +62,13 @@ async function signOut() {
           <label for="current-password" class="form-label small fw-semibold">
             Current password
           </label>
-          <input
-            id="current-password"
-            v-model="currentPassword"
-            type="password"
-            class="form-control"
-            autocomplete="current-password"
-          />
+          <PasswordInput id="current-password" v-model="currentPassword" autocomplete="current-password" />
         </div>
         <div class="col-12 col-sm-6">
           <label for="new-password" class="form-label small fw-semibold">New password</label>
-          <input
+          <PasswordInput
             id="new-password"
             v-model="newPassword"
-            type="password"
-            class="form-control"
             autocomplete="new-password"
             aria-describedby="new-password-hint"
           />
@@ -105,13 +98,7 @@ async function signOut() {
         <label for="delete-password" class="form-label small fw-semibold">
           Type your password to confirm
         </label>
-        <input
-          id="delete-password"
-          v-model="deletePassword"
-          type="password"
-          class="form-control"
-          autocomplete="current-password"
-        />
+        <PasswordInput id="delete-password" v-model="deletePassword" autocomplete="current-password" />
       </div>
       <p v-if="deleteError" class="small text-tt-accent mb-0" role="alert">{{ deleteError }}</p>
       <button

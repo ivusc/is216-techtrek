@@ -13,14 +13,28 @@ import {
 
 defineProps({
   item: { type: Object, required: true },
-  saved: { type: Boolean, default: false }
+  saved: { type: Boolean, default: false },
+  teamCount: { type: Number, default: 0 } // open teams for this hackathon, shown on "Find team"
 })
 
-defineEmits(['details', 'toggle-save'])
+const emit = defineEmits(['details', 'toggle-save', 'find-team'])
+
+// clicks on the card's own buttons and links are left to them
+function openDetails(event) {
+  if (event.target.closest('button, a, input, select')) return
+  emit('details')
+}
 </script>
 
 <template>
-  <div class="opp-card card shadow-sm h-100">
+  <!-- the whole card opens the details panel; its own buttons (Track, Find team...) still do just their job -->
+  <div
+    class="opp-card card h-100 card-hover"
+    tabindex="0"
+    :aria-label="'Open details for ' + item.title"
+    @click="openDetails"
+    @keydown.enter.self="emit('details')"
+  >
     <!-- avatar, organisation + location -->
     <div class="d-flex align-items-center gap-3">
       <div
@@ -38,7 +52,7 @@ defineEmits(['details', 'toggle-save'])
       </div>
     </div>
 
-    <div class="d-flex flex-column gap-2" role="button" @click="$emit('details')">
+    <div class="d-flex flex-column gap-2">
       <!-- title -->
       <h3 class="opp-title mb-0">{{ item.title }}</h3>
 
@@ -85,9 +99,17 @@ defineEmits(['details', 'toggle-save'])
       <div class="d-flex gap-2 ms-auto">
         <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
         <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
-        <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+        <button
+          v-if="item.type === 'hackathon'"
+          type="button"
+          class="btn btn-sm btn-outline-primary fw-semibold text-nowrap"
+          :title="teamCount > 0 ? teamCount + (teamCount === 1 ? ' team is' : ' teams are') + ' looking for members' : 'No teams yet - start one'"
+          :aria-label="teamCount > 0 ? 'Find team, ' + teamCount + ' open' : 'Find team'"
+          @click="$emit('find-team')"
+        >
           Find team
-        </RouterLink>
+          <span v-if="teamCount > 0" class="badge rounded-pill bg-primary ms-1">{{ teamCount }}</span>
+        </button>
         <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
           <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
           {{ saved ? 'Tracked' : 'Track' }}

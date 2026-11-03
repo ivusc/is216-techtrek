@@ -6,13 +6,29 @@ export const typeBadge = {
   competition: 'bg-info-subtle text-body'
 }
 
-// the 5 tracker columns, in board order
+// the 5 tracker columns for jobs and internships, in board order
 export const trackerStages = [
   { status: 'saved', label: 'Saved' },
   { status: 'applied', label: 'Applied' },
   { status: 'interview', label: 'Interview' },
   { status: 'offer', label: 'Offer' },
   { status: 'rejected', label: 'Rejected' }
+]
+
+// the 5 tracker columns for hackathons and competitions (same statuses as the server's EVENT_STATUSES)
+export const hackathonStages = [
+  { status: 'saved', label: 'Saved' },
+  { status: 'registered', label: 'Registered' },
+  { status: 'team', label: 'Team formed' },
+  { status: 'submitted', label: 'Submitted' },
+  { status: 'results', label: 'Results' }
+]
+
+// how a finished hackathon went, picked on a card in the Results column
+export const hackathonResults = [
+  { value: 'won', label: 'Won', icon: 'bi-trophy-fill', css: 'bg-warning-subtle text-warning-emphasis' },
+  { value: 'finalist', label: 'Finalist', icon: 'bi-star-fill', css: 'bg-info-subtle text-primary-emphasis' },
+  { value: 'participated', label: 'Took part', icon: 'bi-check-circle-fill', css: 'bg-success-subtle text-success-emphasis' }
 ]
 
 // SMU schools for onboarding; the code is what gets saved (the server checks it is one of these)

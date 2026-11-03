@@ -3,6 +3,7 @@ import '@/views/login/LoginView.css';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
+import PasswordInput from '@/components/PasswordInput.vue';
 
 defineEmits(['switch-to-signup']);
 
@@ -82,7 +83,6 @@ onMounted(() => {
           Log in with your SMU account to pick up where you left off.
         </p>
       </div>
-      <p v-if="errorMessage" class="errors">{{ errorMessage }}</p>
       <div>
         <label for="login-email" class="form-label small fw-semibold">SMU email</label>
         <div class="position-relative">
@@ -103,29 +103,20 @@ onMounted(() => {
       </div>
       <div>
         <label for="login-password" class="form-label small fw-semibold">Password</label>
-        <div class="position-relative">
-          <i
-            class="bi bi-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"
-            aria-hidden="true"
-          ></i>
-          <input
-            id="login-password"
-            type="password"
-            class="form-control ps-5"
-            v-model="password"
-            autocomplete="current-password"
-            placeholder="••••••••••"
-          />
-        </div>
-      </div>
-      <div class="form-check">
-        <input
-          id="login-remember"
-          class="form-check-input"
-          type="checkbox"
-          v-model="rememberUser"
+        <PasswordInput
+          id="login-password"
+          v-model="password"
+          lock-icon
+          autocomplete="current-password"
+          placeholder="••••••••••"
         />
-        <label class="form-check-label fw-normal" for="login-remember">Remember me</label>
+      </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="form-check mb-0">
+          <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
+          <label class="form-check-label fw-normal" for="login-remember">Remember me</label>
+        </div>
+        <a href="#" class="small fw-semibold text-decoration-none" @click.prevent>Forgot password?</a>
       </div>
       <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
       <button type="submit" class="btn btn-primary fw-semibold">Log in</button>

@@ -110,6 +110,7 @@ describe('ApplicationDetailModal', () => {
       ],
       interviewAt: '2026-11-05T02:30:00.000Z',
       deadline: null,
+      result: null,
     });
 
     await wrapper.find('#application-interview').setValue('');
@@ -125,6 +126,27 @@ describe('ApplicationDetailModal', () => {
 
     await button(wrapper, 'Delete').trigger('click');
     expect(wrapper.emitted('delete')).toHaveLength(1);
+  });
+
+  it('offers a hackathon its own steps and asks how it went in Results', async () => {
+    const wrapper = mountModal(applications()[1]);
+    const stages = wrapper.find('#application-stage').findAll('option');
+
+    expect(stages.map((option) => option.element.value)).toEqual([
+      'saved',
+      'registered',
+      'team',
+      'submitted',
+      'results',
+    ]);
+    expect(wrapper.find('#application-result').exists()).toBe(false);
+
+    await wrapper.find('#application-stage').setValue('results');
+    await wrapper.find('#application-result').setValue('won');
+    await button(wrapper, 'Save changes').trigger('click');
+
+    expect(wrapper.find('#application-deadline').exists()).toBe(false);
+    expect(wrapper.emitted('save')[0][0]).toMatchObject({ status: 'results', result: 'won' });
   });
 
   it('closes on Esc, the overlay and Cancel', async () => {

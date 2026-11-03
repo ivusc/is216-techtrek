@@ -11,6 +11,13 @@ router.patch('/:id', teamsController.updateTeam);
 router.delete('/:id', teamsController.deleteTeam);
 
 router.post('/:id/requests', teamsController.createRequest);
+
+// invites: the leader invites someone by SMU email; the invited person accepts or declines
+router.get('/invites', teamsController.getMyInvites);
+router.patch('/invites/:id', teamsController.respondToInvite);
+router.delete('/invites/:id', teamsController.cancelInvite);
+router.get('/:id/invites', teamsController.getTeamInvites);
+router.post('/:id/invites', teamsController.createInvite);
 router.get('/:id/matches', teamsController.getMatches);
 router.get('/requests/incoming', teamsController.getIncomingRequests);
 router.get('/requests/sent', teamsController.getSentRequests);

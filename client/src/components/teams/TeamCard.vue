@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { formatDate } from '@/utils/date'
 import {
   getDisplayName,
@@ -15,10 +16,19 @@ const props = defineProps({
   team: { type: Object, required: true },
   mode: { type: String, default: 'browse' },
   mySkills: { type: Array, default: () => [] },
-  matches: { type: Array, default: null }
+  matches: { type: Array, default: null },
+  undoing: { type: Boolean, default: false } // true while this team's request is being withdrawn
 })
 
-defineEmits(['request', 'edit', 'view-requests'])
+const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite'])
+
+// on Browse, a team I can still join opens "Request to join" when the card itself is clicked
+const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
+
+function onCardClick(event) {
+  if (!canRequest.value || event.target.closest('button, a, input, select')) return
+  emit('request')
+}
 
 function isMatch(skill) {
   return props.mySkills.some((mine) => sameSkill(mine, skill))
@@ -31,7 +41,14 @@ function isUrgent() {
 </script>
 
 <template>
-  <div class="card p-3 card-hover h-100">
+  <div
+    class="card p-3 h-100"
+    :class="{ 'card-hover': canRequest }"
+    :tabindex="canRequest ? 0 : undefined"
+    :aria-label="canRequest ? 'Ask to join ' + team.name : undefined"
+    @click="onCardClick"
+    @keydown.enter.self="canRequest && emit('request')"
+  >
 
     <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
       <span class="badge rounded-pill fw-medium text-truncate mw-100" :class="getEventBadgeClass(team.event.name)">
@@ -80,20 +97,37 @@ function isUrgent() {
         <span class="text-caption text-body-secondary">{{ getSlotsText(team) }}</span>
       </div>
 
+      <!-- a pending request can be taken back -->
+      <div v-if="mode === 'browse' && team.requestStatus === 'pending'" class="d-flex align-items-center gap-2">
+        <span class="badge rounded-pill bg-info-subtle text-primary-emphasis fw-medium d-inline-flex align-items-center gap-1 py-2 px-3">
+          <i class="bi bi-send-check" aria-hidden="true"></i> Request sent
+        </span>
+        <button class="btn btn-sm btn-outline-primary fw-semibold" :disabled="undoing" @click="$emit('undo')">
+          {{ undoing ? 'Undoing...' : 'Undo' }}
+        </button>
+      </div>
+
       <button
-        v-if="mode === 'browse'"
+        v-else-if="mode === 'browse'"
         class="btn btn-sm fw-semibold text-nowrap"
         :class="team.requestStatus === null && team.slotsOpen > 0 ? 'btn-primary' : 'btn-light'"
         :disabled="team.requestStatus !== null || team.slotsOpen === 0"
         @click="$emit('request')"
       >
-        <template v-if="team.requestStatus === 'pending'">Request sent</template>
-        <template v-else-if="team.requestStatus === 'declined'">Request declined</template>
+        <template v-if="team.requestStatus === 'declined'">Request declined</template>
+        <template v-else-if="team.requestStatus === 'accepted'">You're in!</template>
         <template v-else-if="team.slotsOpen === 0">Team full</template>
         <template v-else>Request to join</template>
       </button>
 
       <div v-else-if="team.isLeader" class="d-flex gap-2">
+        <button
+          v-if="team.status === 'open' && team.slotsOpen > 0"
+          class="btn btn-sm btn-outline-primary fw-semibold"
+          @click="$emit('invite')"
+        >
+          <i class="bi bi-person-plus" aria-hidden="true"></i> Invite
+        </button>
         <button v-if="team.status !== 'draft'" class="btn btn-sm btn-light fw-semibold" @click="$emit('view-requests')">Requests</button>
         <button class="btn btn-sm btn-primary fw-semibold" @click="$emit('edit')">Edit post</button>
       </div>

@@ -8,11 +8,18 @@ import TeamsView from '@/views/teams/TeamsView.vue';
 import { ME, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
 import { HACKATHONS } from '@/__tests__/fixtures/opportunities';
 
+const route = vi.hoisted(() => ({ query: {} }));
+
+vi.mock('vue-router', () => ({
+  useRoute: () => route,
+}));
+
 const mock = new MockAdapter(serverAPI);
 
 const NO_EVENTS = { jobs: null, hackathons: { count: 0, hackathons: [] } };
 
 beforeEach(() => {
+  route.query = {};
   setActivePinia(createPinia());
   useUserStore().user = { ...ME };
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -23,8 +30,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockLists({ teams = [team()], mine = [ledTeam()], incoming = [], sent = [] } = {}) {
+function mockLists({
+  teams = [team()],
+  mine = [ledTeam()],
+  incoming = [],
+  sent = [],
+  invites = [],
+} = {}) {
   mock.onGet('/teams').reply(200, teams);
+  mock.onGet('/teams/invites').reply(200, invites);
   mock.onGet('/teams/mine').reply(200, mine);
   mock.onGet(/\/teams\/[^/]+\/matches$/).reply(200, []);
   mock.onGet('/teams/requests/incoming').reply(200, incoming);
@@ -81,17 +95,19 @@ describe('TeamsView errors', () => {
     },
   );
 
-  it('pre-filters by my skills once a retry loads the teams', async () => {
+  it('keeps Match my skills applied through a retry', async () => {
     mockLists();
     mock.onGet('/teams').reply(500, { error: 'Failed to fetch teams' });
     const wrapper = await mountTeams();
+    await button(wrapper, 'Match my skills').trigger('click');
 
     mockLists({ teams: [team(), team({ _id: 't2', name: 'Data Divers', skills: ['Python'] })] });
     await button(wrapper, 'Retry').trigger('click');
     await flushPromises();
 
     expect(wrapper.find('.skills-label').text()).toBe('Skills: Vue.js');
-    expect(titles(wrapper)).toEqual(['Byte Me']);
+    expect(titles(wrapper)).toContain('Byte Me');
+    expect(titles(wrapper)).not.toContain('Data Divers');
   });
 
   it('announces a failed answer as an alert', async () => {
@@ -110,7 +126,7 @@ describe('TeamsView errors', () => {
 });
 
 describe('TeamsView', () => {
-  it('loads teams, mine and requests and pre-filters browse by my skills', async () => {
+  it('loads teams, mine and requests, shows every team and filters by my skills when asked', async () => {
     mockLists({
       teams: [
         team(),
@@ -123,14 +139,21 @@ describe('TeamsView', () => {
     const wrapper = await mountTeams();
 
     expect(wrapper.findAll('nav .nav-link').map((tab) => tab.text())).toEqual([
-      'Browse teams 3',
+      'Browse teams 4',
       'My teams 1',
       'Requests 2',
     ]);
+    expect(wrapper.find('.skills-label').text()).toBe('Skills: Any');
+    expect(wrapper.text()).not.toContain('need your skills');
+    expect(titles(wrapper)).toEqual(['Night Owls', 'Byte Me', 'Data Divers', 'Pixel Pals']);
+    expect(requestsTo('/teams/m1/matches')).toHaveLength(1);
+
+    await button(wrapper, 'Match my skills').trigger('click');
+
     expect(wrapper.find('.skills-label').text()).toBe('Skills: Vue.js');
     expect(wrapper.text()).toContain('2 teams need your skills');
-    expect(titles(wrapper)).toEqual(['Byte Me', 'Pixel Pals']);
-    expect(requestsTo('/teams/m1/matches')).toHaveLength(1);
+    expect(titles(wrapper)).not.toContain('Data Divers');
+    expect(titles(wrapper)).toEqual(expect.arrayContaining(['Byte Me', 'Pixel Pals']));
   });
 
   it('creates a team post and lands on My teams', async () => {
@@ -163,7 +186,8 @@ describe('TeamsView', () => {
       eventLocation: 'NUS',
       closesAt: '2026-11-20',
     });
-    expect(dialog(wrapper).exists()).toBe(false);
+    expect(wrapper.find('#post-name').exists()).toBe(false);
+    expect(dialog(wrapper).text()).toContain('Pixel Pushers is live!');
     expect(button(wrapper, 'My teams').classes()).toContain('active');
     expect(requestsTo('/teams/mine')).toHaveLength(2);
   });
@@ -184,15 +208,14 @@ describe('TeamsView', () => {
     await dialogButton(wrapper, 'Publish post').trigger('click');
     await flushPromises();
 
-    expect(JSON.parse(mock.history.post[0].data)).toMatchObject({
+    const body = JSON.parse(mock.history.post[0].data);
+    expect(body).toMatchObject({
       name: 'Pixel Pushers',
       status: 'open',
-      opportunityId: null,
-      eventName: 'AI Builders Challenge',
-      eventLocation: 'Online',
-      closesAt: '2026-11-30T23:59:59.000Z',
+      opportunity: { source: 'devpost', externalId: '203', title: 'AI Builders Challenge' },
     });
-    expect(dialog(wrapper).exists()).toBe(false);
+    expect(body).not.toHaveProperty('eventName');
+    expect(wrapper.find('#post-name').exists()).toBe(false);
   });
 
   it('edits and deletes a post', async () => {
@@ -314,18 +337,21 @@ describe('TeamsView', () => {
     const wrapper = await mountTeams();
 
     await button(wrapper, 'Requests').trigger('click');
+    await flushPromises();
+    const incomingLoads = requestsTo('/teams/requests/incoming').length;
     await button(wrapper, 'Accept').trigger('click');
     await flushPromises();
 
     expect(mock.history.patch[0].url).toBe('/teams/requests/r1');
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({ status: 'accepted' });
-    expect(requestsTo('/teams/requests/incoming')).toHaveLength(2);
+    expect(requestsTo('/teams/requests/incoming')).toHaveLength(incomingLoads + 1);
 
+    const sentLoads = requestsTo('/teams/requests/sent').length;
     await button(wrapper, 'Withdraw').trigger('click');
     await flushPromises();
 
     expect(mock.history.delete[0].url).toBe('/teams/requests/s1');
-    expect(requestsTo('/teams/requests/sent')).toHaveLength(3);
+    expect(requestsTo('/teams/requests/sent')).toHaveLength(sentLoads + 1);
   });
 
   it("shows the server's reason inside the modal", async () => {
@@ -351,7 +377,9 @@ describe('TeamsView', () => {
     });
     mock.onPatch('/me').reply((config) => [200, { user: { ...ME, ...JSON.parse(config.data) } }]);
     const wrapper = await mountTeams();
-    expect(titles(wrapper)).toEqual(['Byte Me']);
+    await button(wrapper, 'Match my skills').trigger('click');
+    expect(titles(wrapper)).toContain('Byte Me');
+    expect(titles(wrapper)).not.toContain('Data Divers');
 
     await button(wrapper, 'Edit skills').trigger('click');
     const input = dialog(wrapper).find('.skill-text');
@@ -363,6 +391,7 @@ describe('TeamsView', () => {
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({ skills: ['Vue.js', 'Figma'] });
     expect(dialog(wrapper).exists()).toBe(false);
     expect(wrapper.find('.skills-label').text()).toBe('Skills: Vue.js, Figma');
-    expect(titles(wrapper)).toEqual(['Byte Me', 'Data Divers']);
+    expect(titles(wrapper)).toEqual(expect.arrayContaining(['Byte Me', 'Data Divers']));
+    expect(titles(wrapper)).not.toContain('Py Pals');
   });
 });

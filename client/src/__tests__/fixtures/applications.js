@@ -24,7 +24,7 @@ export function applications() {
     {
       _id: 'a2',
       userId: 'u1',
-      status: 'applied',
+      status: 'registered',
       notes: 'Team of three.',
       opportunityId: {
         _id: 'o2',

@@ -2,8 +2,8 @@
 import { computed } from 'vue'
 import { formatDate } from '@/utils/date'
 import { getDaysLeft } from '@/utils/opportunity'
-import { getApplicationDeadline } from '@/utils/application'
-import { typeBadge, trackerStages } from '@/constants'
+import { getApplicationDeadline, stagesFor } from '@/utils/application'
+import { typeBadge, hackathonResults } from '@/constants'
 
 const props = defineProps({
   application: { type: Object, required: true }
@@ -13,7 +13,13 @@ defineEmits(['open', 'move'])
 
 const opportunity = computed(() => props.application.opportunityId)
 
-const otherStages = computed(() => trackerStages.filter((stage) => stage.status !== props.application.status))
+// "Move to" only offers this card's own steps (a hackathon can't move to Interview)
+const otherStages = computed(() =>
+  stagesFor(opportunity.value.type).filter((stage) => stage.status !== props.application.status)
+)
+
+// a finished hackathon's result badge (Won / Finalist / Took part)
+const result = computed(() => hackathonResults.find((option) => option.value === props.application.result))
 
 // the date line at the bottom of the card depends on the stage
 const dateLine = computed(() => {
@@ -28,6 +34,16 @@ const dateLine = computed(() => {
   }
   if (status === 'rejected') {
     return { text: 'Closed ' + formatDate(updatedAt), urgent: false }
+  }
+  // hackathon steps
+  if (status === 'submitted') {
+    return { text: 'Submitted ' + formatDate(updatedAt), urgent: false }
+  }
+  if (status === 'results') {
+    return { text: 'Finished ' + formatDate(updatedAt), urgent: false }
+  }
+  if (status === 'team' && !deadline) {
+    return { text: 'Team formed ' + formatDate(updatedAt), urgent: false }
   }
   if (deadline) {
     // red when due within a week (or already overdue)
@@ -85,9 +101,12 @@ function onDragStart(event) {
 
     <p class="fw-semibold mb-0">{{ opportunity.title }}</p>
 
-    <div>
+    <div class="d-flex flex-wrap gap-1">
       <span class="badge rounded-pill fw-medium text-caption" :class="typeBadge[opportunity.type]">
         {{ opportunity.type[0].toUpperCase() + opportunity.type.slice(1) }}
+      </span>
+      <span v-if="application.status === 'results' && result" class="badge rounded-pill fw-medium text-caption" :class="result.css">
+        <i :class="'bi ' + result.icon" aria-hidden="true"></i> {{ result.label }}
       </span>
     </div>
 

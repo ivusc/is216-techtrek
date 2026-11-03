@@ -46,7 +46,7 @@ describe('OpportunityCardList', () => {
       .findAll('button')
       .find((candidate) => candidate.text().startsWith('Track'))
       .trigger('click');
-    await jobCard.find('[role="button"]').trigger('click');
+    await jobCard.find('.opp-title').trigger('click');
 
     expect(list.emitted('toggle-save')).toEqual([[ITEMS[1]]]);
     expect(list.emitted('details')).toEqual([[ITEMS[1]]]);

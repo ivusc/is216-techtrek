@@ -1,9 +1,10 @@
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import { trackerStages } from '@/constants'
+import { trackerStages, hackathonStages } from '@/constants'
 
 const props = defineProps({
   status: { type: String, default: 'saved' }, // the column that was clicked, 'saved' from the toolbar
+  kind: { type: String, default: 'job' }, // 'job' or 'event': which tab to start on (the board the form was opened from)
   isSaving: { type: Boolean, default: false },
   error: { type: String, default: '' } // shown inside the modal, the page alert is hidden behind it
 })
@@ -39,17 +40,24 @@ const tabs = {
   }
 }
 
-const activeTab = ref('job')
+const activeTab = ref(props.kind === 'event' ? 'event' : 'job')
 const tab = computed(() => tabs[activeTab.value])
 
-// switching tab picks that tab's first type, so a job tab never saves as a hackathon
+// jobs and events have different steps
+const stageOptions = computed(() => (activeTab.value === 'event' ? hackathonStages : trackerStages))
+
+// switching tab picks that tab's first type, so a job tab never saves as a hackathon,
+// and goes back to Saved if the chosen step doesn't exist on the other tab
 function selectTab(name) {
   activeTab.value = name
   form.type = tabs[name].types[0].value
+  if (!stageOptions.value.some((stage) => stage.status === form.status)) {
+    form.status = 'saved'
+  }
 }
 
 const form = reactive({
-  type: 'job',
+  type: props.kind === 'event' ? 'hackathon' : 'job',
   title: '',
   organisation: '',
   url: '',
@@ -64,7 +72,7 @@ const triedToSubmit = ref(false)
 const missingTitle = computed(() => form.title.trim() === '')
 const missingOrganisation = computed(() => form.organisation.trim() === '')
 
-const stageLabel = computed(() => trackerStages.find((stage) => stage.status === form.status).label)
+const stageLabel = computed(() => stageOptions.value.find((stage) => stage.status === form.status)?.label ?? 'Saved')
 
 function submit() {
   triedToSubmit.value = true
@@ -222,7 +230,7 @@ onMounted(() => dialog.value.focus())
                   class="form-select field-lg"
                   :style="{ color: `var(--tt-status-${form.status})` }"
                 >
-                  <option v-for="stage in trackerStages" :key="stage.status" :value="stage.status">●&nbsp;&nbsp;{{ stage.label }}</option>
+                  <option v-for="stage in stageOptions" :key="stage.status" :value="stage.status">●&nbsp;&nbsp;{{ stage.label }}</option>
                 </select>
               </div>
               <div class="col-sm-6">

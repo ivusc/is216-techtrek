@@ -12,8 +12,8 @@ import { useApplicationsStore } from '@/store/applications'
 import { useOpportunityStore } from '@/store/opportunity'
 import { fetchIncomingRequests, answerRequest, getErrorMessage } from '@/services/teamService'
 import serverAPI from '@/services/serverAPI'
-import { trackerStages, typeBadge } from '@/constants'
-import { getApplicationDeadline, isDueThisWeek } from '@/utils/application'
+import { typeBadge } from '@/constants'
+import { getApplicationDeadline, isDueThisWeek, getStageLabel } from '@/utils/application'
 import { getDaysLeft, isClosed } from '@/utils/opportunity'
 import { formatDate } from '@/utils/date'
 import { getDisplayName, getInitials, getAvatarStyle } from '@/utils/team'
@@ -101,6 +101,7 @@ const stats = computed(() => {
   return [
     {
       label: 'Saved opportunities',
+      to: '/tracker',
       value: countStatus('saved'),
       note: '+' + savedThisWeek.value + ' this week',
       icon: 'bi-clipboard-check',
@@ -108,6 +109,7 @@ const stats = computed(() => {
     },
     {
       label: 'Active applications',
+      to: '/tracker',
       value: countStatus('applied', 'interview'),
       note: countStatus('interview') + ' at interview',
       icon: 'bi-briefcase',
@@ -115,6 +117,7 @@ const stats = computed(() => {
     },
     {
       label: 'Deadlines this week',
+      to: '/tracker',
       value: dueThisWeek.value.length,
       note: nextDue ? 'Next: ' + formatDate(nextDue.deadline) : 'Nothing due',
       icon: 'bi-calendar-event',
@@ -122,6 +125,7 @@ const stats = computed(() => {
     },
     {
       label: 'Team requests',
+      to: { path: '/teams', query: { tab: 'requests' } },
       value: incoming.value.length,
       note: incoming.value.length > 0 ? 'Waiting for you' : 'All caught up',
       icon: 'bi-person-plus',
@@ -132,18 +136,13 @@ const stats = computed(() => {
 
 // --- upcoming deadlines ---
 
-const statusLabels = {}
-for (const stage of trackerStages) {
-  statusLabels[stage.status] = stage.label
-}
-
-// tracked applications with a deadline from today onwards, soonest first (rejected ones are left out)
+// tracked applications with a deadline from today onwards, soonest first (rejected and finished ones are left out)
 const upcomingDeadlines = computed(() => {
   const list = []
   for (const application of applications.value) {
     const deadline = getApplicationDeadline(application)
     const daysLeft = getDaysLeft({ deadline })
-    if (deadline && daysLeft >= 0 && application.status !== 'rejected') {
+    if (deadline && daysLeft >= 0 && application.status !== 'rejected' && application.status !== 'results') {
       list.push({ application, deadline, daysLeft })
     }
   }
@@ -171,8 +170,10 @@ const calendarEvents = computed(() => {
   const events = []
   for (const application of applications.value) {
     const deadline = getApplicationDeadline(application)
-    if (deadline) events.push({ date: deadline, kind: 'deadline' })
-    if (application.interviewAt) events.push({ date: application.interviewAt, kind: 'interview' })
+    // title and organisation are shown when the day is clicked on the calendar
+    const details = { title: application.opportunityId.title, organisation: application.opportunityId.organisation }
+    if (deadline) events.push({ date: deadline, kind: 'deadline', ...details })
+    if (application.interviewAt) events.push({ date: application.interviewAt, kind: 'interview', ...details })
   }
   return events
 })
@@ -244,7 +245,8 @@ async function respond(request, status) {
     <!-- stat cards -->
     <div class="row g-3 mb-3">
       <div v-for="stat in stats" :key="stat.label" class="col-6 col-xl-3">
-        <div class="card home-stat-card h-100">
+        <!-- each number links to where it comes from -->
+        <RouterLink :to="stat.to" class="card home-stat-card card-hover h-100 text-decoration-none text-body">
           <div class="d-flex justify-content-between align-items-start mb-2">
             <span class="home-stat-icon rounded-3 d-flex align-items-center justify-content-center" :class="stat.tile">
               <i :class="`bi ${stat.icon}`"></i>
@@ -253,7 +255,7 @@ async function respond(request, status) {
           </div>
           <div class="text-stat">{{ stat.value }}</div>
           <div class="small text-body-secondary">{{ stat.label }}</div>
-        </div>
+        </RouterLink>
       </div>
     </div>
 
@@ -272,10 +274,11 @@ async function respond(request, status) {
           </p>
 
           <div class="scroll-list">
-          <div
+          <RouterLink
             v-for="entry in upcomingDeadlines.slice(0, 10)"
             :key="entry.application._id"
-            class="deadline-row d-flex align-items-center gap-3 py-2"
+            to="/tracker"
+            class="deadline-row row-hover d-flex align-items-center gap-3 py-2 px-2 text-decoration-none text-body"
           >
             <div
               class="date-tile rounded-3 d-flex flex-column align-items-center justify-content-center flex-shrink-0"
@@ -295,12 +298,12 @@ async function respond(request, status) {
             </div>
             <span class="status-pill badge rounded-pill bg-body-secondary text-body fw-medium d-none d-sm-inline-flex align-items-center gap-1">
               <span class="status-dot-home rounded-circle" :style="{ backgroundColor: `var(--tt-status-${entry.application.status})` }"></span>
-              {{ statusLabels[entry.application.status] }}
+              {{ getStageLabel(entry.application.status) }}
             </span>
             <span class="days-left small text-end flex-shrink-0" :class="entry.daysLeft <= 7 ? 'text-tt-accent fw-semibold' : 'text-body-secondary'">
               {{ daysLeftText(entry.daysLeft) }}
             </span>
-          </div>
+          </RouterLink>
           </div>
         </div>
 
@@ -323,6 +326,8 @@ async function respond(request, status) {
               <OpportunityCard
                 :item="item"
                 :saved="opportunityStore.isSaved(item)"
+                :team-count="opportunityStore.teamCountFor(item)"
+                @find-team="router.push({ path: '/teams', query: { event: item.title } })"
                 @details="router.push('/opportunities')"
                 @toggle-save="opportunityStore.toggleSave(item)"
               />
@@ -379,13 +384,15 @@ async function respond(request, status) {
           </div>
         </div>
 
-        <div class="card practice-card border-0 p-3 flex-shrink-0">
-          <h2 class="h6 fw-semibold mb-1"><i class="bi bi-stars me-1"></i>Daily practice</h2>
-          <p class="small mb-2">
-            Practise interview questions for the internships you are tracking.
-            <template v-if="practiceScore > 0">Your average score: {{ practiceScore }}/10.</template>
-          </p>
-          <RouterLink to="/interview" class="btn btn-sm btn-primary fw-semibold align-self-start">Start practice</RouterLink>
+        <div class="card practice-card border-0 p-3 flex-shrink-0 d-flex flex-row align-items-center gap-3">
+          <div class="flex-grow-1 min-w-0">
+            <h2 class="h6 fw-semibold mb-1"><i class="bi bi-stars me-1"></i>Daily practice</h2>
+            <p class="small mb-0">
+              Practise interview questions for the internships you are tracking.
+              <template v-if="practiceScore > 0">Your average score: {{ practiceScore }}/10.</template>
+            </p>
+          </div>
+          <RouterLink to="/interview" class="btn btn-sm btn-primary fw-semibold text-nowrap flex-shrink-0">Start practice</RouterLink>
         </div>
       </div>
     </div>

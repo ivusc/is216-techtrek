@@ -13,15 +13,29 @@ import {
 
 defineProps({
   item: { type: Object, required: true },
-  saved: { type: Boolean, default: false }
+  saved: { type: Boolean, default: false },
+  teamCount: { type: Number, default: 0 } // open teams for this hackathon, shown on "Find team"
 })
 
-defineEmits(['details', 'toggle-save'])
+const emit = defineEmits(['details', 'toggle-save', 'find-team'])
+
+// clicks on the card's own buttons and links are left to them
+function openDetails(event) {
+  if (event.target.closest('button, a, input, select')) return
+  emit('details')
+}
 </script>
 
 <template>
   <!-- list view: one row per opportunity, same info as OpportunityCard laid out sideways -->
-  <div class="opp-row">
+  <!-- the whole row opens the details panel; its own buttons still do just their job -->
+  <div
+    class="opp-row row-hover"
+    tabindex="0"
+    :aria-label="'Open details for ' + item.title"
+    @click="openDetails"
+    @keydown.enter.self="emit('details')"
+  >
     <div
       class="opp-row-logo rounded-3 d-flex justify-content-center align-items-center fw-semibold"
       :class="item.type === 'hackathon' ? 'bg-tt-peach text-body' : 'bg-primary-subtle text-primary'"
@@ -30,7 +44,7 @@ defineEmits(['details', 'toggle-save'])
     </div>
 
     <!-- title + tags, then organisation · location -->
-    <div class="opp-row-main min-w-0" role="button" @click="$emit('details')">
+    <div class="opp-row-main min-w-0">
       <div class="d-flex align-items-center gap-2 min-w-0">
         <h3 class="opp-row-title text-truncate mb-0">{{ item.title }}</h3>
         <span class="badge rounded-pill fw-medium flex-shrink-0" :class="typeBadge[item.type]">
@@ -65,9 +79,17 @@ defineEmits(['details', 'toggle-save'])
 
     <div class="opp-row-actions d-flex align-items-center gap-2">
       <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
-      <RouterLink v-if="item.type === 'hackathon'" to="/teams" class="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+      <button
+        v-if="item.type === 'hackathon'"
+        type="button"
+        class="btn btn-sm btn-outline-primary fw-semibold text-nowrap"
+        :title="teamCount > 0 ? teamCount + (teamCount === 1 ? ' team is' : ' teams are') + ' looking for members' : 'No teams yet - start one'"
+        :aria-label="teamCount > 0 ? 'Find team, ' + teamCount + ' open' : 'Find team'"
+        @click="$emit('find-team')"
+      >
         Find team
-      </RouterLink>
+        <span v-if="teamCount > 0" class="badge rounded-pill bg-primary ms-1">{{ teamCount }}</span>
+      </button>
       <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
         <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
         {{ saved ? 'Tracked' : 'Track' }}

@@ -126,6 +126,11 @@ $nav-underline-link-active-color: $tt-primary;
   --tt-status-interview: #e8995a;
   --tt-status-offer:     #{$tt-secondary};
   --tt-status-rejected:  #{$tt-accent};
+  // hackathon steps
+  --tt-status-registered: #{$tt-primary};
+  --tt-status-team:       #8a6fd1;
+  --tt-status-submitted:  #e8995a;
+  --tt-status-results:    #{$tt-secondary};
 }
 
 // ─── 4. Component rules the Sass variables can't express ─────────────────
@@ -164,7 +169,40 @@ $nav-underline-link-active-color: $tt-primary;
 // Shadows: Bootstrap only applies these when $enable-shadows is on, which also adds
 // inset shadows to buttons and inputs. Apply them directly instead.
 .card          { box-shadow: $box-shadow-sm; }
-.card-hover:hover { box-shadow: $box-shadow; }
+// cards you can click: lift a little on hover, press down on click, ring on keyboard focus
+.card-hover {
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: $box-shadow;
+  border-color: rgba($tt-primary, .35);
+}
+.card-hover:active {
+  transform: translateY(-1px) scale(.995);
+  transition-duration: .08s;
+}
+.card-hover:focus-visible {
+  outline: 2px solid $tt-primary;
+  outline-offset: 2px;
+}
+// rows inside a card (e.g. upcoming deadlines): a soft background on hover instead of a lift
+.row-hover {
+  cursor: pointer;
+  border-radius: $border-radius;
+  transition: background-color .15s ease;
+}
+.row-hover:hover {
+  background-color: rgba($tt-primary, .06);
+}
+// phones: no lift, so a tapped card doesn't stay "lifted"
+@media (hover: none) {
+  .card-hover:hover { transform: none; box-shadow: $box-shadow-sm; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-hover, .card-hover:hover, .card-hover:active { transform: none; transition: none; }
+}
 .dropdown-menu { box-shadow: $box-shadow; }
 .modal-content { box-shadow: $box-shadow-lg; }
 

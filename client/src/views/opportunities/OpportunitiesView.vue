@@ -7,6 +7,7 @@ import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
+import FindTeamPanel from '@/components/opportunities/FindTeamPanel.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
 import {
   getDaysLeft,
@@ -21,7 +22,7 @@ import { useOpportunityStore } from '@/store/opportunity'
 
 // the store holds the fetched opportunities and does all the server calls
 const opportunityStore = useOpportunityStore()
-const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, savedItems } =
+const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, jobSector, sectorOptions, savedItems } =
   storeToRefs(opportunityStore)
 
 const activeTab = ref('overview')
@@ -41,8 +42,13 @@ const visibleCount = ref(PAGE_SIZE)
 
 // the opportunity shown in the details panel (null = panel is closed)
 const selectedItem = ref(null)
+// the hackathon whose teams are shown in the "Find team" panel (null = closed)
+const findTeamItem = ref(null)
 
-onMounted(opportunityStore.fetchOpportunities)
+onMounted(() => {
+  opportunityStore.fetchOpportunities()
+  opportunityStore.loadSectorOptions()
+})
 
 // displayedItems: the items of the tab that is selected (same as before)
 const displayedItems = computed(() => {
@@ -213,15 +219,16 @@ const canLoadMore = computed(() => {
 })
 
 //listens to changes in these variables, and resets to first 9 cards if changed
-watch([activeTab, search, locationFilter, paidOnly, sortBy, jobType, jobField, themeFilter, closingWithin], () => {
+watch([activeTab, search, locationFilter, paidOnly, sortBy, jobSector, jobType, jobField, themeFilter, closingWithin], () => {
   visibleCount.value = PAGE_SIZE
 })
 
-// role and work type are filtered by the server, so get the jobs again when they change
-watch([jobType, jobField], opportunityStore.reloadJobs)
+// sector, role and work type are filtered by the server, so get the jobs again when they change
+watch([jobSector, jobType, jobField], opportunityStore.reloadJobs)
 
 function clearAll() {
   search.value = ''
+  jobSector.value = 'tech'
   jobType.value = ''
   jobField.value = ''
   themeFilter.value = ''
@@ -254,7 +261,9 @@ const loadMore = async () => {
     />
 
     <OpportunityFilters
+      v-model:job-sector="jobSector"
       v-model:job-field="jobField"
+      :sectors="sectorOptions"
       v-model:job-type="jobType"
       v-model:theme="themeFilter"
       v-model:closing-within="closingWithin"
@@ -316,6 +325,8 @@ const loadMore = async () => {
           :items="section.shownItems"
           :view-mode="viewMode"
           :saved-items="savedItems"
+          :team-counts="opportunityStore.teamCounts"
+          @find-team="findTeamItem = $event"
           @details="openDetails"
           @toggle-save="opportunityStore.toggleSave"
         />
@@ -330,6 +341,8 @@ const loadMore = async () => {
         :items="visibleItems"
         :view-mode="viewMode"
         :saved-items="savedItems"
+        :team-counts="opportunityStore.teamCounts"
+        @find-team="findTeamItem = $event"
         @details="openDetails"
         @toggle-save="opportunityStore.toggleSave"
       />
@@ -338,6 +351,8 @@ const loadMore = async () => {
         <button class="btn btn-outline-primary fw-semibold px-4" @click="loadMore">Load more opportunities</button>
       </div>
     </template>
+
+    <FindTeamPanel v-if="findTeamItem" :item="findTeamItem" @close="findTeamItem = null" />
 
     <OpportunityDetails
       v-if="selectedItem"

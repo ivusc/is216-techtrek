@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "seed:teams": "node scripts/seed-teams.js",
+    "migrate:hackathon-statuses": "node scripts/migrate-hackathon-statuses.js",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },

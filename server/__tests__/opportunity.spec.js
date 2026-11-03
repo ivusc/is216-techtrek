@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import adzuna from './fixtures/adzuna.json';
 import devpost from './fixtures/devpost.json';
 import { failAdzuna, failDevpost, stubAdzuna, stubDevpost } from './helpers/upstream.js';
@@ -11,6 +11,17 @@ const Opportunity = require('../models/Opportunity');
 const { findOrCreateOpportunity } = require('../service/opportunity-service');
 
 const BASE_PARAMS = { app_id: 'app', app_key: 'key', results_per_page: 20, category: 'it-jobs' };
+const HACKATHON_CACHE_MS = 10 * 60 * 1000;
+
+let clock = Date.now();
+
+beforeEach(() => {
+  clock += 3 * HACKATHON_CACHE_MS;
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(clock);
+});
+
+afterEach(() => vi.useRealTimers());
 
 describe('GET /opportunity/jobs', () => {
   it.each([
@@ -24,6 +35,20 @@ describe('GET /opportunity/jobs', () => {
     expect(get).toHaveBeenCalledWith('https://adzuna.test/jobs/sg/search/2', {
       params: { ...BASE_PARAMS, ...typeParams, what_or: 'frontend react vue angular' },
     });
+  });
+
+  it.each([
+    [
+      'sector=finance&field=audit',
+      { ...BASE_PARAMS, category: 'accounting-finance-jobs', what_or: 'audit auditor assurance' },
+    ],
+    ['sector=all', { app_id: 'app', app_key: 'key', results_per_page: 20 }],
+  ])('maps %s onto Adzuna params', async (query, params) => {
+    const get = stubAdzuna(adzuna);
+
+    await request(app).get(`/opportunity/jobs?${query}`).expect(200);
+
+    expect(get).toHaveBeenCalledWith('https://adzuna.test/jobs/sg/search/1', { params });
   });
 
   it('sends no filter params when none are given', async () => {
@@ -70,8 +95,17 @@ describe('GET /opportunity/jobs', () => {
     ['type=parttime', 'type must be one of: fulltime, intern'],
     [
       'field=design',
-      'field must be one of: frontend, fullstack, backend, data, ai, devops, cybersecurity, mobile',
+      'field must be one of: frontend, backend, fullstack, data, ai, devops, cybersecurity, mobile',
     ],
+    [
+      'sector=space',
+      'sector must be one of: tech, finance, consulting, marketing, sales, hr, legal, design, engineering, logistics, all',
+    ],
+    [
+      'sector=finance&field=frontend',
+      'field must be one of: audit, tax, accounting, banking, investment, risk',
+    ],
+    ['sector=all&field=audit', 'field must be one of: (none for this sector)'],
   ])('rejects %s', async (query, error) => {
     const get = stubAdzuna(adzuna);
 
@@ -95,6 +129,20 @@ describe('GET /opportunity/jobs', () => {
     const response = await request(app).get('/opportunity/jobs').expect(500);
 
     expect(response.body).toEqual({ error: 'Failed to fetch jobs.' });
+  });
+});
+
+describe('GET /opportunity/job-filters', () => {
+  it('lists every sector with its roles, Tech first and by default', async () => {
+    const response = await request(app).get('/opportunity/job-filters').expect(200);
+
+    expect(response.body.defaultSector).toBe('tech');
+    expect(response.body.sectors[0]).toMatchObject({
+      key: 'tech',
+      label: 'Tech',
+      roles: expect.arrayContaining([{ key: 'frontend', label: 'Frontend' }]),
+    });
+    expect(response.body.sectors.at(-1)).toEqual({ key: 'all', label: 'All sectors', roles: [] });
   });
 });
 
@@ -159,6 +207,48 @@ describe('GET /opportunity/hackathons', () => {
       deadline: null,
     });
     expect(response.body.hackathons[0].dates).toBeUndefined();
+  });
+
+  it('reads the prize and location the way the Devpost API sends them', async () => {
+    const { prizeText, displayed_location, ...rest } = devpost.hackathons[0];
+    stubDevpost({
+      hackathons: [
+        {
+          ...rest,
+          prize_amount: '$<span data-currency-value>5,000</span>',
+          displayed_location: { icon: 'globe', location: 'Online' },
+        },
+      ],
+    });
+
+    const response = await request(app).get('/opportunity/hackathons').expect(200);
+
+    expect(response.body.hackathons[0]).toMatchObject({ prize: '$5,000', location: 'Online' });
+  });
+
+  it('reads every page Devpost reports and keeps each hackathon once', async () => {
+    const get = stubDevpost({ ...devpost, meta: { per_page: 2, total_count: 4 } });
+
+    const response = await request(app).get('/opportunity/hackathons').expect(200);
+
+    expect(get.mock.calls.map(([, options]) => options.params)).toEqual([
+      { 'status[]': 'open', page: 1 },
+      { 'status[]': 'open', page: 2 },
+    ]);
+    expect(response.body.count).toBe(2);
+  });
+
+  it('reuses the list for ten minutes', async () => {
+    const get = stubDevpost(devpost);
+
+    await request(app).get('/opportunity/hackathons').expect(200);
+    vi.setSystemTime(clock + HACKATHON_CACHE_MS - 1);
+    await request(app).get('/opportunity/hackathons').expect(200);
+    expect(get).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(clock + HACKATHON_CACHE_MS + 1);
+    await request(app).get('/opportunity/hackathons').expect(200);
+    expect(get).toHaveBeenCalledTimes(2);
   });
 
   it('answers 500 when Devpost fails', async () => {

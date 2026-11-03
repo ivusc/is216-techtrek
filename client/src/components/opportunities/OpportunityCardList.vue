@@ -7,14 +7,15 @@ import { getKey } from '@/utils/opportunity'
 const props = defineProps({
   items: { type: Array, required: true },
   viewMode: { type: String, default: 'grid' }, // 'grid' or 'list'
-  savedItems: { type: Array, default: () => [] } // [{ key, id }] of every saved item
+  savedItems: { type: Array, default: () => [] }, // [{ key, id }] of every saved item
+  teamCounts: { type: Object, default: () => ({}) } // { "Hackathon title": open teams }
 })
 
 // keys of the saved items, so each card knows if it is saved
 const savedKeys = computed(() => props.savedItems.map((saved) => saved.key))
 
 // passes the clicked item up, the parent opens the panel / saves it
-defineEmits(['details', 'toggle-save'])
+defineEmits(['details', 'toggle-save', 'find-team'])
 </script>
 
 <template>
@@ -25,8 +26,10 @@ defineEmits(['details', 'toggle-save'])
       :key="getKey(item)"
       :item="item"
       :saved="savedKeys.includes(getKey(item))"
+      :team-count="teamCounts[item.title] ?? 0"
       @details="$emit('details', item)"
       @toggle-save="$emit('toggle-save', item)"
+      @find-team="$emit('find-team', item)"
     />
   </div>
 
@@ -36,8 +39,10 @@ defineEmits(['details', 'toggle-save'])
       <OpportunityCard
         :item="item"
         :saved="savedKeys.includes(getKey(item))"
+        :team-count="teamCounts[item.title] ?? 0"
         @details="$emit('details', item)"
         @toggle-save="$emit('toggle-save', item)"
+        @find-team="$emit('find-team', item)"
       />
     </div>
   </div>

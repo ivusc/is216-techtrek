@@ -13,7 +13,7 @@ function handleError(res, err, fallback) {
 // POST /application  body: { opportunity, status?, notes?, deadline?, interviewAt?, contactName? }
 // `opportunity` = the full listing object from /jobs or /hackathons. The user comes from the session.
 async function createApplication(req, res) {
-  const { opportunity, status, notes, deadline, interviewAt, contactName } = req.body ?? {};
+  const { opportunity, status, result, notes, deadline, interviewAt, contactName } = req.body ?? {};
   const userId = req.session.user._id;
 
   if (!opportunity) {
@@ -21,7 +21,7 @@ async function createApplication(req, res) {
   }
 
   try {
-    const applicationDetails = { status, notes, deadline, interviewAt, contactName };
+    const applicationDetails = { status, result, notes, deadline, interviewAt, contactName };
     const application = await applicationService.createApplication(userId, opportunity, applicationDetails);
 
     res.status(201).json(application);
@@ -62,7 +62,7 @@ async function getApplication(req, res) {
 // PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName, checklist ([{ label, done }])
 async function updateApplication(req, res) {
   const { id: applicationId } = req.params;
-  const { status, notes, deadline, interviewAt, contactName, checklist } = req.body ?? {};
+  const { status, result, notes, deadline, interviewAt, contactName, checklist } = req.body ?? {};
 
   if (!mongoose.isValidObjectId(applicationId)) {
     return res.status(400).json({ error: 'Invalid ID' });
@@ -73,7 +73,7 @@ async function updateApplication(req, res) {
   }
 
   try {
-    const changes = { status, notes, deadline, interviewAt, contactName, checklist };
+    const changes = { status, result, notes, deadline, interviewAt, contactName, checklist };
     const application = await applicationService.updateApplication(applicationId, req.session.user._id, changes);
 
     if (!application) {

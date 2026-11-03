@@ -1,9 +1,10 @@
-import { fetchAllOpportunities, fetchJobs } from '@/services/opportunityService';
+import { fetchAllOpportunities, fetchJobs, fetchJobFilterOptions } from '@/services/opportunityService';
 import {
   createApplicationService,
   deleteApplicationService,
   fetchAllApplications,
 } from '@/services/trackerService';
+import { fetchTeams } from '@/services/teamService';
 import { getKey } from '@/utils/opportunity';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -21,9 +22,25 @@ export const useOpportunityStore = defineStore('opportunity', () => {
 
   // job filters, '' = any
   const jobType = ref(''); // fulltime | intern
-  const jobField = ref(''); // frontend | backend | fullstack | data | ai | devops | cybersecurity | mobile
+  const jobField = ref(''); // a role key from the chosen sector, e.g. frontend (tech) or audit (finance)
+  const jobSector = ref('tech'); // tech | finance | consulting | ... | all - Tech is the default
+  // [{ key, label, roles: [{ key, label }] }] from the server
+  const sectorOptions = ref([]);
+
+  async function loadSectorOptions() {
+    if (sectorOptions.value.length > 0) return;
+    try {
+      const data = await fetchJobFilterOptions();
+      sectorOptions.value = data.sectors;
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   const savedItems = ref([]);
+
+  // { "Hackathon title": 3 } - how many teams with open slots each hackathon has, for the "Find team" buttons
+  const teamCounts = ref({});
 
   // gets all jobs and hackathons from our express server
   async function fetchOpportunities() {
@@ -31,7 +48,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchAllOpportunities({ type: jobType.value, field: jobField.value });
+      const data = await fetchAllOpportunities({ sector: jobSector.value, type: jobType.value, field: jobField.value });
 
       // the server sends null for a source that failed, so check before using it
       if (data.jobs != null) {
@@ -51,6 +68,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
       lastUpdated.value = new Date().toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
 
       await fetchSavedItems();
+      fetchTeamCounts();
     } catch (error) {
       console.error(error);
       status.value = 'There was an error: ' + error.message;
@@ -80,7 +98,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchJobs(1, { type: jobType.value, field: jobField.value });
+      const data = await fetchJobs(1, { sector: jobSector.value, type: jobType.value, field: jobField.value });
       jobs.value = data.jobs;
       jobsPage.value = 1;
       hasMoreJobs.value = data.jobs.length > 0;
@@ -95,7 +113,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
   // gets the next page of jobs and adds the ones we do not have yet
   async function fetchMoreJobs() {
     try {
-      const data = await fetchJobs(jobsPage.value + 1, { type: jobType.value, field: jobField.value });
+      const data = await fetchJobs(jobsPage.value + 1, { sector: jobSector.value, type: jobType.value, field: jobField.value });
 
       let addedCount = 0;
       
@@ -153,6 +171,26 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     }
   }
 
+  // counted by event name, the same way the Teams page filters by event
+  async function fetchTeamCounts() {
+    try {
+      const teams = await fetchTeams();
+      const counts = {};
+      for (const team of teams) {
+        if (team.slotsOpen > 0) {
+          counts[team.event.name] = (counts[team.event.name] ?? 0) + 1;
+        }
+      }
+      teamCounts.value = counts;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  function teamCountFor(item) {
+    return teamCounts.value[item.title] ?? 0;
+  }
+
   return {
     jobs,
     hackathons,
@@ -163,8 +201,14 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     hasMoreJobs,
     jobType,
     jobField,
+    jobSector,
+    sectorOptions,
+    loadSectorOptions,
     savedItems,
+    teamCounts,
     fetchOpportunities,
+    fetchTeamCounts,
+    teamCountFor,
     reloadJobs,
     fetchMoreJobs,
     isSaved,

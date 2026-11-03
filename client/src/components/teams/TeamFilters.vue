@@ -11,12 +11,25 @@ const event = defineModel('event', { type: String, required: true })
 const skills = defineModel('skills', { type: Array, required: true })
 const size = defineModel('size', { type: String, required: true })
 const openOnly = defineModel('openOnly', { type: Boolean, required: true })
+// on: only teams that want one of my skills, with my matching skills highlighted
+const matchMySkills = defineModel('matchMySkills', { type: Boolean, default: false })
 
 defineEmits(['clear'])
 </script>
 
 <template>
   <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button
+      type="button"
+      class="btn btn-sm rounded-pill fw-semibold"
+      :class="matchMySkills ? 'btn-primary' : 'bg-white border text-primary'"
+      :aria-pressed="matchMySkills"
+      @click="matchMySkills = !matchMySkills"
+    >
+      <i :class="matchMySkills ? 'bi bi-check-lg' : 'bi bi-stars'" aria-hidden="true"></i>
+      Match my skills
+    </button>
+
     <select
       v-model="event"
       class="form-select form-select-sm rounded-pill w-auto"

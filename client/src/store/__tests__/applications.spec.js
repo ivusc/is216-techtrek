@@ -90,7 +90,7 @@ describe('useApplicationsStore', () => {
     const store = seededStore();
     store.status = 'There was an error: Network Error';
 
-    await store.updateApplicationStatus('a2', 'applied');
+    await store.updateApplicationStatus('a2', 'registered');
 
     expect(mock.history.patch).toHaveLength(0);
     expect(store.status).toBe('There was an error: Network Error');

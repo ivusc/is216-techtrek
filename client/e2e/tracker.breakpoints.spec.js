@@ -31,11 +31,20 @@ async function seedTracker(account) {
     {
       opportunity: {
         source: 'manual',
+        type: 'job',
+        title: 'Backend Engineer',
+        organisation: 'Shopee',
+      },
+      status: 'rejected',
+    },
+    {
+      opportunity: {
+        source: 'manual',
         type: 'hackathon',
         title: 'Hack&Roll',
         organisation: 'NUS Hackers',
       },
-      status: 'rejected',
+      status: 'registered',
     },
   ];
   for (const seed of seeds) {
@@ -105,6 +114,26 @@ test.describe('tracker board', () => {
         page.getByRole('button', { name: /Add application$/ }),
         page.locator('main'),
       );
+    });
+  }
+
+  for (const width of WIDTHS) {
+    test(`${width} switches to the hackathon board`, async ({
+      loggedIn: page,
+      account,
+    }, testInfo) => {
+      await openTracker(page, account, width);
+      const hackathons = page.getByRole('tab', { name: /Hackathons/ });
+
+      await expectInside(hackathons, page.locator('main'));
+      await hackathons.click();
+
+      await expect(hackathons).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('.kanban-column')).toHaveCount(5);
+      await expect(page.locator('.kanban-card')).toHaveText([/Hack&Roll/]);
+      await expect(page.getByRole('button', { name: /Add event$/ })).toBeVisible();
+      await screenshot(page, testInfo, `tracker-hackathons-${width}`);
+      await expectTrackerFits(page);
     });
   }
 

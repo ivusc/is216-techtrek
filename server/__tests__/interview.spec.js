@@ -351,7 +351,7 @@ describe('GET /interview/dashboard', () => {
     });
     await saveApplication(agent, {
       opportunity: manualOpportunity({ type: 'hackathon', title: 'Hack&Roll' }),
-      status: 'applied',
+      status: 'submitted',
     });
     await saveApplication(agent, {
       opportunity: manualOpportunity({ organisation: 'Shopee' }),

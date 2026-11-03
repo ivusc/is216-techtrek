@@ -1,12 +1,15 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { formatDate } from '@/utils/date'
-import { getKey } from '@/utils/opportunity'
 import TeamModal from './TeamModal.vue'
 import SkillInput from './SkillInput.vue'
+import { getKey } from '@/utils/opportunity'
 
+// events: open hackathons from the Devpost list (they have no database _id yet, so they are picked by getKey)
 const props = defineProps({
   events: { type: Array, required: true },
+  // the hackathon title to start with, e.g. when "Start a team" is pressed on a hackathon
+  initialEvent: { type: String, default: '' },
   team: { type: Object, default: null },
   suggestions: { type: Array, default: () => [] },
   busy: { type: Boolean, default: false },
@@ -37,11 +40,8 @@ if (isEditing) {
     otherCloses.value = props.team.closesAt ? props.team.closesAt.slice(0, 10) : ''
   }
 } else {
-  eventChoice.value = props.events.length > 0 ? getKey(props.events[0]) : 'other'
-}
-
-function locationText(location) {
-  return typeof location === 'string' ? location : (location?.location ?? '')
+  const startEvent = props.events.find((event) => event.title === props.initialEvent) ?? props.events[0]
+  eventChoice.value = startEvent ? getKey(startEvent) : 'other'
 }
 
 function eventFields() {
@@ -53,13 +53,7 @@ function eventFields() {
       closesAt: otherCloses.value
     }
   }
-  const event = props.events.find((candidate) => getKey(candidate) === eventChoice.value)
-  return {
-    opportunityId: null,
-    eventName: event.title,
-    eventLocation: locationText(event.location),
-    closesAt: event.deadline
-  }
+  return { opportunity: props.events.find((candidate) => getKey(candidate) === eventChoice.value) }
 }
 
 const savedEventFields = eventFields()
@@ -156,7 +150,7 @@ const showDelete = isEditing && props.team.status !== 'draft'
         <option v-for="event in events" :key="getKey(event)" :value="getKey(event)">
           {{ event.title }}<template v-if="event.deadline"> · closes {{ formatDate(event.deadline) }}</template>
         </option>
-        <option value="other">Other event (type it in)</option>
+        <option value="other">Other event (not on the list)</option>
       </select>
 
       <div v-if="eventChoice === 'other'" class="row g-2 mt-1">

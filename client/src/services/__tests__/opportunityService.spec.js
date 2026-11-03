@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
 import serverAPI from '@/services/serverAPI';
-import { fetchAllOpportunities, fetchJobs } from '@/services/opportunityService';
+import {
+  fetchAllOpportunities,
+  fetchJobFilterOptions,
+  fetchJobs,
+} from '@/services/opportunityService';
 
 const mock = new MockAdapter(serverAPI);
 
@@ -20,6 +24,18 @@ describe('opportunityService', () => {
       () => fetchAllOpportunities(),
       '/opportunity/all',
       {},
+    ],
+    [
+      'fetchAllOpportunities sends the sector with its role',
+      () => fetchAllOpportunities({ sector: 'finance', type: '', field: 'audit' }),
+      '/opportunity/all',
+      { sector: 'finance', field: 'audit' },
+    ],
+    [
+      'fetchJobFilterOptions asks for the sectors and roles',
+      () => fetchJobFilterOptions(),
+      '/opportunity/job-filters',
+      undefined,
     ],
     [
       'fetchJobs sends the page with the filters',

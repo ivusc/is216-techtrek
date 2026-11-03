@@ -135,7 +135,8 @@ test.describe('teams page', () => {
 
       await page.getByLabel('Search teams').fill(tag);
       const cards = page.locator('.row-cols-1 > .col');
-      await expect(cards).toHaveCount(3);
+      await expect(cards).toHaveCount(4);
+      await expect(cards.first()).toContainText(`Mine ${tag}`);
       const columns = await Promise.all([0, 1, 2].map((index) => box(cards.nth(index))));
       expect(new Set(columns.map((card) => Math.round(card.x))).size).toBe(columnsAt(width));
       await expectNoHorizontalOverflow(page);

@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/nodemon.json",
   "watch": ["."],
   "ext": "js,json,env",
-  "ignore": ["node_modules/**"],
+  "ignore": ["node_modules/**", "scripts/**"],
   "legacyWatch": true,
   "pollingInterval": 300
 }
