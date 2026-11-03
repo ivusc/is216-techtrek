@@ -96,7 +96,7 @@ function openDetails(event) {
     <div class="d-flex align-items-center flex-wrap gap-2">
       <p class="opp-via text-caption text-body-tertiary text-truncate mb-0">via {{ getPlatform(item) }}</p>
       <!-- the buttons wrap together onto their own row when the card is too narrow (hackathons on phones) -->
-      <div class="d-flex gap-2 ms-auto">
+      <div class="d-flex flex-wrap justify-content-end gap-2 ms-auto">
         <!-- Details opens the details panel for jobs AND hackathons (the link to the website is inside the panel) -->
         <button class="btn btn-sm btn-link fw-semibold text-decoration-none text-nowrap" @click="$emit('details')">Details</button>
         <button
