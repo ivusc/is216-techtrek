@@ -62,6 +62,23 @@ const DASHBOARD = {
   highestScore: 9,
   averageScore: '7.0',
   interviewAttempts: [],
+  seniorTips: [
+    {
+      organisation: 'Acme',
+      title: 'Frontend Intern',
+      difficulty: 3,
+      rounds: 'Take-home, then a pairing session',
+      tips: 'Walk through a component you built and why.',
+      createdAt: '2026-10-30T02:00:00.000Z',
+    },
+    {
+      organisation: 'Lion City Analytics',
+      title: 'Data Analyst',
+      difficulty: 4,
+      tips: 'Practise SQL window functions.',
+      createdAt: '2026-10-28T02:00:00.000Z',
+    },
+  ],
 };
 
 beforeEach(() => setActivePinia(createPinia()));
@@ -78,7 +95,14 @@ async function mountDashboard() {
 }
 
 function rows(wrapper) {
-  return wrapper.findAll('.list-group-item');
+  return wrapper.get('[aria-labelledby="interview-bank-title"]').findAll('.list-group-item');
+}
+
+function tipRoles(wrapper) {
+  return wrapper
+    .get('[aria-labelledby="senior-tips-title"]')
+    .findAll('li h3')
+    .map((role) => role.text());
 }
 
 function rowQuestions(wrapper) {
@@ -159,6 +183,30 @@ describe('InterviewView', () => {
     expect(rowQuestions(wrapper)).toHaveLength(3);
     expect(caption(wrapper)).toBe('3 questions');
     expect(clearButton(wrapper)).toBeUndefined();
+  });
+
+  it('lists senior tips for the roles and narrows them by role and search', async () => {
+    mock.onGet('/interview/dashboard').reply(200, DASHBOARD);
+    const wrapper = await mountDashboard();
+
+    expect(tipRoles(wrapper)).toEqual([
+      'Acme · Frontend Intern',
+      'Lion City Analytics · Data Analyst',
+    ]);
+
+    await filterInput(wrapper, 'Frontend Intern').setValue(true);
+    expect(tipRoles(wrapper)).toEqual(['Acme · Frontend Intern']);
+    await clearButton(wrapper).trigger('click');
+
+    await wrapper.get('input[aria-label="Search questions"]').setValue('sql');
+    expect(tipRoles(wrapper)).toEqual(['Lion City Analytics · Data Analyst']);
+    await wrapper.get('input[aria-label="Search questions"]').setValue('lion city');
+    expect(tipRoles(wrapper)).toEqual(['Lion City Analytics · Data Analyst']);
+    await wrapper.get('input[aria-label="Search questions"]').setValue('kubernetes');
+    expect(tipRoles(wrapper)).toEqual([]);
+    expect(wrapper.get('[aria-labelledby="senior-tips-title"]').text()).toContain(
+      'No tips match these filters.',
+    );
   });
 
   it('explains how to start when there is nothing to practise for', async () => {

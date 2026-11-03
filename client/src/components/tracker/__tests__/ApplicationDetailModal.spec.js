@@ -159,4 +159,24 @@ describe('ApplicationDetailModal', () => {
 
     expect(wrapper.emitted('close')).toHaveLength(3);
   });
+
+  it('asks an offer holder for interview tips until they are shared', async () => {
+    const interview = mountModal(applications()[2]);
+    expect(button(interview, 'Share your interview tips')).toBeUndefined();
+    expect(interview.text()).not.toContain('Help the next SMU student');
+
+    const offer = { ...applications()[2], status: 'offer' };
+    const wrapper = mountModal(offer);
+
+    expect(wrapper.text()).toContain('Got the offer? Help the next SMU student.');
+    await button(wrapper, 'Share your interview tips').trigger('click');
+    expect(wrapper.emitted('share-tips')).toHaveLength(1);
+
+    const reviewed = mountModal({
+      ...offer,
+      review: { difficulty: 3, tips: 'Know the product.', createdAt: '2026-11-03T02:00:00.000Z' },
+    });
+    expect(reviewed.text()).toContain('You shared your tips on 3 Nov');
+    expect(button(reviewed, 'Share your interview tips')).toBeUndefined();
+  });
 });

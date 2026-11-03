@@ -45,6 +45,19 @@ export async function expectNoHorizontalOverflow(page) {
   expect(overflow).toEqual({ document: 0, main: 0 });
 }
 
+export async function expectInside(inner, outer) {
+  const innerBox = await inner.boundingBox();
+  const outerBox = await outer.boundingBox();
+  expect(innerBox.x).toBeGreaterThanOrEqual(outerBox.x);
+  expect(innerBox.x + innerBox.width).toBeLessThanOrEqual(outerBox.x + outerBox.width + 0.5);
+}
+
+export async function expectGutters(dialog, width, gutter) {
+  const box = await dialog.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(gutter);
+  expect(width - (box.x + box.width)).toBeGreaterThanOrEqual(gutter);
+}
+
 export function screenshot(target, testInfo, name) {
   return target.screenshot({
     path: `e2e/__screenshots__/${testInfo.project.name}/${name}.png`,
