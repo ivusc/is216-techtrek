@@ -49,6 +49,7 @@ async function getQuestions() {
 }
 
 async function submitAnswer() {
+  const current = practiceQuestions.value[currentQuestionIndex.value]
   feedbackLoading.value = true
   submitted.value = true
   errorMessage.value = ''
@@ -57,17 +58,20 @@ async function submitAnswer() {
       '/interview/feedback',
       {
         applicationId,
-        question: practiceQuestions.value[currentQuestionIndex.value].question,
+        question: current.question,
         answer: answer.value
       }
     )
     feedback.value = response.data.feedback
     feedbackLoading.value = false
+    completedQuestions.value = completedQuestions.value.filter(
+      (completed) => completed.questionId !== current.questionId
+    )
     completedQuestions.value.push({
-      questionId: practiceQuestions.value[currentQuestionIndex.value].questionId,
-      question: practiceQuestions.value[currentQuestionIndex.value].question,
-      type: practiceQuestions.value[currentQuestionIndex.value].type,
-      difficulty: practiceQuestions.value[currentQuestionIndex.value].difficulty,
+      questionId: current.questionId,
+      question: current.question,
+      type: current.type,
+      difficulty: current.difficulty,
       score: feedback.value.score
     })
   } catch (error) {
@@ -78,10 +82,15 @@ async function submitAnswer() {
   }
 
   if (currentQuestionIndex.value === practiceQuestions.value.length - 1 && completedQuestions.value.length != 0) {
-    await serverAPI.post('/interview/attempt', {
-      applicationId,
-      questions: completedQuestions.value
-    })
+    try {
+      await serverAPI.post('/interview/attempt', {
+        applicationId,
+        questions: completedQuestions.value
+      })
+    } catch {
+      submitted.value = false
+      errorMessage.value = 'This practice session could not be saved. Please submit your answer again.'
+    }
   }
 }
 
@@ -101,7 +110,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="errorMessage" class="error-message">
+  <div v-if="errorMessage" class="error-message" role="alert">
     {{ errorMessage }}
   </div>
   <TrekLoader
