@@ -10,18 +10,36 @@ import {
 } from './fixtures.js';
 
 const MD = 768;
-const LG = 992;
 const XL = 1200;
 const DRAWER_WIDTH = 540;
+const READABLE_TITLE_WIDTH = 200;
+const SINGLE_LINE_ROWS_FROM = 1440;
+const DAY = 24 * 60 * 60 * 1000;
 const OPPORTUNITIES = JSON.parse(
   readFileSync(new URL('./fixtures/opportunities.json', import.meta.url), 'utf8'),
 );
+const URGENT_TITLE = 'International Collegiate Sustainability Innovation Grand Finals';
+const WITH_URGENT_HACKATHON = {
+  ...OPPORTUNITIES,
+  hackathons: {
+    count: OPPORTUNITIES.hackathons.count + 1,
+    hackathons: [
+      {
+        ...OPPORTUNITIES.hackathons.hackathons[0],
+        externalId: '9199',
+        title: URGENT_TITLE,
+        deadline: new Date(Date.now() + 3 * DAY).toISOString(),
+      },
+      ...OPPORTUNITIES.hackathons.hackathons,
+    ],
+  },
+};
 
-async function openOpportunities(page, size) {
-  const total = OPPORTUNITIES.jobs.jobs.length + OPPORTUNITIES.hackathons.hackathons.length;
+async function openOpportunities(page, size, payload = OPPORTUNITIES) {
+  const total = payload.jobs.jobs.length + payload.hackathons.hackathons.length;
   await page.route('**/opportunity/**', (route) => route.abort());
-  await page.route('**/opportunity/all*', (route) => route.fulfill({ json: OPPORTUNITIES }));
-  await page.route('**/opportunity/jobs*', (route) => route.fulfill({ json: OPPORTUNITIES.jobs }));
+  await page.route('**/opportunity/all*', (route) => route.fulfill({ json: payload }));
+  await page.route('**/opportunity/jobs*', (route) => route.fulfill({ json: payload.jobs }));
   await page.setViewportSize(size);
   await page.goto('/opportunities');
   await expect(page.getByText(`${total} results`, { exact: true })).toBeVisible();
@@ -120,7 +138,7 @@ test.describe('opportunities layout', () => {
 
   for (const width of WIDTHS.filter((candidate) => candidate >= MD)) {
     test(`${width} lays out the list rows`, async ({ loggedIn: page }, testInfo) => {
-      await openOpportunities(page, { width, height: 900 });
+      await openOpportunities(page, { width, height: 900 }, WITH_URGENT_HACKATHON);
       await openJobsTab(page, width);
 
       await page.getByRole('button', { name: /List$/ }).click();
@@ -128,8 +146,22 @@ test.describe('opportunities layout', () => {
       const main = await row.locator('.opp-row-main').boundingBox();
       const meta = await row.locator('.opp-row-meta').boundingBox();
 
-      expect(meta.y >= main.y + main.height).toBe(width < LG);
-      expect(meta.x >= main.x + main.width).toBe(width >= LG);
+      expect(meta.y >= main.y + main.height).toBe(width < SINGLE_LINE_ROWS_FROM);
+      expect(meta.x >= main.x + main.width).toBe(width >= SINGLE_LINE_ROWS_FROM);
+      expect(main.width).toBeGreaterThanOrEqual(READABLE_TITLE_WIDTH);
+      const title = row.locator('.opp-row-title');
+      await expect(title).toHaveText('Frontend Intern');
+      expect(await title.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+
+      await visibleTabs(page, width)
+        .getByRole('button', { name: /^Hackathons/ })
+        .click();
+      const urgentRow = page.locator('.opp-row', { hasText: URGENT_TITLE });
+      await expect(urgentRow.locator('.badge')).toHaveText(['Hackathon', '3 days left']);
+      const urgentTitle = await urgentRow.locator('.opp-row-title').boundingBox();
+      expect(urgentTitle.width).toBeGreaterThanOrEqual(READABLE_TITLE_WIDTH);
       await expectNoHorizontalOverflow(page);
       await screenshot(page, testInfo, `opportunities-list-${width}`);
     });
