@@ -1,7 +1,6 @@
 import {
   addApplicationService,
   deleteApplicationService,
-  fetchApplicationService,
   fetchAllApplications,
   updateApplicationService,
 } from '@/services/trackerService';
@@ -39,8 +38,7 @@ export const useApplicationsStore = defineStore('applications', () => {
     status.value = null;
 
     try {
-      const created = await addApplicationService(opportunity, details);
-      applications.value.push(await fetchApplicationService(created._id));
+      applications.value.push(await addApplicationService(opportunity, details));
       return true;
     } catch (error) {
       console.error(error);
