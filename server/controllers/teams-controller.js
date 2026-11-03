@@ -7,6 +7,7 @@ const { cleanSkills } = require('../service/skills');
 
 const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
+const EVENT_FIELDS = ['opportunityId', 'eventName', 'eventLocation', 'closesAt'];
 const MAX_MATCHES = 20;
 
 // --- Helper Functions ---
@@ -48,6 +49,25 @@ function isTakingRequests(team) {
   return (
     team.status === 'open' && team.slotsOpen > 0 && (!team.closesAt || team.closesAt >= new Date())
   );
+}
+
+async function resolveEvent(data) {
+  if (!data.opportunityId) {
+    return {
+      event: { name: data.eventName, location: data.eventLocation },
+      closesAt: data.closesAt,
+    };
+  }
+  const opportunity = await Opportunity.findById(data.opportunityId);
+  if (!opportunity) return null;
+  return {
+    event: {
+      opportunityId: opportunity._id,
+      name: opportunity.title,
+      location: opportunity.location,
+    },
+    closesAt: data.closesAt || opportunity.deadline,
+  };
 }
 
 function populateTeam(query) {
@@ -167,15 +187,8 @@ async function createTeam(req, res) {
   }
 
   try {
-    let eventData = { name: data.eventName, location: data.eventLocation };
-    let closesAt = data.closesAt;
-
-    if (data.opportunityId) {
-      const opportunity = await Opportunity.findById(data.opportunityId);
-      if (!opportunity) return res.status(404).json({ error: 'Event not found' });
-      eventData = { opportunityId: opportunity._id, name: opportunity.title, location: opportunity.location };
-      closesAt = closesAt || opportunity.deadline;
-    }
+    const resolved = await resolveEvent(data);
+    if (!resolved) return res.status(404).json({ error: 'Event not found' });
 
     const teamSize = Number(data.teamSize);
     const openSlots = Number(data.openSlots);
@@ -186,8 +199,8 @@ async function createTeam(req, res) {
     const team = await Team.create({
       name: data.name,
       leaderId: userId,
-      event: eventData,
-      closesAt,
+      event: resolved.event,
+      closesAt: resolved.closesAt,
       teamSize,
       externalMembers: teamSize - openSlots - 1,
       members: [{ userId, role: 'Team lead' }],
@@ -230,6 +243,25 @@ async function updateTeam(req, res) {
       }
       team.teamSize = teamSize;
       team.externalMembers = teamSize - openSlots - team.members.length;
+    }
+
+    if (EVENT_FIELDS.some((field) => data[field] !== undefined)) {
+      const current = {
+        opportunityId: team.event.opportunityId,
+        eventName: team.event.name,
+        eventLocation: team.event.location,
+        closesAt: data.opportunityId ? undefined : team.closesAt,
+      };
+      const resolved = await resolveEvent({ ...current, ...data });
+      if (!resolved) return res.status(404).json({ error: 'Event not found' });
+      team.event = resolved.event;
+      team.closesAt = resolved.closesAt;
+    }
+    if (data.status === 'open' && team.status === 'draft') {
+      if (team.slotsOpen === 0) {
+        return res.status(400).json({ error: 'Invalid slots configuration' });
+      }
+      team.status = 'open';
     }
 
     team.syncStatus();
