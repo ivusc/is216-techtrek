@@ -171,8 +171,10 @@ const calendarEvents = computed(() => {
   const events = []
   for (const application of applications.value) {
     const deadline = getApplicationDeadline(application)
-    if (deadline) events.push({ date: deadline, kind: 'deadline' })
-    if (application.interviewAt) events.push({ date: application.interviewAt, kind: 'interview' })
+    // title and organisation are shown when the day is clicked on the calendar
+    const details = { title: application.opportunityId.title, organisation: application.opportunityId.organisation }
+    if (deadline) events.push({ date: deadline, kind: 'deadline', ...details })
+    if (application.interviewAt) events.push({ date: application.interviewAt, kind: 'interview', ...details })
   }
   return events
 })
