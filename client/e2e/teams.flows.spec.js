@@ -76,7 +76,7 @@ function tab(page, name) {
 }
 
 function teamCard(page, name) {
-  return page.locator('.card', { hasText: name });
+  return page.locator('.card', { has: page.getByRole('heading', { name, exact: true }) });
 }
 
 function sentRow(page, name) {
@@ -104,6 +104,11 @@ async function createPost(page, { name, teamSize, openSlots, draft = false, othe
   await dialog.getByLabel('Pitch').fill('We ship a working demo every weekend.');
   await dialog.getByRole('button', { name: draft ? 'Save draft' : 'Publish post' }).click();
   await expect(dialog).toBeHidden();
+  if (!draft) {
+    const live = page.getByRole('dialog', { name: `${name} is live!` });
+    await live.getByRole('button', { name: 'Done' }).click();
+    await expect(live).toBeHidden();
+  }
 }
 
 for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP })) {
@@ -126,9 +131,10 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
       const request = requester.page.getByRole('dialog', { name: `Request to join ${name}` });
       await request.getByLabel(/Message to/).fill('Keen to help.');
       await request.getByRole('button', { name: 'Send request' }).click();
+      await expect(teamCard(requester.page, name)).toContainText('Request sent');
       await expect(
-        teamCard(requester.page, name).getByRole('button', { name: 'Request sent' }),
-      ).toBeDisabled();
+        teamCard(requester.page, name).getByRole('button', { name: 'Undo' }),
+      ).toBeEnabled();
 
       await page.reload();
       await tab(page, /Requests/).click();
@@ -256,6 +262,7 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
       await page.getByLabel('Search teams').fill(tag);
       const cards = page.locator('.row-cols-1 > .col');
       await expect(cards).toHaveCount(2);
+      await page.getByRole('button', { name: 'Match my skills' }).click();
       await expect(page.getByText('Add your skills to get matched')).toBeVisible();
 
       await page.getByRole('button', { name: 'Edit skills' }).click();
