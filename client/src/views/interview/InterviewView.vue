@@ -22,6 +22,7 @@ const errorMessage = ref('');
 
 const loadData = async () => {
   isLoading.value = true;
+  errorMessage.value = '';
   try {
     const response = await serverAPI.get('/interview/dashboard');
     applicationCards.value = response.data.applicationCards;
@@ -118,7 +119,20 @@ function bestScore(question) {
       subtitle="Practise by role and question type. Gemini gives instant feedback on every answer."
       type="questions"
     />
-    <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+    <div
+      v-if="errorMessage"
+      class="alert alert-danger d-flex justify-content-between align-items-center py-2"
+      role="alert"
+    >
+      {{ errorMessage }}
+      <button
+        type="button"
+        class="btn btn-sm btn-link text-tt-accent fw-semibold"
+        @click="loadData"
+      >
+        Retry
+      </button>
+    </div>
     <TrekLoader
       v-if="isLoading"
       title="Getting interview prep ready"
