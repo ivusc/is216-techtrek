@@ -23,7 +23,7 @@ const LISTINGS = [
   },
 ];
 
-const EVENT_FIELDS = ['opportunityId', 'eventName', 'eventLocation', 'closesAt'];
+const EVENT_FIELDS = ['opportunity', 'opportunityId', 'eventName', 'eventLocation', 'closesAt'];
 
 function mountModal(props = {}) {
   return mount(CreateTeamModal, { props: { events: LISTINGS, ...props } });
@@ -59,40 +59,33 @@ describe('CreateTeamModal event picker', () => {
     expect(optionTexts(wrapper, '#post-event')).toEqual([
       'Build for Good · closes 1 Dec',
       'Code for Climate',
-      'Other event (type it in)',
+      'Other event (not on the list)',
     ]);
     expect(wrapper.find('#post-event').element.value).toBe('devpost-201');
     expect(wrapper.find('[aria-label="Event name"]').exists()).toBe(false);
   });
 
-  it('sends the chosen listing as the event', async () => {
+  it.each([
+    ['devpost-201', 0],
+    ['devpost-202', 1],
+  ])('sends listing %s as the opportunity for the server to save and link', async (key, index) => {
     const wrapper = mountModal();
 
     await fill(wrapper);
+    await wrapper.find('#post-event').setValue(key);
     await button(wrapper, 'Publish post').trigger('click');
 
     expect(submitted(wrapper).status).toBe('open');
-    expect(eventPart(submitted(wrapper))).toStrictEqual({
-      opportunityId: null,
-      eventName: 'Build for Good',
-      eventLocation: 'Singapore',
-      closesAt: '2026-11-30T23:59:59.000Z',
-    });
+    expect(eventPart(submitted(wrapper))).toStrictEqual({ opportunity: LISTINGS[index] });
   });
 
-  it('sends the location text of a listing whose location is an object', async () => {
-    const wrapper = mountModal();
+  it.each([
+    ['the hackathon it was opened for', 'Code for Climate', 'devpost-202'],
+    ['the first listing for an unknown hackathon', 'Hack&Roll', 'devpost-201'],
+  ])('starts a new post on %s', (label, initialEvent, key) => {
+    const wrapper = mountModal({ initialEvent });
 
-    await fill(wrapper);
-    await wrapper.find('#post-event').setValue('devpost-202');
-    await button(wrapper, 'Publish post').trigger('click');
-
-    expect(eventPart(submitted(wrapper))).toStrictEqual({
-      opportunityId: null,
-      eventName: 'Code for Climate',
-      eventLocation: 'Online',
-      closesAt: null,
-    });
+    expect(wrapper.find('#post-event').element.value).toBe(key);
   });
 
   it('lets me type an event that is not listed', async () => {
@@ -175,12 +168,7 @@ describe('CreateTeamModal event picker', () => {
       'the listing',
       ledTeam({ event: { name: 'Code for Climate' } }),
       ['#post-event', 'devpost-201'],
-      {
-        opportunityId: null,
-        eventName: 'Build for Good',
-        eventLocation: 'Singapore',
-        closesAt: '2026-11-30T23:59:59.000Z',
-      },
+      { opportunityId: null, opportunity: LISTINGS[0] },
     ],
   ])('sends only what an edit of %s changes', async (label, team, [field, value], sent) => {
     const wrapper = mountModal({ team });
@@ -239,7 +227,7 @@ describe('CreateTeamModal', () => {
   it('starts on Other with its inputs when there are no listings', () => {
     const wrapper = mountModal({ events: [] });
 
-    expect(optionTexts(wrapper, '#post-event')).toEqual(['Other event (type it in)']);
+    expect(optionTexts(wrapper, '#post-event')).toEqual(['Other event (not on the list)']);
     expect(wrapper.find('#post-event').element.value).toBe('other');
     expect(wrapper.find('[aria-label="Event name"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="Event location"]').exists()).toBe(true);
@@ -264,10 +252,7 @@ describe('CreateTeamModal', () => {
       pitch: 'We ship.',
       skills: ['Figma'],
       autoAccept: true,
-      opportunityId: null,
-      eventName: 'Build for Good',
-      eventLocation: 'Singapore',
-      closesAt: '2026-11-30T23:59:59.000Z',
+      opportunity: LISTINGS[0],
     };
     expect(wrapper.emitted('submit')).toEqual([
       [{ ...post, status: 'draft' }],

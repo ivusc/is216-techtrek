@@ -1,10 +1,12 @@
 import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loginAs } from './helpers/session.js';
+import { saveApplication } from './helpers/records.js';
 
 const require = createRequire(import.meta.url);
 const mongoose = require('mongoose');
 const app = require('../app');
+const Application = require('../models/Application');
 const Opportunity = require('../models/Opportunity');
 const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
@@ -502,5 +504,104 @@ describe('DELETE /teams/:id', () => {
 
     expect(response.body.error).toBe('Only leader can delete');
     expect(await Team.countDocuments()).toBe(1);
+  });
+});
+
+const LISTING = {
+  source: 'devpost',
+  externalId: '555',
+  type: 'hackathon',
+  title: 'Build for Good',
+  organisation: 'Devpost Labs',
+  location: 'Online',
+  url: 'https://buildforgood.devpost.com/',
+  deadline: '2027-01-15T23:59:59.000Z',
+};
+
+function listingOf(opportunity) {
+  return {
+    source: opportunity.source,
+    externalId: opportunity.externalId,
+    type: opportunity.type,
+    title: opportunity.title,
+    organisation: opportunity.organisation,
+    url: opportunity.url,
+  };
+}
+
+describe('teams for a listed hackathon', () => {
+  it('saves the listing once and links every team to it', async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const other = await loginAs(app, { userName: 'other.leader@smu.edu.sg' });
+    const { eventName, ...base } = TEAM;
+
+    const first = await post(leader, { ...base, opportunity: LISTING });
+    const second = await post(other, { ...base, name: 'Second Team', opportunity: LISTING });
+
+    const saved = await Opportunity.find({ source: 'devpost', externalId: '555' });
+    expect(saved).toHaveLength(1);
+    expect(first.event).toMatchObject({
+      opportunityId: String(saved[0]._id),
+      name: 'Build for Good',
+      location: 'Online',
+    });
+    expect(first.closesAt).toBe('2027-01-15T23:59:59.000Z');
+    expect(second.event.opportunityId).toBe(String(saved[0]._id));
+  });
+
+  it('asks for an event when none is given', async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const { eventName, ...base } = TEAM;
+
+    const response = await leader.post('/teams').send(base).expect(400);
+
+    expect(response.body).toEqual({ error: 'Pick a hackathon or type in the event name.' });
+    expect(await Team.countDocuments()).toBe(0);
+  });
+
+  it('relinks a team to another listing on edit and takes its deadline', async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const created = await post(leader, { ...TEAM, closesAt: '2026-12-01T00:00:00.000Z' });
+
+    const response = await leader
+      .patch(`/teams/${created._id}`)
+      .send({ opportunity: LISTING })
+      .expect(200);
+
+    const saved = await Opportunity.findOne({ source: 'devpost', externalId: '555' });
+    expect(response.body.event).toMatchObject({
+      opportunityId: String(saved._id),
+      name: 'Build for Good',
+    });
+    expect(response.body.closesAt).toBe('2027-01-15T23:59:59.000Z');
+  });
+
+  it("moves the leader's tracker card to Team formed when the team is published, at once or later", async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const now = await hackathon();
+    const later = await hackathon({ externalId: '102', title: 'Later Hack' });
+    const nowCard = await saveApplication(leader, {
+      opportunity: listingOf(now),
+      status: 'registered',
+    });
+    const laterCard = await saveApplication(leader, {
+      opportunity: listingOf(later),
+      status: 'saved',
+    });
+
+    await post(leader, { ...TEAM, opportunityId: String(now._id) });
+    const draft = await post(leader, {
+      ...TEAM,
+      name: 'Draft Team',
+      status: 'draft',
+      opportunityId: String(later._id),
+    });
+
+    expect((await Application.findById(nowCard._id)).status).toBe('team');
+    expect((await Application.findById(laterCard._id)).status).toBe('saved');
+
+    await leader.patch(`/teams/${draft._id}`).send({ status: 'open' }).expect(200);
+
+    expect((await Application.findById(laterCard._id)).status).toBe('team');
   });
 });
