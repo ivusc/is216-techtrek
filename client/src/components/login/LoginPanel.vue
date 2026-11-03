@@ -81,6 +81,7 @@ onMounted(() => {
           Log in with your SMU account to pick up where you left off.
         </p>
       </div>
+      <p v-if="errorMessage" class="errors">{{ errorMessage }}</p>
       <div>
         <label for="login-email" class="form-label small fw-semibold">SMU email</label>
         <div class="position-relative">
@@ -141,6 +142,22 @@ onMounted(() => {
           >New to TechTrek? Create an account</a
         >
       </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="form-check mb-0">
+          <input id="remember-me" class="form-check-input" type="checkbox" v-model="rememberUser" />
+          <label class="form-check-label small fw-medium" for="remember-me">Remember me</label>
+        </div>
+        <a href="#" class="small fw-semibold text-decoration-none" @click.prevent>Forgot password?</a>
+      </div>
+      <button type="submit" class="btn btn-primary fw-semibold">Log in</button>
+      <p class="form-note mb-0">
+        <i class="bi bi-lock"></i>
+        Sign-up is limited to @smu.edu.sg emails.
+      </p>
+      <p class="text-center small text-body-secondary mb-0">
+        New to TechTrek?
+        <a href="#" class="text-body-secondary" @click.prevent="$emit('switch-to-signup')">Create an account</a>
+      </p>
     </div>
   </form>
 </template>

@@ -20,7 +20,7 @@ defineEmits(['details', 'toggle-save'])
 
 <template>
   <div class="opp-card card shadow-sm h-100">
-    <!-- avatar, organisation + location, bookmark -->
+    <!-- avatar, organisation + location -->
     <div class="d-flex align-items-center gap-3">
       <div
         class="opp-logo rounded-3 d-flex justify-content-center align-items-center fw-semibold flex-shrink-0"
@@ -35,14 +35,6 @@ defineEmits(['details', 'toggle-save'])
           {{ item.location }}
         </p>
       </div>
-      <button
-        class="btn btn-link p-0 opp-save text-body-secondary"
-        :class="{ 'text-primary': saved }"
-        :aria-label="saved ? 'Remove from saved' : 'Save'"
-        @click="$emit('toggle-save')"
-      >
-        <i :class="saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark'"></i>
-      </button>
     </div>
 
     <div class="d-flex flex-column gap-2" role="button" @click="$emit('details')">
@@ -122,11 +114,5 @@ defineEmits(['details', 'toggle-save'])
 .opp-via {
   flex: 1 1 0;
   min-width: 3.5rem;
-}
-.opp-save {
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  line-height: 1;
 }
 </style>

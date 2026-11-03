@@ -1,0 +1,65 @@
+/* dashboard (home page) */
+.home-stat-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+.deadline-row + .deadline-row {
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.date-tile {
+  width: 48px;
+  height: 52px;
+  line-height: 1.1;
+}
+
+.status-dot-home {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+}
+
+.days-left {
+  min-width: 80px;
+}
+
+.request-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.practice-card {
+  background-color: var(--tt-peach);
+}
+
+.home-stat-card {
+  padding: 12px 16px;
+}
+
+/* fit the whole dashboard on one screen from lg up (below that it scrolls like a normal page) */
+@media (min-width: 992px) {
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 3rem); /* the screen minus <main>'s top and bottom padding */
+  }
+  .dashboard-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .dashboard-col {
+    min-height: 0;
+    height: 100%;
+  }
+  /* these cards take the space that is left, and their list scrolls inside them */
+  .fill-card {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .scroll-list {
+    overflow-y: auto;
+    min-height: 0;
+  }
+}

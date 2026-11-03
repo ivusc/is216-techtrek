@@ -11,6 +11,8 @@ const { sniffImageType, extensionOf } = require('../service/avatar');
 
 const EDITABLE_FIELDS = [
   'displayName',
+  'faculty',
+  'onboarded',
   'year',
   'course',
   'about',

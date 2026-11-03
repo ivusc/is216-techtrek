@@ -12,6 +12,7 @@ import { storeToRefs } from 'pinia';
 import { useApplicationsStore } from '@/store/applications';
 import { buildIcsFile } from '@/utils/calendar';
 import PageHeader from '@/components/PageHeader.vue';
+import TrekLoader from '@/components/TrekLoader.vue';
 
 const applicationStore = useApplicationsStore();
 const { applications, status, isLoading, isSaving } = storeToRefs(applicationStore);
@@ -145,9 +146,11 @@ async function deleteSelected() {
 
     <div v-if="status" class="alert alert-danger" role="alert">{{ status }}</div>
 
-    <div v-if="isLoading">
-      <p>Loading...</p>
-    </div>
+    <TrekLoader
+      v-if="isLoading"
+      title="Loading your tracker"
+      :captions="['Gathering your applications…', 'Sorting cards into columns…', 'Checking upcoming deadlines…']"
+    />
 
     <div v-else class="d-flex flex-column flex-grow-1 min-h-0">
       <TrackerToolbar v-model:view-mode="viewMode" v-model:type="typeFilter" v-model:deadline="deadlineFilter"

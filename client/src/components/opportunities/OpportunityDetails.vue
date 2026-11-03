@@ -174,14 +174,15 @@ const infoBoxes = computed(() => {
 
     <!-- buttons at the bottom of the panel -->
     <div class="details-footer d-flex justify-content-end border-top">
+      <!-- same as the card's Track button: adds it to the tracker's Saved column, click again to remove -->
       <button
         class="btn fw-semibold text-nowrap details-btn"
         :class="saved ? 'btn-light' : 'btn-outline-primary'"
         type="button"
         @click="$emit('toggle-save')"
       >
-        <i :class="saved ? 'bi bi-bookmark-fill' : 'bi bi-bookmark'"></i>
-        {{ saved ? 'Saved' : 'Save' }}
+        <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
+        {{ saved ? 'Tracked' : 'Track' }}
       </button>
 
       <!-- link to the real listing -->

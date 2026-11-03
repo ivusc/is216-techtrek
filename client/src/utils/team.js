@@ -37,6 +37,9 @@ export function getSchoolLine(user) {
   if (user?.course) {
     parts.push(user.course)
   }
+  if (user?.faculty) {
+    parts.push(user.faculty)
+  }
   return parts.join(' ')
 }
 
