@@ -5,6 +5,7 @@ import {
   getLocationGroup,
   getMonthlySalary,
   getPrizeAmount,
+  getPrizeText,
   getUrgentText,
   getPostedText,
   getPlatform
@@ -54,7 +55,7 @@ defineEmits(['details', 'toggle-save'])
       <span v-else class="text-nowrap"><i class="bi bi-clock me-1"></i>{{ getPostedText(item) }}</span>
 
       <span v-if="item.type === 'hackathon' && getPrizeAmount(item) > 0" class="text-nowrap">
-        <i class="bi bi-trophy me-1"></i>{{ item.prize }} prizes
+        <i class="bi bi-trophy me-1"></i>{{ getPrizeText(item) }}
       </span>
       <span v-else-if="getMonthlySalary(item) > 0" class="text-nowrap">
         <i class="bi bi-currency-dollar me-1"></i>S${{ getMonthlySalary(item).toLocaleString() }}/mo

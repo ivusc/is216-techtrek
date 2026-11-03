@@ -41,6 +41,13 @@ export function getPrizeAmount(item) {
   return Number(amount[0].replace(/,/g, ''))
 }
 
+export function getPrizeText(item) {
+  if (/\bprizes?\b/i.test(item.prize)) {
+    return item.prize
+  }
+  return item.prize + ' prizes'
+}
+
 //  "Paid only" filter
 export function isPaid(item) {
   if (item.type === 'hackathon') {
