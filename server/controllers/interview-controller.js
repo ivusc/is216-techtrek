@@ -405,6 +405,9 @@ async function saveAttempt(req, res) {
 
     res.status(201).json(interviewAttempt)
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
     console.log(error)
 
     res.status(500).json({
