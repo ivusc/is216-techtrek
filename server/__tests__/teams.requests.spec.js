@@ -288,3 +288,57 @@ describe('GET /teams/requests/incoming', () => {
     expect(incoming.map((request) => request.team.name)).toEqual(['Byte Me', 'Byte Me', 'Byte Me']);
   });
 });
+
+describe('invites', () => {
+  it('lets the leader invite a friend by email, who accepts and joins', async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const friend = await loginAs(app, { userName: 'friend@smu.edu.sg' });
+    const team = await post(leader, TEAM);
+
+    await leader
+      .post(`/teams/${team._id}/invites`)
+      .send({ userName: ' Friend@SMU.edu.sg ', message: 'Join us' })
+      .expect(201);
+    const mine = await friend.get('/teams/invites').expect(200);
+    const [invite] = mine.body;
+    await friend.patch(`/teams/invites/${invite._id}`).send({ status: 'accepted' }).expect(200);
+
+    expect(invite).toMatchObject({
+      status: 'pending',
+      message: 'Join us',
+      team: { name: 'Byte Me', leader: { displayName: 'Leader' } },
+    });
+    expect((await Team.findById(team._id)).members).toHaveLength(2);
+  });
+
+  it('never shows an email in the invite lists', async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const friend = await loginAs(app, { userName: 'friend@smu.edu.sg' });
+    const team = await post(leader, TEAM);
+    await leader
+      .post(`/teams/${team._id}/invites`)
+      .send({ userName: 'friend@smu.edu.sg' })
+      .expect(201);
+
+    const sentByMe = await leader.get(`/teams/${team._id}/invites`).expect(200);
+    const sentToMe = await friend.get('/teams/invites').expect(200);
+
+    expect(sentByMe.body[0].user.displayName).toBe('Friend');
+    expect(sentToMe.body[0].team.leader.displayName).toBe('Leader');
+    expect(JSON.stringify(sentByMe.body)).not.toContain('@smu.edu.sg');
+    expect(JSON.stringify(sentToMe.body)).not.toContain('@smu.edu.sg');
+  });
+
+  it.each([
+    ['PATCH', '/teams/invites/nope', { status: 'accepted' }],
+    ['DELETE', '/teams/invites/nope', undefined],
+    ['GET', '/teams/nope/invites', undefined],
+    ['POST', '/teams/nope/invites', { userName: 'friend@smu.edu.sg' }],
+  ])('answers 400 for a malformed id on %s %s', async (method, path, body) => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+
+    const response = await leader[method.toLowerCase()](path).send(body).expect(400);
+
+    expect(response.body).toEqual({ error: 'Invalid ID' });
+  });
+});
