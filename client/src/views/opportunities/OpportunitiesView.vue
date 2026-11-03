@@ -7,7 +7,7 @@ import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
-import OpportunityLoader from '@/components/opportunities/OpportunityLoader.vue'
+import TrekLoader from '@/components/TrekLoader.vue'
 import {
   getDaysLeft,
   getLocationGroup,
@@ -278,7 +278,17 @@ const loadMore = async () => {
       <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="opportunityStore.fetchOpportunities">Retry</button>
     </div>
 
-    <OpportunityLoader v-if="isLoading" />
+    <TrekLoader
+      v-if="isLoading"
+      title="Scouting opportunities"
+      :captions="[
+        'Packing snacks for the trek…',
+        'Scouting internships on Adzuna…',
+        'Hunting down hackathons on Devpost…',
+        'Checking which deadlines are close…',
+        'Almost there…',
+      ]"
+    />
 
     <!-- Overview tab -->
     <template v-else-if="activeTab === 'overview'">

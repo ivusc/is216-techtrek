@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import './interview.css'
 import serverAPI from '@/services/serverAPI'
 import PageHeader from '@/components/PageHeader.vue'
+import TrekLoader from '@/components/TrekLoader.vue'
 
 const search = ref("")
 const difficulties = ['Easy', 'Medium', 'Hard']
@@ -54,9 +55,11 @@ const filteredQuestions = computed(() => {
   <div v-if="errorMessage" class="error-message">
     {{ errorMessage }}
   </div>
-  <div v-if="isLoading" style="text-align:center;">
-    Loading content....
-  </div>
+  <TrekLoader
+    v-if="isLoading"
+    title="Getting interview prep ready"
+    :captions="['Loading your question bank…', 'Adding up your scores…', 'Finding roles you can practise for…']"
+  />
   <div v-else>
     <PageHeader v-model="search" title="Interview prep"
       subtitle="Practice by role and question type.Gemini gives instant feedback on every answer" type="questions" />

@@ -15,6 +15,7 @@ import JoinRequestModal from '@/components/teams/JoinRequestModal.vue'
 import CreateTeamModal from '@/components/teams/CreateTeamModal.vue'
 import EditSkillsModal from '@/components/teams/EditSkillsModal.vue'
 import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
+import TrekLoader from '@/components/TrekLoader.vue'
 
 const auth = useUserStore()
 
@@ -340,7 +341,11 @@ function openSkills() {
         <button class="btn btn-sm btn-link text-tt-accent fw-semibold" @click="loadAll()">Retry</button>
       </div>
 
-      <p v-if="isLoading" class="text-center text-body-secondary py-5">Loading teams...</p>
+      <TrekLoader
+        v-if="isLoading"
+        title="Finding your teammates"
+        :captions="['Looking for teams that need your skills…', 'Rounding up hackathon events…', 'Checking your requests…']"
+      />
 
       <template v-else>
 

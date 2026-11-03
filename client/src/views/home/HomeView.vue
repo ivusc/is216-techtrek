@@ -6,6 +6,7 @@ import './home.css'
 import PageHeader from '@/components/PageHeader.vue'
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue'
 import MiniCalendar from '@/components/home/MiniCalendar.vue'
+import TrekLoader from '@/components/TrekLoader.vue'
 import { useUserStore } from '@/store/user'
 import { useApplicationsStore } from '@/store/applications'
 import { useOpportunityStore } from '@/store/opportunity'
@@ -21,7 +22,7 @@ const router = useRouter()
 const auth = useUserStore()
 const applicationStore = useApplicationsStore()
 const opportunityStore = useOpportunityStore()
-const { applications } = storeToRefs(applicationStore)
+const { applications, isLoading } = storeToRefs(applicationStore)
 const { jobs, hackathons } = storeToRefs(opportunityStore)
 
 const search = ref('')
@@ -241,6 +242,13 @@ async function respond(request, status) {
       @keydown.enter="goToOpportunities"
     />
 
+    <!-- only the first time: after that the old numbers stay on screen while they refresh -->
+    <TrekLoader
+      v-if="isLoading && applications.length === 0"
+      title="Setting up your dashboard"
+      :captions="['Counting your deadlines…', 'Picking opportunities for your skills…', 'Checking your team requests…']"
+    />
+    <template v-else>
     <!-- stat cards -->
     <div class="row g-3 mb-3">
       <div v-for="stat in stats" :key="stat.label" class="col-6 col-xl-3">
@@ -389,5 +397,6 @@ async function respond(request, status) {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>

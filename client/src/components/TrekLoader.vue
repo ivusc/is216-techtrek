@@ -1,27 +1,33 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-// a little compass hops along a dotted trail while the listings load; the caption changes every couple of seconds
-const captions = [
-  'Packing snacks for the trek…',
-  'Scouting internships on Adzuna…',
-  'Hunting down hackathons on Devpost…',
-  'Checking which deadlines are close…',
-  'Almost there…',
-]
+// the loading screen used on every page: a little compass hops along a dotted trail
+// while the caption changes every couple of seconds
+const props = defineProps({
+  title: { type: String, default: 'Loading' },
+  captions: { type: Array, default: () => ['Packing snacks for the trek…', 'Almost there…'] },
+  // compact: smaller and with less space around it, for loading inside a card or panel
+  compact: { type: Boolean, default: false },
+})
+
 const captionIndex = ref(0)
 let timer = null
 
 onMounted(() => {
   timer = setInterval(() => {
-    captionIndex.value = (captionIndex.value + 1) % captions.length
+    captionIndex.value = (captionIndex.value + 1) % props.captions.length
   }, 1800)
 })
 onUnmounted(() => clearInterval(timer))
 </script>
 
 <template>
-  <div class="trek-loader d-flex flex-column align-items-center text-center py-5" role="status" aria-live="polite">
+  <div
+    class="trek-loader d-flex flex-column align-items-center text-center"
+    :class="compact ? 'trek-compact py-3' : 'py-5'"
+    role="status"
+    aria-live="polite"
+  >
     <div class="trek-scene position-relative">
       <!-- things the compass "finds" pop up around it -->
       <span class="trek-find find-1 rounded-circle bg-tt-peach d-flex align-items-center justify-content-center"><i class="bi bi-briefcase"></i></span>
@@ -42,7 +48,7 @@ onUnmounted(() => clearInterval(timer))
       </svg>
     </div>
 
-    <h2 class="trek-title fw-bold mt-3 mb-1">Scouting opportunities</h2>
+    <h2 class="trek-title fw-bold mt-3 mb-1">{{ title }}</h2>
     <Transition name="trek-fade" mode="out-in">
       <p :key="captionIndex" class="trek-caption text-body-secondary mb-0">{{ captions[captionIndex] }}</p>
     </Transition>
@@ -181,6 +187,18 @@ onUnmounted(() => clearInterval(timer))
   20% { transform: translateY(0) scale(1); }
   30% { opacity: 1; }
   40%, 100% { opacity: 0; transform: translateY(-14px) scale(0.9); }
+}
+
+/* compact: the same scene at 70% size */
+.trek-compact .trek-scene {
+  transform: scale(0.7);
+  margin: -26px 0;
+}
+.trek-compact .trek-title {
+  font-size: 1.125rem;
+}
+.trek-compact .trek-caption {
+  font-size: 0.9375rem;
 }
 
 /* people who turn off motion get a still compass */
