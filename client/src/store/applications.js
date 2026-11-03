@@ -21,7 +21,6 @@ export const useApplicationsStore = defineStore('applications', () => {
       const data = await fetchAllApplications();
       if (data != null) {
         applications.value = data;
-        console.log(applications.value);
       } else {
         status.value = 'Applications could not be loaded right now.';
       }
