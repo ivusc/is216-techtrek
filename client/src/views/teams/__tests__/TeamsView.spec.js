@@ -8,7 +8,7 @@ import TeamsView from '@/views/teams/TeamsView.vue';
 import { ME, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
 import { HACKATHONS } from '@/__tests__/fixtures/opportunities';
 
-const route = vi.hoisted(() => ({ query: {} }));
+const route = await vi.hoisted(async () => (await import('vue')).reactive({ query: {} }));
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
@@ -455,5 +455,62 @@ describe('TeamsView', () => {
     expect(wrapper.find('.skills-label').text()).toBe('Skills: Vue.js, Figma');
     expect(titles(wrapper)).toEqual(expect.arrayContaining(['Byte Me', 'Data Divers']));
     expect(titles(wrapper)).not.toContain('Py Pals');
+  });
+});
+
+describe('TeamsView event link', () => {
+  function eventSelect(wrapper) {
+    return wrapper.find('select[aria-label="Filter by event"]');
+  }
+
+  it('filters to a hackathon without posts and starts the first team for it', async () => {
+    route.query = { event: 'Lifehack' };
+    mockLists();
+    mock.onGet('/opportunity/hackathons').reply(200, NO_EVENTS);
+    const wrapper = await mountTeams();
+
+    expect(eventSelect(wrapper).element.value).toBe('Lifehack');
+    const options = eventSelect(wrapper).findAll('option');
+    expect(options.map((option) => option.element.value)).toContain('Lifehack');
+    expect(titles(wrapper)).toEqual([]);
+    expect(wrapper.text()).toContain('No teams are looking for members for Lifehack yet.');
+
+    await button(wrapper, 'Start a team').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('#post-event').element.value).toBe('other');
+    expect(wrapper.find('[aria-label="Event name"]').element.value).toBe('Lifehack');
+
+    await dialogButton(wrapper, 'Cancel').trigger('click');
+    await button(wrapper, 'See all teams').trigger('click');
+
+    expect(eventSelect(wrapper).element.value).toBe('');
+    expect(titles(wrapper)).toEqual(['Night Owls', 'Byte Me']);
+  });
+
+  it('does not offer to start a team when the hackathon only has teams the filters hide', async () => {
+    route.query = { event: 'Hack&Roll' };
+    mockLists({ teams: [team({ slotsOpen: 0 })], mine: [] });
+    const wrapper = await mountTeams();
+
+    expect(wrapper.text()).toContain('No teams match your filters.');
+    expect(button(wrapper, 'Start a team')).toBeUndefined();
+
+    await button(wrapper, 'Open slots only').trigger('click');
+
+    expect(titles(wrapper)).toEqual(['Byte Me']);
+  });
+
+  it('shows every team again when the address drops the event', async () => {
+    route.query = { event: 'Lifehack' };
+    mockLists();
+    const wrapper = await mountTeams();
+    expect(titles(wrapper)).toEqual([]);
+
+    route.query = {};
+    await flushPromises();
+
+    expect(eventSelect(wrapper).element.value).toBe('');
+    expect(titles(wrapper)).toEqual(['Night Owls', 'Byte Me']);
   });
 });
