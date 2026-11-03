@@ -35,7 +35,42 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+function sidebarWidth(wrapper) {
+  return wrapper.find('#sidebar').element.style.width;
+}
+
+function toggleButton(wrapper) {
+  return wrapper.find('#sidebar button');
+}
+
 describe('SideBar', () => {
+  it('starts collapsed below lg', async () => {
+    stubScreen({ belowLg: true });
+    const wrapper = await mountSideBar();
+
+    expect(sidebarWidth(wrapper)).toBe('80px');
+    expect(toggleButton(wrapper).attributes('aria-label')).toBe('Expand sidebar');
+  });
+
+  it('starts open from lg', async () => {
+    const wrapper = await mountSideBar();
+
+    expect(sidebarWidth(wrapper)).toBe('260px');
+    expect(toggleButton(wrapper).attributes('aria-label')).toBe('Collapse sidebar');
+  });
+
+  it('collapses and expands from the toggle', async () => {
+    const wrapper = await mountSideBar();
+
+    await toggleButton(wrapper).trigger('click');
+    expect(sidebarWidth(wrapper)).toBe('80px');
+    expect(wrapper.find('#sidebar a[href="/teams"]').attributes('title')).toBe('Teams');
+
+    await toggleButton(wrapper).trigger('click');
+    expect(sidebarWidth(wrapper)).toBe('260px');
+    expect(wrapper.find('#sidebar a[href="/teams"]').attributes('title')).toBeUndefined();
+  });
+
   it('marks only the current page with aria-current', async () => {
     const marked = {};
     for (const path of ['/tracker', '/home']) {
@@ -49,5 +84,12 @@ describe('SideBar', () => {
       '/tracker': [['/tracker'], ['/tracker']],
       '/home': [['/home'], ['/home']],
     });
+  });
+
+  it('uses the short labels in the tab bar', async () => {
+    const wrapper = await mountSideBar();
+
+    const labels = wrapper.findAll('.bottom-nav a').map((link) => link.text());
+    expect(labels).toEqual(['Home', 'Discover', 'Tracker', 'Teams', 'Prep']);
   });
 });
