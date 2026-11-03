@@ -33,8 +33,6 @@ function clearFilters() {
   hideRejected.value = false;
 }
 
-console.log(applications)
-
 const filteredApplications = computed(() => {
   const keyword = search.value.trim().toLowerCase();
 

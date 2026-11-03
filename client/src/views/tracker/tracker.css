@@ -71,7 +71,7 @@
 }
 
 .application-modal {
-  max-width: 680px;
+  max-width: min(680px, calc(100% - 2 * var(--bs-modal-margin)));
 }
 
 .application-modal .modal-content {
@@ -186,7 +186,7 @@
 }
 
 /* 7 columns get too narrow on phones, so the grid scrolls sideways like the kanban board */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .calendar-scroll {
     overflow-x: auto;
   }
