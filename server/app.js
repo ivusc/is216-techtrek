@@ -18,12 +18,12 @@ app.use(
   }),
 );
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     secret: process.env.SECRET,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
     cookie: {
       maxAge: 1000 * 60 * 60,
       httpOnly: true,
