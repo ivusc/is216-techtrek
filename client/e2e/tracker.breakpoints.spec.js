@@ -74,6 +74,12 @@ async function expectInside(inner, outer) {
   expect(innerBox.x + innerBox.width).toBeLessThanOrEqual(outerBox.x + outerBox.width + 0.5);
 }
 
+async function expectGutters(dialog, width, gutter) {
+  const box = await dialog.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(gutter);
+  expect(width - (box.x + box.width)).toBeGreaterThanOrEqual(gutter);
+}
+
 async function expectFieldsSideBySide(first, second, sideBySide) {
   const firstBox = await first.boundingBox();
   const secondBox = await second.boundingBox();
@@ -174,6 +180,8 @@ test.describe('tracker calendar', () => {
 
 test.describe('tracker modals', () => {
   for (const width of WIDTHS) {
+    const gutter = width < SM ? 8 : 16;
+
     test(`${width} fits the add and detail modals`, async ({
       loggedIn: page,
       account,
@@ -186,6 +194,7 @@ test.describe('tracker modals', () => {
       await screenshot(page, testInfo, `tracker-add-${width}`);
       await expectTrackerFits(page);
       await expectInside(add.locator('.modal-content'), page.locator('body'));
+      await expectGutters(add.locator('.modal-content'), width, gutter);
       const submit = add.getByRole('button', { name: 'Add to Saved' });
       await expect(submit).toBeInViewport({ ratio: 1 });
       await expectInside(submit, add.locator('.modal-content'));
@@ -203,6 +212,7 @@ test.describe('tracker modals', () => {
       await screenshot(page, testInfo, `tracker-detail-${width}`);
       await expectTrackerFits(page);
       await expectInside(detail.locator('.modal-content'), page.locator('body'));
+      await expectGutters(detail.locator('.modal-content'), width, gutter);
       const save = detail.getByRole('button', { name: 'Save changes' });
       await expect(save).toBeInViewport({ ratio: 1 });
       await expectInside(save, detail.locator('.modal-content'));
