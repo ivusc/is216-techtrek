@@ -1,7 +1,7 @@
 import serverAPI from './serverAPI';
 
 export async function fetchMe() {
-  const response = await serverAPI.get('/me');
+  const response = await serverAPI.get('/me', { timeout: 10000 });
   return response.data;
 }
 
