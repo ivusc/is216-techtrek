@@ -10,11 +10,13 @@ import {
   getPostedText,
   getPlatform
 } from '@/utils/opportunity'
+import MatchMeter from './MatchMeter.vue'
 
 defineProps({
   item: { type: Object, required: true },
   saved: { type: Boolean, default: false },
-  teamCount: { type: Number, default: 0 } // open teams for this hackathon, shown on "Find team"
+  teamCount: { type: Number, default: 0 }, // open teams for this hackathon, shown on "Find team"
+  mySkills: { type: Array, default: () => [] } // the user's skills, for the match meter
 })
 
 const emit = defineEmits(['details', 'toggle-save', 'find-team'])
@@ -88,6 +90,8 @@ function openDetails(event) {
         </span>
       </div>
     </div>
+
+    <MatchMeter :item="item" :my-skills="mySkills" />
 
     <!-- mt-auto keeps the footer at the bottom when the card is stretched to the row height -->
     <hr class="mt-auto mb-0 border-secondary-subtle opacity-100" />

@@ -7,8 +7,22 @@ const props = defineProps({
   // theme names found in the loaded hackathons, most common first
   themes: { type: Array, required: true },
   // [{ key, label, roles: [{ key, label }] }] from the server
-  sectors: { type: Array, default: () => [] }
+  sectors: { type: Array, default: () => [] },
+  // { location: { Singapore: 12 }, theme: { AI: 3 }, closingWithin: { 7: 2 }, paidOnly: 9 }: results each choice would give
+  counts: { type: Object, default: null }
 })
+
+// " · 12" after a choice, or nothing when the parent sends no counts
+function countText(group, value) {
+  const count = group === 'paidOnly' ? props.counts?.paidOnly : props.counts?.[group]?.[value]
+  return count === undefined ? '' : ' · ' + count
+}
+
+const locationOptions = [
+  { value: 'Singapore', label: 'Singapore' },
+  { value: 'Online', label: 'Online / remote' },
+  { value: 'Other', label: 'Elsewhere' }
+]
 
 // job filters (sent to the server)
 const jobSector = defineModel('jobSector', { type: String, required: true })
@@ -140,7 +154,7 @@ const activeFilterCount = computed(() => {
         aria-label="Theme"
       >
         <option value="">Theme</option>
-        <option v-for="name in themes" :key="name" :value="name">Theme: {{ name }}</option>
+        <option v-for="name in themes" :key="name" :value="name">Theme: {{ name }}{{ countText('theme', name) }}</option>
       </select>
 
       <select
@@ -150,8 +164,8 @@ const activeFilterCount = computed(() => {
         aria-label="Deadline"
       >
         <option value="">Deadline</option>
-        <option value="7">Deadline: next 7 days</option>
-        <option value="30">Deadline: next 30 days</option>
+        <option value="7">Deadline: next 7 days{{ countText('closingWithin', '7') }}</option>
+        <option value="30">Deadline: next 30 days{{ countText('closingWithin', '30') }}</option>
       </select>
     </template>
 
@@ -163,9 +177,7 @@ const activeFilterCount = computed(() => {
       aria-label="Location"
     >
       <option value="">Location</option>
-      <option value="Singapore">Singapore</option>
-      <option value="Online">Online / remote</option>
-      <option value="Other">Elsewhere</option>
+      <option v-for="option in locationOptions" :key="option.value" :value="option.value">{{ option.label }}{{ countText('location', option.value) }}</option>
     </select>
 
     <button
@@ -173,7 +185,7 @@ const activeFilterCount = computed(() => {
       :class="paidOnly ? 'btn-light border-primary' : 'bg-white border'"
       @click="paidOnly = !paidOnly"
     >
-      Paid only
+      Paid only<span>{{ countText('paidOnly') }}</span>
     </button>
 
     <button class="btn btn-sm btn-link fw-semibold text-decoration-none" @click="$emit('clear')">Clear all</button>
