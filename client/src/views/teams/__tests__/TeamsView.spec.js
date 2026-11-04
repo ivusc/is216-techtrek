@@ -138,10 +138,10 @@ describe('TeamsView', () => {
     });
     const wrapper = await mountTeams();
 
-    expect(wrapper.findAll('nav .nav-link').map((tab) => tab.text())).toEqual([
-      'Browse teams 4',
-      'My teams 1',
-      'Requests 2',
+    expect(wrapper.findAll('[role="tab"]').map((tab) => tab.find('.tab-label').text() + ' ' + tab.find('.tab-count').text())).toEqual([
+      'Browse teams 4 recruiting',
+      'My teams 1 team',
+      'Requests 2 waiting',
     ]);
     expect(wrapper.find('.skills-label').text()).toBe('Skills: Any');
     expect(wrapper.text()).not.toContain('need your skills');
@@ -313,8 +313,20 @@ describe('TeamsView', () => {
     await dialogButton(wrapper, 'Delete post').trigger('click');
     await flushPromises();
 
+    // it asks first; Keep team goes back to the form and deletes nothing
+    expect(dialog(wrapper).find('h2').text()).toBe('Delete Night Owls?');
+    expect(dialog(wrapper).text()).toContain("It can't be undone.");
+    await dialogButton(wrapper, 'Keep team').trigger('click');
+    expect(mock.history.delete).toHaveLength(0);
+    expect(dialog(wrapper).find('h2').text()).toBe('Edit team post');
+
+    await dialogButton(wrapper, 'Delete post').trigger('click');
+    await dialogButton(wrapper, 'Delete team').trigger('click');
+    await flushPromises();
+
     expect(mock.history.delete[0].url).toBe('/teams/m1');
     expect(dialog(wrapper).exists()).toBe(false);
+    expect(wrapper.text()).toContain('You deleted Night Owls.');
   });
 
   it('edits a post while the event list is down without resending its close date', async () => {

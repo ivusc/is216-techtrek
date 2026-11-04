@@ -22,6 +22,7 @@ import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue'
 import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue'
 import LeaveTeamModal from '@/components/teams/LeaveTeamModal.vue'
+import DeleteTeamModal from '@/components/teams/DeleteTeamModal.vue'
 import InvitesBanner from '@/components/teams/InvitesBanner.vue'
 import { fetchMyInvites, answerInvite } from '@/services/teamService'
 import { isClosed } from '@/utils/opportunity'
@@ -173,6 +174,8 @@ const pendingSent = computed(() => sent.value.filter((request) => request.status
 
 // opened from an invite link (/teams?team=<id>): show that team's join form once the teams have loaded
 const teamFromLink = typeof route.query.team === 'string' ? route.query.team : ''
+// a link from an open role also says which role (&role=Designer), so the join form starts with it picked
+const linkRole = ref(typeof route.query.role === 'string' ? route.query.role : '')
 async function openTeamFromLink() {
   await loadAll()
   if (teamFromLink === '') return
@@ -338,7 +341,7 @@ function showRequestAccepted(request) {
   joinedToast.value = {
     key: request._id,
     title: 'Welcome aboard!',
-    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + (request.role ? ' as ' + request.role : '') + '.',
     left: personFrom(request.user),
     right: me()
   }
@@ -398,26 +401,46 @@ const submitTeam = async (post) => {
   isBusy.value = false
 }
 
-const removeTeam = async () => {
-  isBusy.value = true
-  modalError.value = ''
+// "Delete post" in the edit form asks first; Keep team goes back to the form
+const deletingTeam = ref(null)
+const deleteBusy = ref(false)
+const deleteError = ref('')
+
+function removeTeam() {
+  deletingTeam.value = editingTeam.value
+  deleteError.value = ''
+  showCreate.value = false
+}
+
+function keepTeam() {
+  deletingTeam.value = null
+  showCreate.value = true
+}
+
+async function confirmDelete() {
+  deleteBusy.value = true
+  deleteError.value = ''
   try {
-    await deleteTeam(editingTeam.value._id)
+    const name = deletingTeam.value.name
+    await deleteTeam(deletingTeam.value._id)
+    deletingTeam.value = null
     closeCreate()
+    leftMessage.value = 'You deleted ' + name + '.'
+    setTimeout(() => (leftMessage.value = ''), 5000)
     await loadAll(false)
   } catch (error) {
     console.error(error)
-    modalError.value = getErrorMessage(error)
+    deleteError.value = getErrorMessage(error)
   }
-  isBusy.value = false
+  deleteBusy.value = false
 }
 
-const answer = async (request, newStatus) => {
+const answer = async (request, newStatus, role) => {
   busyRequestId.value = request._id
   try {
-    await answerRequest(request._id, newStatus)
+    const answered = await answerRequest(request._id, newStatus, role)
     if (newStatus === 'accepted') {
-      showRequestAccepted(request)
+      showRequestAccepted({ ...request, role: answered?.role ?? role ?? request.role })
     }
     await loadAll(false)
   } catch (error) {
@@ -491,7 +514,7 @@ function openSkills() {
 // keep requests, invites and new teams up to date while the page is open: when the Requests or Browse tab
 // is opened, when the browser tab comes back into view, and every 20 seconds (skipped while a form is open)
 function refreshInBackground() {
-  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value || leavingTeam.value
+  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value || leavingTeam.value || deletingTeam.value
   if (document.visibilityState === 'visible' && !formOpen && !isLoading.value) {
     loadAll(false)
   }
@@ -630,6 +653,7 @@ onUnmounted(() => {
     <JoinRequestModal
       v-if="joinTarget"
       :team="joinTarget"
+      :initial-role="joinTarget._id === teamFromLink ? linkRole : ''"
       :my-skills="mySkills"
       :busy="isSending"
       :error="joinError"
@@ -680,6 +704,15 @@ onUnmounted(() => {
     />
 
     <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" @close="inviteTeam = null" />
+
+    <DeleteTeamModal
+      v-if="deletingTeam"
+      :team="deletingTeam"
+      :busy="deleteBusy"
+      :error="deleteError"
+      @close="keepTeam"
+      @confirm="confirmDelete"
+    />
 
     <LeaveTeamModal
       v-if="leavingTeam"

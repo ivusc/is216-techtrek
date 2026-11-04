@@ -2,12 +2,13 @@
 export function describeNotification(notification) {
   const who = notification.actorName || 'Someone'
   const team = notification.teamName || 'your team'
+  const asRole = notification.role ? ` as ${notification.role}` : ''
 
   switch (notification.type) {
     case 'request-received':
-      return { text: `${who} asked to join ${team}`, icon: 'bi-person-raised-hand', tone: 'primary', to: { path: '/teams', query: { tab: 'requests' } } }
+      return { text: `${who} asked to join ${team}${asRole}`, icon: 'bi-person-raised-hand', tone: 'primary', to: { path: '/teams', query: { tab: 'requests' } } }
     case 'request-accepted':
-      return { text: `You're in! ${who} accepted you into ${team}`, icon: 'bi-check-circle-fill', tone: 'success', to: { path: '/teams', query: { tab: 'mine' } } }
+      return { text: `You're in! ${who} accepted you into ${team}${asRole}`, icon: 'bi-check-circle-fill', tone: 'success', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'request-declined':
       return { text: `${team} can't take you this time`, icon: 'bi-x-circle', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } } }
     case 'invite-received':
@@ -17,7 +18,7 @@ export function describeNotification(notification) {
     case 'invite-declined':
       return { text: `${who} declined your invite to ${team}`, icon: 'bi-person-dash', tone: 'muted', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'member-joined':
-      return { text: `${who} joined ${team}`, icon: 'bi-people-fill', tone: 'success', to: { path: '/teams', query: { tab: 'mine' } } }
+      return { text: `${who} joined ${team}${asRole}`, icon: 'bi-people-fill', tone: 'success', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'member-left':
       return { text: `${who} left ${team}`, icon: 'bi-box-arrow-left', tone: 'warning', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'team-deleted':

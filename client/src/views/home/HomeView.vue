@@ -236,7 +236,7 @@ function showRequestAccepted(request) {
   joinedToast.value = {
     key: request._id,
     title: 'Welcome aboard!',
-    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + (request.role ? ' as ' + request.role : '') + '.',
     left: personFrom(request.user),
     right: me()
   }
@@ -265,6 +265,12 @@ async function respondToInvite(invite, status) {
     requestError.value = 'Could not answer the invite: ' + getErrorMessage(error)
   }
   busyRequestId.value = ''
+}
+
+// the role they asked for is no longer open (someone else filled it)
+function askedRoleTaken(request) {
+  const open = request.team?.openRoles ?? []
+  return open.length > 0 && Boolean(request.role) && !open.some((role) => role.toLowerCase() === request.role.toLowerCase())
 }
 
 async function respond(request, status) {
@@ -453,12 +459,21 @@ async function respond(request, status) {
                 <span class="fw-semibold">{{ getDisplayName(request.user).split('@')[0] }}</span>
                 wants to join <span class="fw-semibold">{{ request.team?.name }}</span>
               </p>
-              <span v-if="request.role" class="text-caption text-body-tertiary">{{ request.role }}</span>
+              <span v-if="request.role" class="text-caption text-body-tertiary">as {{ request.role }}</span>
             </div>
+            <!-- their role was filled by someone else: pick another one in the Requests inbox -->
+            <RouterLink
+              v-if="askedRoleTaken(request)"
+              :to="{ path: '/teams', query: { tab: 'requests' } }"
+              class="btn btn-sm btn-outline-primary fw-semibold text-nowrap"
+            >
+              Pick role
+            </RouterLink>
             <button
+              v-else
               class="btn btn-sm btn-primary"
               :disabled="busyRequestId === request._id"
-              aria-label="Accept request"
+              :aria-label="request.role ? 'Accept as ' + request.role : 'Accept request'"
               @click="respond(request, 'accepted')"
             >
               <i class="bi bi-check-lg"></i>

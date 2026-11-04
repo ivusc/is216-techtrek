@@ -102,7 +102,7 @@ describe('JoinRequestModal', () => {
     // the other open role still shows as an open circle
     await wrapper.findAll('[role="radio"]')[1].trigger('click');
     expect(wrapper.find('.is-you .person-role').text()).toBe('Designer');
-    expect(wrapper.find('[aria-label="Invite someone to be the Frontend developer"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="Ask to be the Frontend developer"]').exists()).toBe(true);
 
     await button(wrapper, 'Send request').trigger('click');
     expect(wrapper.emitted('submit')[0][0].role).toBe('Designer');
@@ -113,5 +113,31 @@ describe('JoinRequestModal', () => {
 
     expect(wrapper.findAll('[role="radio"]')).toHaveLength(1);
     expect(button(wrapper, 'Send request').attributes('disabled')).toBeUndefined();
+  });
+
+  it("starts with the role from a role's link, and lists each role once", () => {
+    const wrapper = mountModal({
+      team: team({ openRoles: ['Frontend developer', 'Marketing', 'Frontend Developer'] }),
+      initialRole: 'marketing',
+    });
+
+    expect(wrapper.findAll('[role="radio"]').map((choice) => choice.text())).toEqual(['Frontend developer', 'Marketing']);
+    expect(wrapper.find('[role="radio"][aria-checked="true"]').text()).toBe('Marketing');
+  });
+
+  it('picks a role by tapping its circle, and highlights my circle with it', async () => {
+    const wrapper = mountModal({ team: team({ openRoles: ['Data analyst', 'Frontend developer'] }) });
+
+    // before picking, every open role has its own circle and I'm not placed yet
+    expect(wrapper.find('.is-you').exists()).toBe(false);
+    expect(wrapper.findAll('[aria-label^="Ask to be the"]')).toHaveLength(2);
+    await wrapper.find('[aria-label="Ask to be the Frontend developer"]').trigger('click');
+
+    expect(wrapper.find('[role="radio"][aria-checked="true"]').text()).toBe('Frontend developer');
+    expect(wrapper.find('.is-you').classes()).toContain('is-chosen');
+    expect(wrapper.find('.is-you .person-role').text()).toBe('Frontend developer');
+    // no share box opens, and no other circle is highlighted
+    expect(wrapper.find('.share-panel').exists()).toBe(false);
+    expect(wrapper.findAll('.person.is-open')).toHaveLength(0);
   });
 });

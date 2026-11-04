@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { safeHttpUrl } from '@/utils/url'
-import { getDisplayName, getSchoolLine } from '@/utils/team'
+import { getDisplayName, getSchoolLine, uniqueRoles } from '@/utils/team'
 
 // the team as a row of profile circles: the lead (starred), the members with their roles, teammates
 // not on TechTrek, and the open spots. Click a member to see their profile, or an open spot to
@@ -16,7 +16,7 @@ const props = defineProps({
   roleError: { type: String, default: '' }
 })
 
-const emit = defineEmits(['invite', 'assign-role'])
+const emit = defineEmits(['invite', 'assign-role', 'pick-role'])
 
 const leaderId = computed(() => String(props.team.leader?._id ?? props.team.leader ?? ''))
 
@@ -30,18 +30,26 @@ const members = computed(() => {
 })
 
 const externalSpots = computed(() => Array.from({ length: props.team.externalMembers ?? 0 }, (_, index) => index))
+// in the request window I'm shown in a circle once I've picked a role (a team without open roles
+// shows me straight away). Until then every open role keeps its own circle to tap.
+const shownYou = computed(() => {
+  if (!props.you) return null
+  if ((props.team.openRoles ?? []).length > 0 && !props.you.role) return null
+  return props.you
+})
+
 // the roles still to fill; in the request window the role I picked is shown on me instead
 const rolesLeft = computed(() => {
   const roles = [...(props.team.openRoles ?? [])]
   const mine = String(props.you?.role ?? '').toLowerCase()
   const index = roles.findIndex((role) => role.toLowerCase() === mine)
-  if (props.you && index !== -1) roles.splice(index, 1)
+  if (shownYou.value && index !== -1) roles.splice(index, 1)
   return roles
 })
 
 // when I am shown in the first open spot, there is one fewer empty circle
 const openSpots = computed(() =>
-  Array.from({ length: Math.max(props.team.slotsOpen - (props.you ? 1 : 0), 0) }, (_, index) => ({
+  Array.from({ length: Math.max(props.team.slotsOpen - (shownYou.value ? 1 : 0), 0) }, (_, index) => ({
     index,
     role: rolesLeft.value[index] ?? null
   }))
@@ -65,6 +73,25 @@ function toggle(id) {
   const member = members.value.find((candidate) => candidate.user._id === id)
   roleDraft.value = member?.role ?? ''
 }
+
+// in the request window, tapping an open role picks it (I move into that circle);
+// anywhere else, an open spot opens the invite / share box
+function openSpotClicked(spot) {
+  if (props.you && spot.role) {
+    openId.value = null
+    emit('pick-role', spot.role)
+    return
+  }
+  toggle('share' + spot.index)
+}
+
+// picking a different role closes the share box, so only my circle is highlighted
+watch(
+  () => props.you?.role,
+  () => {
+    if (sharing.value) openId.value = null
+  }
+)
 
 // the lead gives the open member a role
 const isLeader = computed(() => props.team.isLeader === true)
@@ -98,7 +125,11 @@ watch(
 )
 
 // the Teams page opens the join form for ?team=<id>
-const teamLink = computed(() => window.location.origin + '/teams?team=' + props.team._id)
+// an open role's link also names the role, so the request window opens with it picked
+const teamLink = computed(() => {
+  const link = window.location.origin + '/teams?team=' + props.team._id
+  return sharingRole.value ? link + '&role=' + encodeURIComponent(sharingRole.value) : link
+})
 const copied = ref(false)
 
 async function copyLink() {
@@ -152,12 +183,12 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
       </div>
 
       <!-- request window: where I would go -->
-      <div v-if="you" class="person is-static is-you">
+      <div v-if="shownYou" class="person is-static is-you" :class="{ 'is-chosen': Boolean(shownYou.role) }">
         <span class="person-ring you-ring">
-          <UserAvatar :user-id="you.id ?? ''" :name="you.name ?? ''" :avatar-updated-at="you.avatarUpdatedAt ?? ''" :size="76" />
+          <UserAvatar :user-id="shownYou.id ?? ''" :name="shownYou.name ?? ''" :avatar-updated-at="shownYou.avatarUpdatedAt ?? ''" :size="76" />
         </span>
         <span class="person-name fw-semibold text-primary">You</span>
-        <span class="person-role text-caption text-body-secondary text-truncate">{{ you.role || 'Your spot' }}</span>
+        <span class="person-role text-caption text-body-secondary text-truncate">{{ shownYou.role || 'Your spot' }}</span>
       </div>
 
       <!-- empty spots: click to invite someone or share the team -->
@@ -167,9 +198,9 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
         type="button"
         class="person"
         :class="{ 'is-open': openId === 'share' + spot.index }"
-        :aria-expanded="openId === 'share' + spot.index"
-        :aria-label="spot.role ? 'Invite someone to be the ' + spot.role : 'Invite someone to this open spot'"
-        @click="toggle('share' + spot.index)"
+        :aria-expanded="you && spot.role ? undefined : openId === 'share' + spot.index"
+        :aria-label="you && spot.role ? 'Ask to be the ' + spot.role : spot.role ? 'Invite someone to be the ' + spot.role : 'Invite someone to this open spot'"
+        @click="openSpotClicked(spot)"
       >
         <span class="person-ring">
           <span class="spot spot-open rounded-circle d-flex align-items-center justify-content-center">
@@ -177,7 +208,7 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
           </span>
         </span>
         <span class="person-name spot-name fw-semibold text-primary">{{ spot.role ?? 'Open spot' }}</span>
-        <span class="person-role text-caption text-body-secondary">{{ spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
+        <span class="person-role text-caption text-body-secondary">{{ you && spot.role ? 'Tap to pick' : spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
       </button>
     </div>
 
@@ -214,7 +245,7 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
         <div v-if="(team.openRoles ?? []).length > 0" class="d-flex flex-wrap align-items-center gap-1 mt-2">
           <span class="text-caption text-body-tertiary">Give an open role:</span>
           <button
-            v-for="role in [...new Set(team.openRoles)]"
+            v-for="role in uniqueRoles(team.openRoles)"
             :key="role"
             type="button"
             class="btn btn-sm rounded-pill bg-primary-subtle border border-primary-subtle text-primary-emphasis py-0 px-2"
@@ -243,11 +274,12 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
     <!-- an open spot was clicked: invite by email (lead) and share the team's link (everyone) -->
     <div v-else-if="sharing" class="people-panel share-panel rounded-3 p-3">
       <p class="fw-semibold mb-1">
-        <template v-if="sharingRole">{{ canInvite ? 'Find your ' + sharingRole : 'Know a good ' + sharingRole + '?' }}</template>
+        <template v-if="sharingRole">{{ canInvite ? 'Fill the ' + sharingRole + ' role' : 'Know someone for ' + sharingRole + '?' }}</template>
         <template v-else>{{ canInvite ? 'Fill this spot' : 'Know someone for this spot?' }}</template>
       </p>
       <p class="small text-body-secondary mb-3">
-        Send them the team link. It opens {{ team.name }} on TechTrek so they can ask to join.
+        <template v-if="sharingRole">This link opens {{ team.name }} on TechTrek with {{ sharingRole }} already picked, so they can ask to join for it.</template>
+        <template v-else>Send them the team link. It opens {{ team.name }} on TechTrek so they can ask to join.</template>
       </p>
       <label :for="'team-link-' + team._id" class="visually-hidden">Team link</label>
       <div class="input-group">
@@ -262,6 +294,7 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
       </button>
     </div>
 
+    <p v-else-if="you && (team.openRoles ?? []).length > 0" class="small text-body-secondary mb-0">Tap a role to ask for it, or tap someone to see their profile.</p>
     <p v-else class="small text-body-secondary mb-0">Tap someone to see their profile, or an open spot to invite a friend.</p>
   </div>
 </template>
@@ -314,6 +347,14 @@ button.person:hover .person-ring {
 }
 
 /* me, in the spot I'm asking for: a dashed purple ring around my photo */
+/* the role I'm asking for: my circle gets the same solid ring and tint as a selected circle */
+.person.is-you.is-chosen {
+  background-color: var(--bs-primary-bg-subtle);
+}
+.person.is-you.is-chosen .you-ring {
+  border-style: solid;
+  box-shadow: 0 0 0 2px var(--bs-primary);
+}
 .you-ring {
   padding: 3px;
   border: 2px dashed var(--bs-primary);

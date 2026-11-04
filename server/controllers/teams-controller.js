@@ -417,10 +417,10 @@ async function createRequest(req, res) {
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
       request.status = 'accepted';
       await request.save();
-      await notificationService.notify({ userId: team.leaderId._id, type: 'member-joined', actor: user, team });
-      await notificationService.notify({ userId, type: 'request-accepted', actorId: team.leaderId._id, team });
+      await notificationService.notify({ userId: team.leaderId._id, type: 'member-joined', actor: user, team, role: askedRole });
+      await notificationService.notify({ userId, type: 'request-accepted', actorId: team.leaderId._id, team, role: askedRole });
     } else {
-      await notificationService.notify({ userId: team.leaderId._id, type: 'request-received', actor: user, team });
+      await notificationService.notify({ userId: team.leaderId._id, type: 'request-received', actor: user, team, role: askedRole });
     }
 
     res.status(201).json({ _id: request._id, status: request.status });
@@ -432,7 +432,8 @@ async function createRequest(req, res) {
 async function respondToRequest(req, res) {
   const { id: requestId } = req.params;
   const userId = req.session.user._id;
-  const { status } = req.body ?? {};
+  // role: the open role the lead accepts them into (defaults to the role they asked for)
+  const { status, role } = req.body ?? {};
   if (!ANSWER_STATUSES.includes(status)) {
     return res.status(400).json({ error: 'Status must be accepted or declined' });
   }
@@ -447,9 +448,17 @@ async function respondToRequest(req, res) {
       return res.status(409).json({ error: 'This team is already full' });
     }
 
+    let joinedAs = String(role ?? '').trim() || request.role;
+    if (status === 'accepted' && team.openRoles.length > 0) {
+      joinedAs = matchOpenRole(team, joinedAs);
+      if (!joinedAs) {
+        return res.status(400).json({ error: 'Pick one of the open roles: ' + team.openRoles.join(', ') });
+      }
+    }
+
     const answered = await TeamRequest.findOneAndUpdate(
       { _id: requestId, status: 'pending' },
-      { status },
+      status === 'accepted' ? { status, role: joinedAs } : { status },
       { returnDocument: 'after' },
     );
     if (!answered) return res.status(409).json({ error: 'This request has already been answered' });
@@ -466,9 +475,10 @@ async function respondToRequest(req, res) {
       type: status === 'accepted' ? 'request-accepted' : 'request-declined',
       actorId: userId,
       team,
+      role: status === 'accepted' ? answered.role : undefined,
     });
 
-    res.json({ _id: answered._id, status: answered.status });
+    res.json({ _id: answered._id, status: answered.status, role: answered.role });
   } catch (err) {
     handleError(res, err, 'Failed to answer request');
   }
@@ -536,7 +546,7 @@ async function getIncomingRequests(req, res) {
     const teamIds = await Team.find({ leaderId: userId }).distinct('_id');
     const requests = await TeamRequest.find({ teamId: { $in: teamIds }, kind: { $ne: 'invite' } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
-      .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
+      .populate({ path: 'teamId', select: 'name event openRoles', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));
@@ -550,7 +560,7 @@ async function getSentRequests(req, res) {
   try {
     const requests = await TeamRequest.find({ userId, kind: { $ne: 'invite' } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
-      .populate({ path: 'teamId', select: 'name event', options: { lean: true } })
+      .populate({ path: 'teamId', select: 'name event openRoles', options: { lean: true } })
       .sort('-createdAt');
 
     res.json(requests.filter((r) => r.userId && r.teamId).map(formatRequest));

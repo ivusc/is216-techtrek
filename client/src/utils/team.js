@@ -99,3 +99,14 @@ export function getClosesInDays(team) {
   }
   return Math.ceil((new Date(team.closesAt) - new Date()) / 86400000)
 }
+
+// each open role once, ignoring capitals ("Frontend developer" and "Frontend Developer" are one role)
+export function uniqueRoles(roles = []) {
+  const seen = new Set()
+  return roles.filter((role) => {
+    const key = role.trim().toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}

@@ -31,9 +31,9 @@ describe('RequestsPanel', () => {
     expect(buttons(wrapper, 'Accept')).toHaveLength(1);
     expect(buttons(wrapper, 'Decline')).toHaveLength(1);
     const [first, second] = wrapper.findAll('.card');
-    expect(first.text()).toContain('as Figma');
+    expect(first.text()).toContain('Asking to be Figma');
     expect(first.text()).toContain('“I can design the screens.”');
-    expect(second.text()).toContain('as Vue.js');
+    expect(second.text()).toContain('Joined as Vue.js');
     expect(second.text()).toContain('Accepted');
     expect(second.findAll('button').map((candidate) => candidate.text())).toEqual(['View profile']);
 
@@ -41,7 +41,7 @@ describe('RequestsPanel', () => {
     await buttons(wrapper, 'Decline')[0].trigger('click');
 
     expect(wrapper.emitted('answer')).toEqual([
-      [pending, 'accepted'],
+      [pending, 'accepted', undefined],
       [pending, 'declined'],
     ]);
   });
@@ -111,5 +111,26 @@ describe('RequestsPanel', () => {
     await buttons(wrapper, 'Edit team post')[0].trigger('click');
 
     expect(wrapper.emitted('edit-team')).toEqual([[led]]);
+  });
+
+  it('lets the lead pick which open role to accept someone into', async () => {
+    const request = joinRequest({ role: 'Designer', team: { ...joinRequest().team, openRoles: ['Frontend developer', 'Designer'] } });
+    const wrapper = mountPanel({ incoming: [request] });
+
+    expect(wrapper.text()).toContain('Asking to be Designer');
+    const accept = () => wrapper.findAll('button').find((b) => b.text().startsWith('Accept as'));
+    expect(accept().text()).toBe('Accept as Designer');
+
+    await wrapper.find('select').setValue('Frontend developer');
+    await accept().trigger('click');
+    expect(wrapper.emitted('answer')).toEqual([[request, 'accepted', 'Frontend developer']]);
+  });
+
+  it('says when the role they asked for has been filled and picks an open one', () => {
+    const request = joinRequest({ role: 'Designer', team: { ...joinRequest().team, openRoles: ['Backend developer'] } });
+    const wrapper = mountPanel({ incoming: [request] });
+
+    expect(wrapper.text()).toContain('Designer has been filled, so pick another open role for them.');
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Accept as Backend developer')).toBe(true);
   });
 });

@@ -84,6 +84,53 @@ describe('requests for an open role', () => {
   });
 });
 
+describe('the lead answering a request for a role', () => {
+  async function ask(member, teamId, role) {
+    return (await member.post(`/teams/${teamId}/requests`).send({ role }).expect(201)).body;
+  }
+
+  it('tells the lead which role was asked for, and the new member which role they got', async () => {
+    const { leader, member, team } = await setUp();
+    const request = await ask(member, team._id, 'Designer');
+
+    const { body: leadInbox } = await leader.get('/notifications').expect(200);
+    expect(leadInbox.notifications[0]).toMatchObject({ type: 'request-received', role: 'Designer' });
+    const { body: incoming } = await leader.get('/teams/requests/incoming').expect(200);
+    expect(incoming[0].team.openRoles).toEqual(['Frontend developer', 'Designer']);
+
+    const answered = await leader.patch(`/teams/requests/${request._id}`).send({ status: 'accepted' }).expect(200);
+    expect(answered.body).toEqual({ _id: request._id, status: 'accepted', role: 'Designer' });
+    const { body: memberInbox } = await member.get('/notifications').expect(200);
+    expect(memberInbox.notifications[0]).toMatchObject({ type: 'request-accepted', role: 'Designer' });
+  });
+
+  it('lets the lead accept someone into a different open role', async () => {
+    const { leader, member, team } = await setUp();
+    const request = await ask(member, team._id, 'Designer');
+
+    const { body } = await leader
+      .patch(`/teams/requests/${request._id}`)
+      .send({ status: 'accepted', role: 'frontend developer' })
+      .expect(200);
+
+    expect(body.role).toBe('Frontend developer');
+    const saved = await Team.findById(team._id);
+    expect(saved.members[1].role).toBe('Frontend developer');
+    expect(saved.openRoles).toEqual(['Designer']);
+  });
+
+  it('refuses a role that is not open and leaves the request pending', async () => {
+    const { leader, member, team } = await setUp();
+    const request = await ask(member, team._id, 'Designer');
+
+    const wrong = await leader.patch(`/teams/requests/${request._id}`).send({ status: 'accepted', role: 'Mascot' }).expect(400);
+
+    expect(wrong.body).toEqual({ error: 'Pick one of the open roles: Frontend developer, Designer' });
+    const { body: incoming } = await leader.get('/teams/requests/incoming').expect(200);
+    expect(incoming[0].status).toBe('pending');
+  });
+});
+
 describe('PATCH /teams/:id/members/:userId', () => {
   it('lets the lead give a member a role, fills a matching open role and tells them', async () => {
     const { leader, member, team } = await setUp();

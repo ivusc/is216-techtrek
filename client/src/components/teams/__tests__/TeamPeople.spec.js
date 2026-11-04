@@ -70,4 +70,17 @@ describe('TeamPeople', () => {
     await wrapper.find('.person').trigger('click');
     expect(wrapper.find('.role-editor').exists()).toBe(false);
   });
+
+  it('gives each open role its own link that names the role', async () => {
+    const wrapper = mountPeople({ openRoles: ['Pitch & business'] });
+    const base = window.location.origin + '/teams?team=' + wrapper.props('team')._id;
+
+    await wrapper.find('[aria-label="Invite someone to be the Pitch & business"]').trigger('click');
+    expect(wrapper.find('.share-panel input').element.value).toBe(base + '&role=Pitch%20%26%20business');
+    expect(wrapper.find('.share-panel').text()).toContain('Know someone for Pitch & business?');
+
+    // the open spot without a role keeps the plain team link
+    await wrapper.find('[aria-label="Invite someone to this open spot"]').trigger('click');
+    expect(wrapper.find('.share-panel input').element.value).toBe(base);
+  });
 });

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { formatDate } from '@/utils/date'
-import { getDisplayName, sameSkill } from '@/utils/team'
+import { getDisplayName, sameSkill, uniqueRoles } from '@/utils/team'
 import TeamModal from './TeamModal.vue'
 import TeamPeople from './TeamPeople.vue'
 import { useUserStore } from '@/store/user'
@@ -10,7 +10,9 @@ const props = defineProps({
   team: { type: Object, required: true },
   mySkills: { type: Array, default: () => [] },
   busy: { type: Boolean, default: false },
-  error: { type: String, default: '' }
+  error: { type: String, default: '' },
+  // opened from a role's link (/teams?team=<id>&role=<role>): start with that role picked
+  initialRole: { type: String, default: '' }
 })
 
 const emit = defineEmits(['close', 'submit'])
@@ -18,11 +20,13 @@ const emit = defineEmits(['close', 'submit'])
 const MAX_MESSAGE = 500
 
 // a team with open roles takes requests for one of those roles; otherwise pick a skill they want
-const openRoles = [...new Set(props.team.openRoles ?? [])]
+const openRoles = uniqueRoles(props.team.openRoles ?? [])
 const hasOpenRoles = openRoles.length > 0
 const choices = hasOpenRoles ? openRoles : props.team.skills
 
 function startingRole() {
+  const fromLink = choices.find((choice) => choice.toLowerCase() === props.initialRole.trim().toLowerCase())
+  if (fromLink) return fromLink
   if (hasOpenRoles) {
     // only one role going, or a role named after one of my skills
     if (openRoles.length === 1) return openRoles[0]
@@ -53,7 +57,7 @@ function send() {
   >
 
     <p class="small fw-semibold mb-2">Who's in the team</p>
-    <TeamPeople :team="team" :you="you" class="mb-4" />
+    <TeamPeople :team="team" :you="you" class="mb-4" @pick-role="role = $event" />
 
     <p v-if="choices.length === 0" class="small text-body-secondary mb-3">Anyone keen to join can ask. No particular skills needed.</p>
 

@@ -50,8 +50,10 @@ export async function fetchSentRequests() {
   return response.data;
 }
 
-export async function answerRequest(requestId, status) {
-  const response = await serverAPI.patch(BASE_URL + '/requests/' + requestId, { status });
+// role: the open role to accept them into (left out = the role they asked for)
+export async function answerRequest(requestId, status, role) {
+  const body = role ? { status, role } : { status };
+  const response = await serverAPI.patch(BASE_URL + '/requests/' + requestId, body);
   return response.data;
 }
 
