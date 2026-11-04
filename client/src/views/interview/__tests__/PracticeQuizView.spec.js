@@ -26,7 +26,6 @@ const SAVED_QUESTION = {
   question: 'Tell me about a trade-off you explained.',
   type: 'Behavioural',
   difficulty: 'Medium',
-  score: 6,
 };
 
 const FEEDBACK = {
