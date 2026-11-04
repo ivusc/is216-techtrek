@@ -22,6 +22,7 @@ import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue'
 import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue'
 import LeaveTeamModal from '@/components/teams/LeaveTeamModal.vue'
+import TeamLeftToast from '@/components/teams/TeamLeftToast.vue'
 import DeleteTeamModal from '@/components/teams/DeleteTeamModal.vue'
 import InvitesBanner from '@/components/teams/InvitesBanner.vue'
 import { fetchMyInvites, answerInvite } from '@/services/teamService'
@@ -455,6 +456,7 @@ const leavingTeam = ref(null)
 const leaveBusy = ref(false)
 const leaveError = ref('')
 const leftMessage = ref('')
+const leftToast = ref(null)
 
 function askToLeave(team) {
   leavingTeam.value = team
@@ -465,9 +467,14 @@ async function confirmLeave() {
   leaveBusy.value = true
   leaveError.value = ''
   try {
-    await leaveTeam(leavingTeam.value._id)
-    leftMessage.value = 'You left ' + leavingTeam.value.name + '.'
-    setTimeout(() => (leftMessage.value = ''), 5000)
+    const team = leavingTeam.value
+    await leaveTeam(team._id)
+    // the goodbye pop-up: me waving to the people still in the team, then out the door
+    leftToast.value = {
+      key: team._id + Date.now(),
+      teamName: team.name,
+      team: team.members.filter((member) => member.user._id !== auth._id).map((member) => personFrom(member.user))
+    }
     leavingTeam.value = null
     await loadAll(false)
   } catch (error) {
@@ -668,6 +675,15 @@ onUnmounted(() => {
       :busy="undoingId === sentToast.requestId"
       @undo="undoRequest(sentToast.requestId, sentToast.team)"
       @close="sentToast = null"
+    />
+
+    <TeamLeftToast
+      v-if="leftToast"
+      :key="leftToast.key"
+      :team-name="leftToast.teamName"
+      :me="me()"
+      :team="leftToast.team"
+      @close="leftToast = null"
     />
 
     <TeamJoinedToast

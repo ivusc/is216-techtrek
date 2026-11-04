@@ -5,7 +5,7 @@ import MockAdapter from 'axios-mock-adapter';
 import serverAPI from '@/services/serverAPI';
 import { useUserStore } from '@/store/user';
 import TeamsView from '@/views/teams/TeamsView.vue';
-import { ME, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
+import { ME, LEADER, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
 import { HACKATHONS } from '@/__tests__/fixtures/opportunities';
 
 const route = await vi.hoisted(async () => (await import('vue')).reactive({ query: {} }));
@@ -327,6 +327,24 @@ describe('TeamsView', () => {
     expect(mock.history.delete[0].url).toBe('/teams/m1');
     expect(dialog(wrapper).exists()).toBe(false);
     expect(wrapper.text()).toContain('You deleted Night Owls.');
+  });
+
+  it('says goodbye with the leaving animation after I leave a team', async () => {
+    const joined = team({ _id: 'j1', name: 'Byte Me', members: [{ user: LEADER, role: 'Team lead' }, { user: ME, role: 'Designer' }] });
+    mockLists({ mine: [joined] });
+    mock.onPost('/teams/j1/leave').reply(204);
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'My teams').trigger('click');
+    await button(wrapper, 'Leave team').trigger('click');
+    await dialogButton(wrapper, 'Leave team').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.post.at(-1).url).toBe('/teams/j1/leave');
+    const toast = wrapper.find('.left-toast');
+    expect(toast.text()).toContain('You left Byte Me.');
+    // the lead is shown staying behind, not me
+    expect(toast.findAll('.leave-teammate [title]').map((avatar) => avatar.attributes('title'))).toEqual(['Ivus Chua']);
   });
 
   it('edits a post while the event list is down without resending its close date', async () => {
