@@ -1,9 +1,12 @@
 <script setup>
 import { ref } from 'vue';
+import { useRoute } from 'vue-router';
 import LoginPanel from '@/components/login/LoginPanel.vue';
 import SignUpPanel from '@/components/login/SignUpPanel.vue';
 import BrandBanner from '@/components/login/BrandBanner.vue';
-const isLogin = ref(true);
+// /login?mode=signup (the landing page's Sign up buttons) opens on the Sign up tab
+const route = useRoute();
+const isLogin = ref(route?.query?.mode !== 'signup');
 
 // the 4 things TechTrek does, shown on the banner (same icons as the sidebar)
 const features = [
