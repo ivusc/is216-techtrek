@@ -8,6 +8,7 @@ import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vu
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
 import FindTeamPanel from '@/components/opportunities/FindTeamPanel.vue'
+import QuickPickDeck from '@/components/opportunities/QuickPickDeck.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
 import {
   getDaysLeft,
@@ -19,13 +20,18 @@ import {
 } from '@/utils/opportunity'
 import PageHeader from '@/components/PageHeader.vue'
 import { useOpportunityStore } from '@/store/opportunity'
+import { useUserStore } from '@/store/user'
 
 // the store holds the fetched opportunities and does all the server calls
 const opportunityStore = useOpportunityStore()
 const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, roleOptions, savedItems } =
   storeToRefs(opportunityStore)
 
+const userStore = useUserStore()
+
 const activeTab = ref('overview')
+// Quick pick: go through the results one big card at a time instead of the grid
+const quickPick = ref(false)
 
 // the home page search sends people here with ?search=...
 const search = ref(useRoute().query.search ?? '')
@@ -41,10 +47,11 @@ function plural(count, one, many) {
   return count + ' ' + (count === 1 ? one : many)
 }
 
+// counts follow the current search + filters (tabCounts, below)
 const tabs = computed(() => [
-  { key: 'overview', label: 'Overview', hint: 'Everything at a glance', icon: 'bi-grid-1x2-fill', count: plural(jobs.value.length + hackathons.value.length, 'listing', 'listings') },
-  { key: 'jobs', label: 'Jobs & internships', hint: 'Roles open for students', icon: 'bi-briefcase-fill', count: plural(jobs.value.length, 'role', 'roles') },
-  { key: 'hackathons', label: 'Hackathons', hint: 'Build, compete and win', icon: 'bi-trophy-fill', count: plural(hackathons.value.length, 'event', 'events') }
+  { key: 'overview', label: 'Overview', hint: 'Everything at a glance', icon: 'bi-grid-1x2-fill', count: plural(tabCounts.value.jobs + tabCounts.value.hackathons, 'listing', 'listings') },
+  { key: 'jobs', label: 'Jobs & internships', hint: 'Roles open for students', icon: 'bi-briefcase-fill', count: plural(tabCounts.value.jobs, 'role', 'roles') },
+  { key: 'hackathons', label: 'Hackathons', hint: 'Build, compete and win', icon: 'bi-trophy-fill', count: plural(tabCounts.value.hackathons, 'event', 'events') }
 ])
 
 const PAGE_SIZE = 9
@@ -94,19 +101,45 @@ const hackathonThemes = computed(() => {
   return Object.keys(counts).sort((a, b) => counts[b] - counts[a])
 })
 
-// true if the hackathon passes the Theme and Deadline filters (jobs are never checked here)
-function passesHackathonFilters(item) {
-  if (themeFilter.value !== '' && !item.themes.includes(themeFilter.value)) {
-    return false
+// true if the item passes the search box and the filters.
+// `override` tries other filter values without picking them, for the live counts on the filter chips
+function passesFilters(item, override = {}) {
+  const f = { location: locationFilter.value, paidOnly: paidOnly.value, theme: themeFilter.value, closingWithin: closingWithin.value, ...override }
+  if (keyword.value !== '') {
+    const text = (item.title + ' ' + item.organisation + ' ' + item.location).toLowerCase()
+    if (!text.includes(keyword.value)) return false
   }
-  if (closingWithin.value !== '') {
-    const days = getDaysLeft(item)
-    if (days === null || days < 0 || days > Number(closingWithin.value)) {
-      return false
+  if (f.location !== '' && getLocationGroup(item) !== f.location) return false
+  if (f.paidOnly && !isPaid(item)) return false
+  // Theme and Deadline only apply to hackathons
+  if (item.type === 'hackathon') {
+    if (f.theme !== '' && !item.themes.includes(f.theme)) return false
+    if (f.closingWithin !== '') {
+      const days = getDaysLeft(item)
+      if (days === null || days < 0 || days > Number(f.closingWithin)) return false
     }
   }
   return true
 }
+
+const keyword = computed(() => search.value.trim().toLowerCase())
+
+function countWith(items, override) {
+  return items.filter((item) => passesFilters(item, override)).length
+}
+
+// what each tab would show with the current search + filters
+const tabCounts = computed(() => ({ jobs: countWith(jobs.value), hackathons: countWith(hackathons.value) }))
+
+// how many results each filter choice would give on this tab, updates as you type
+const filterCounts = computed(() => {
+  const items = displayedItems.value
+  const counts = { location: {}, theme: {}, closingWithin: {}, paidOnly: countWith(items, { paidOnly: true }) }
+  for (const location of ['Singapore', 'Online', 'Other']) counts.location[location] = countWith(items, { location })
+  for (const theme of hackathonThemes.value) counts.theme[theme] = countWith(items, { theme })
+  for (const days of ['7', '30']) counts.closingWithin[days] = countWith(items, { closingWithin: days })
+  return counts
+})
 
 // details panel 
 function openDetails(item) {
@@ -119,27 +152,7 @@ function closeDetails() {
 
 // takes displayedItems, keeps only the ones that pass the search + filters, then sorts them
 const filteredItems = computed(() => {
-  const result = []
-  const keyword = search.value.trim().toLowerCase()
-
-  for (const item of displayedItems.value) {
-    if (keyword !== '') {
-      const text = (item.title + ' ' + item.organisation + ' ' + item.location).toLowerCase()
-      if (!text.includes(keyword)) {
-        continue // skip this item
-      }
-    }
-    if (locationFilter.value !== '' && getLocationGroup(item) !== locationFilter.value) {
-      continue
-    }
-    if (paidOnly.value && !isPaid(item)) {
-      continue
-    }
-    if (item.type === 'hackathon' && !passesHackathonFilters(item)) {
-      continue
-    }
-    result.push(item)
-  }
+  const result = displayedItems.value.filter((item) => passesFilters(item))
 
   if (sortBy.value === 'closing') {
     return sortByClosing(result)
@@ -276,19 +289,28 @@ const loadMore = async () => {
       v-model:location="locationFilter"
       v-model:paid-only="paidOnly"
       v-model:sort-by="sortBy"
+      :counts="filterCounts"
       @clear="clearAll"
     />
 
     <!-- results line, error, loading, nothing found -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-      <p v-if="!isLoading" class="text-body-tertiary mb-0">
+    <div v-if="!isLoading" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <p class="text-body-tertiary mb-0">
         <strong class="text-body">{{ filteredItems.length }} results</strong>
         <small v-if="closingThisWeek > 0"> · {{ closingThisWeek }} closing this week</small>
         <small v-if="lastUpdated !== ''"> · updated {{ lastUpdated }}</small>
       </p>
+      <button
+        class="btn btn-sm rounded-pill fw-semibold ms-auto"
+        :class="quickPick ? 'btn-primary' : 'btn-outline-primary'"
+        :aria-pressed="quickPick"
+        @click="quickPick = !quickPick"
+      >
+        <i class="bi bi-stack"></i> Quick pick
+      </button>
 
       <!-- grid / list toggle (tablets and up; phones are 1 card per row anyway) -->
-      <div class="btn-group bg-body-secondary rounded p-1 d-none d-md-inline-flex ms-auto">
+      <div class="btn-group bg-body-secondary rounded p-1 d-none d-md-inline-flex">
         <button
           class="btn btn-sm border-0 rounded-1"
           :class="viewMode === 'grid' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
@@ -325,6 +347,14 @@ const loadMore = async () => {
       ]"
     />
 
+    <QuickPickDeck
+      v-else-if="quickPick"
+      :items="filteredItems"
+      :my-skills="userStore.skills"
+      @close="quickPick = false"
+      @details="openDetails"
+    />
+
     <!-- Overview tab -->
     <template v-else-if="activeTab === 'overview'">
       <section
@@ -352,6 +382,7 @@ const loadMore = async () => {
           :view-mode="viewMode"
           :saved-items="savedItems"
           :team-counts="opportunityStore.teamCounts"
+          :my-skills="userStore.skills"
           @find-team="findTeamItem = $event"
           @details="openDetails"
           @toggle-save="opportunityStore.toggleSave"
@@ -368,6 +399,7 @@ const loadMore = async () => {
         :view-mode="viewMode"
         :saved-items="savedItems"
         :team-counts="opportunityStore.teamCounts"
+        :my-skills="userStore.skills"
         @find-team="findTeamItem = $event"
         @details="openDetails"
         @toggle-save="opportunityStore.toggleSave"

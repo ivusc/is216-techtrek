@@ -262,4 +262,48 @@ describe('OpportunitiesView', () => {
     expect(keydownListeners(added)).toHaveLength(3);
     expect(keydownListeners(removed)).toEqual(keydownListeners(added));
   });
+
+  it('shows live result counts on the tabs and filter chips', async () => {
+    serveBothSources();
+    const wrapper = await mountView();
+    await button(wrapper, 'Hackathons').trigger('click');
+    const optionText = (value) => wrapper.find(`select[aria-label="Location"] option[value="${value}"]`).text();
+
+    expect(optionText('Singapore')).toBe('Singapore · 2');
+    expect(optionText('Online')).toBe('Online / remote · 2');
+    expect(button(wrapper, 'Paid only').text()).toBe('Paid only · 3');
+
+    await wrapper.find('input[aria-label="Search opportunities"]').setValue('ai');
+    expect(wrapper.find('#opportunities-tab-hackathons .tab-count').text()).toBe('1 event');
+    expect(optionText('Online')).toBe('Online / remote · 1');
+    expect(optionText('Singapore')).toBe('Singapore · 0');
+  });
+
+  it('goes through open, untracked results one card at a time in Quick pick', async () => {
+    serveBothSources();
+    mock.onPost('/application').reply(201, { _id: 'a1', status: 'saved' });
+    const wrapper = await mountView();
+    await button(wrapper, 'Hackathons').trigger('click');
+    await button(wrapper, 'Quick pick').trigger('click');
+    const deckTitle = () => wrapper.find('.deck-title').text();
+
+    // Code for Climate has closed, so it is left out
+    expect(wrapper.text()).toContain('1 of 3');
+    expect(deckTitle()).toBe('Build for Good');
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    await nextTick();
+    expect(deckTitle()).toBe('AI Builders Challenge');
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    await flushPromises();
+    expect(mock.history.post).toHaveLength(1);
+    expect(deckTitle()).toBe('Campus Makers');
+
+    await button(wrapper, 'Skip').trigger('click');
+    expect(wrapper.text()).toContain('You saved 1 of 3 to your Tracker.');
+
+    await button(wrapper, 'Back to all results').trigger('click');
+    expect(titles(wrapper)).toHaveLength(4);
+  });
 });
