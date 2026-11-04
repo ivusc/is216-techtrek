@@ -35,3 +35,23 @@ export function canonicalSkill(skill) {
 export function sameSkill(a, b) {
   return skillKey(canonicalSkill(a)) === skillKey(canonicalSkill(b))
 }
+
+// whole-word search for a skill and its other spellings ("Vue.js" also finds "vue", "vuejs")
+function mentions(text, skill) {
+  const canonical = canonicalSkill(skill)
+  const spellings = [canonical, ...Object.keys(SKILL_ALIASES).filter((key) => SKILL_ALIASES[key] === canonical)]
+  return spellings.some((spelling) => {
+    const escaped = spelling.toLowerCase().replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+    return new RegExp('(^|[^a-z0-9])' + escaped + '($|[^a-z0-9])').test(text)
+  })
+}
+
+// the known skills a listing mentions, split into the ones in mySkills and the rest.
+// listings have no skills field, so we look in the title, description and themes.
+// ponytail: plain text matching, swap for a real skills field if the API ever sends one
+export function listingSkillMatch(item, mySkills, knownSkills) {
+  const text = [item.title, item.description, ...(item.themes ?? [])].join(' ').toLowerCase()
+  const have = mySkills.filter((skill) => mentions(text, skill))
+  const missing = knownSkills.filter((skill) => !have.some((mine) => sameSkill(mine, skill)) && mentions(text, skill))
+  return { have, missing }
+}

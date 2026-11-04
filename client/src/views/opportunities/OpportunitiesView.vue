@@ -8,6 +8,7 @@ import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vu
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
 import FindTeamPanel from '@/components/opportunities/FindTeamPanel.vue'
+import QuickPickDeck from '@/components/opportunities/QuickPickDeck.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
 import {
   getDaysLeft,
@@ -19,13 +20,18 @@ import {
 } from '@/utils/opportunity'
 import PageHeader from '@/components/PageHeader.vue'
 import { useOpportunityStore } from '@/store/opportunity'
+import { useUserStore } from '@/store/user'
 
 // the store holds the fetched opportunities and does all the server calls
 const opportunityStore = useOpportunityStore()
 const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, jobSector, sectorOptions, savedItems } =
   storeToRefs(opportunityStore)
 
+const userStore = useUserStore()
+
 const activeTab = ref('overview')
+// Quick pick: go through the results one big card at a time instead of the grid
+const quickPick = ref(false)
 
 // the home page search sends people here with ?search=...
 const search = ref(useRoute().query.search ?? '')
@@ -84,19 +90,45 @@ const hackathonThemes = computed(() => {
   return Object.keys(counts).sort((a, b) => counts[b] - counts[a])
 })
 
-// true if the hackathon passes the Theme and Deadline filters (jobs are never checked here)
-function passesHackathonFilters(item) {
-  if (themeFilter.value !== '' && !item.themes.includes(themeFilter.value)) {
-    return false
+// true if the item passes the search box and the filters.
+// `override` tries other filter values without picking them, for the live counts on the filter chips
+function passesFilters(item, override = {}) {
+  const f = { location: locationFilter.value, paidOnly: paidOnly.value, theme: themeFilter.value, closingWithin: closingWithin.value, ...override }
+  if (keyword.value !== '') {
+    const text = (item.title + ' ' + item.organisation + ' ' + item.location).toLowerCase()
+    if (!text.includes(keyword.value)) return false
   }
-  if (closingWithin.value !== '') {
-    const days = getDaysLeft(item)
-    if (days === null || days < 0 || days > Number(closingWithin.value)) {
-      return false
+  if (f.location !== '' && getLocationGroup(item) !== f.location) return false
+  if (f.paidOnly && !isPaid(item)) return false
+  // Theme and Deadline only apply to hackathons
+  if (item.type === 'hackathon') {
+    if (f.theme !== '' && !item.themes.includes(f.theme)) return false
+    if (f.closingWithin !== '') {
+      const days = getDaysLeft(item)
+      if (days === null || days < 0 || days > Number(f.closingWithin)) return false
     }
   }
   return true
 }
+
+const keyword = computed(() => search.value.trim().toLowerCase())
+
+function countWith(items, override) {
+  return items.filter((item) => passesFilters(item, override)).length
+}
+
+// what each tab would show with the current search + filters
+const tabCounts = computed(() => ({ jobs: countWith(jobs.value), hackathons: countWith(hackathons.value) }))
+
+// how many results each filter choice would give on this tab, updates as you type
+const filterCounts = computed(() => {
+  const items = displayedItems.value
+  const counts = { location: {}, theme: {}, closingWithin: {}, paidOnly: countWith(items, { paidOnly: true }) }
+  for (const location of ['Singapore', 'Online', 'Other']) counts.location[location] = countWith(items, { location })
+  for (const theme of hackathonThemes.value) counts.theme[theme] = countWith(items, { theme })
+  for (const days of ['7', '30']) counts.closingWithin[days] = countWith(items, { closingWithin: days })
+  return counts
+})
 
 // details panel 
 function openDetails(item) {
@@ -109,27 +141,7 @@ function closeDetails() {
 
 // takes displayedItems, keeps only the ones that pass the search + filters, then sorts them
 const filteredItems = computed(() => {
-  const result = []
-  const keyword = search.value.trim().toLowerCase()
-
-  for (const item of displayedItems.value) {
-    if (keyword !== '') {
-      const text = (item.title + ' ' + item.organisation + ' ' + item.location).toLowerCase()
-      if (!text.includes(keyword)) {
-        continue // skip this item
-      }
-    }
-    if (locationFilter.value !== '' && getLocationGroup(item) !== locationFilter.value) {
-      continue
-    }
-    if (paidOnly.value && !isPaid(item)) {
-      continue
-    }
-    if (item.type === 'hackathon' && !passesHackathonFilters(item)) {
-      continue
-    }
-    result.push(item)
-  }
+  const result = displayedItems.value.filter((item) => passesFilters(item))
 
   if (sortBy.value === 'closing') {
     return sortByClosing(result)
@@ -257,7 +269,7 @@ const loadMore = async () => {
     <OpportunityTabs
       v-model:tab="activeTab"
       v-model:view-mode="viewMode"
-      :counts="{ jobs: jobs.length, hackathons: hackathons.length }"
+      :counts="tabCounts"
     />
 
     <OpportunityFilters
@@ -272,15 +284,26 @@ const loadMore = async () => {
       v-model:location="locationFilter"
       v-model:paid-only="paidOnly"
       v-model:sort-by="sortBy"
+      :counts="filterCounts"
       @clear="clearAll"
     />
 
     <!-- results line, error, loading, nothing found -->
-    <p v-if="!isLoading" class="text-body-tertiary mb-3">
-      <strong class="text-body">{{ filteredItems.length }} results</strong>
-      <small v-if="closingThisWeek > 0"> · {{ closingThisWeek }} closing this week</small>
-      <small v-if="lastUpdated !== ''"> · updated {{ lastUpdated }}</small>
-    </p>
+    <div v-if="!isLoading" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <p class="text-body-tertiary mb-0">
+        <strong class="text-body">{{ filteredItems.length }} results</strong>
+        <small v-if="closingThisWeek > 0"> · {{ closingThisWeek }} closing this week</small>
+        <small v-if="lastUpdated !== ''"> · updated {{ lastUpdated }}</small>
+      </p>
+      <button
+        class="btn btn-sm rounded-pill fw-semibold ms-auto"
+        :class="quickPick ? 'btn-primary' : 'btn-outline-primary'"
+        :aria-pressed="quickPick"
+        @click="quickPick = !quickPick"
+      >
+        <i class="bi bi-stack"></i> Quick pick
+      </button>
+    </div>
 
     <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2" role="alert">
       {{ status }}
@@ -297,6 +320,14 @@ const loadMore = async () => {
         'Checking which deadlines are close…',
         'Almost there…',
       ]"
+    />
+
+    <QuickPickDeck
+      v-else-if="quickPick"
+      :items="filteredItems"
+      :my-skills="userStore.skills"
+      @close="quickPick = false"
+      @details="openDetails"
     />
 
     <!-- Overview tab -->
@@ -326,6 +357,7 @@ const loadMore = async () => {
           :view-mode="viewMode"
           :saved-items="savedItems"
           :team-counts="opportunityStore.teamCounts"
+          :my-skills="userStore.skills"
           @find-team="findTeamItem = $event"
           @details="openDetails"
           @toggle-save="opportunityStore.toggleSave"
@@ -342,6 +374,7 @@ const loadMore = async () => {
         :view-mode="viewMode"
         :saved-items="savedItems"
         :team-counts="opportunityStore.teamCounts"
+        :my-skills="userStore.skills"
         @find-team="findTeamItem = $event"
         @details="openDetails"
         @toggle-save="opportunityStore.toggleSave"
