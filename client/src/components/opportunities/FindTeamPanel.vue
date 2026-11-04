@@ -44,7 +44,7 @@ async function loadTeams() {
 
 onMounted(loadTeams)
 
-const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, requestSent, undoRequest } =
+const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, closeJoin, submitJoin, requestSent, undoRequest } =
   useJoinRequests(async () => {
     await loadTeams()
     opportunityStore.fetchTeamCounts()
