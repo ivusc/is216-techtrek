@@ -26,13 +26,13 @@ describe('opportunityService', () => {
       {},
     ],
     [
-      'fetchAllOpportunities sends the sector with its role',
-      () => fetchAllOpportunities({ sector: 'finance', type: '', field: 'audit' }),
+      'fetchAllOpportunities drops a sector and sends the role',
+      () => fetchAllOpportunities({ sector: 'finance', type: '', field: 'data' }),
       '/opportunity/all',
-      { sector: 'finance', field: 'audit' },
+      { field: 'data' },
     ],
     [
-      'fetchJobFilterOptions asks for the sectors and roles',
+      'fetchJobFilterOptions asks for the IT roles',
       () => fetchJobFilterOptions(),
       '/opportunity/job-filters',
       undefined,

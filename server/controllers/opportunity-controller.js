@@ -6,44 +6,38 @@ function handleError(res, err, fallback) {
 }
 
 // Returns an error message if type or field is not a known preset, otherwise null
-function validateJobFilters({ type, field, sector }) {
-  const { JOB_TYPES, SECTORS, DEFAULT_SECTOR } = opportunityService;
+function validateJobFilters({ type, field }) {
+  const { JOB_TYPES, JOB_FIELDS } = opportunityService;
 
   if (type && !Object.hasOwn(JOB_TYPES, type)) {
     return `type must be one of: ${Object.keys(JOB_TYPES).join(', ')}`;
   }
 
-  if (sector && !Object.hasOwn(SECTORS, sector)) {
-    return `sector must be one of: ${Object.keys(SECTORS).join(', ')}`;
-  }
-
-  // a role only makes sense inside its own sector
-  const roles = SECTORS[sector || DEFAULT_SECTOR].roles;
-  if (field && !Object.hasOwn(roles, field)) {
-    return `field must be one of: ${Object.keys(roles).join(', ') || '(none for this sector)'}`;
+  if (field && !Object.hasOwn(JOB_FIELDS, field)) {
+    return `field must be one of: ${Object.keys(JOB_FIELDS).join(', ')}`;
   }
 
   return null;
 }
 
-// GET /opportunity/job-filters - the sectors and their roles, for the Opportunities page dropdowns
+// GET /opportunity/job-filters - the IT roles, for the Opportunities page Role dropdown
 function fetchJobFilterOptions(req, res) {
   res.json(opportunityService.getJobFilterOptions());
 }
 
-// GET /jobs?sector=tech|finance|...|all&type=fulltime|intern&field=<a role of that sector>&page=2 (sector defaults to tech)
+// GET /jobs?type=fulltime|intern&field=frontend|backend|...&page=2 (always IT jobs)
 // type - omit for all IT jobs; field - omit for every tech field; page - omit for first page
 async function fetchJobs(req, res) {
-  const { type, field, page, sector } = req.query;
+  const { type, field, page } = req.query;
 
-  const filterError = validateJobFilters({ type, field, sector });
+  const filterError = validateJobFilters({ type, field });
 
   if (filterError) {
     return res.status(400).json({ error: filterError });
   }
 
   try {
-    const jobs = await opportunityService.getJobs({ type, field, page, sector });
+    const jobs = await opportunityService.getJobs({ type, field, page });
     res.json(jobs);
   } catch (err) {
     handleError(res, err, 'Failed to fetch jobs.');
@@ -60,18 +54,18 @@ async function fetchHackathons(req, res) {
   }
 }
 
-// GET /all?sector=finance&type=fulltime|intern&field=audit&page=2 (sector, type, field and page only apply to jobs)
+// GET /all?type=fulltime|intern&field=frontend&page=2 (type, field and page only apply to jobs)
 async function fetchAll(req, res) {
-  const { type, field, page, sector } = req.query;
+  const { type, field, page } = req.query;
 
-  const filterError = validateJobFilters({ type, field, sector });
+  const filterError = validateJobFilters({ type, field });
   if (filterError) {
     return res.status(400).json({ error: filterError });
   }
 
   // Fetch both at the same time; one failing should not block the other
   const [jobsResult, hackathonsResult] = await Promise.allSettled([
-    opportunityService.getJobs({ type, field, page, sector }),
+    opportunityService.getJobs({ type, field, page }),
     opportunityService.getHackathons(),
   ]);
 

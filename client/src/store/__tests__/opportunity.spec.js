@@ -33,7 +33,7 @@ describe('useOpportunityStore', () => {
 
     await store.fetchOpportunities();
 
-    expect(mock.history.get[0].params).toEqual({ sector: 'tech' });
+    expect(mock.history.get[0].params).toEqual({});
     expect(store.jobs).toEqual(jobs(2));
     expect(store.hackathons).toEqual(HACKATHONS);
     expect(store.savedItems).toEqual([{ key: 'adzuna-1', id: 'a1' }]);
@@ -94,20 +94,20 @@ describe('useOpportunityStore', () => {
 
     await store.fetchMoreJobs();
     expect(mock.history.get.map((config) => config.params)).toEqual([
-      { page: 1, sector: 'tech', type: 'intern' },
-      { page: 2, sector: 'tech', type: 'intern' },
-      { page: 1, sector: 'tech', type: 'intern' },
-      { page: 2, sector: 'tech', type: 'intern' },
+      { page: 1, type: 'intern' },
+      { page: 2, type: 'intern' },
+      { page: 1, type: 'intern' },
+      { page: 2, type: 'intern' },
     ]);
   });
 
   it('fetchMoreJobs appends new jobs only and stops when nothing new arrives', async () => {
     const [first, second, third] = jobs(3);
     mock
-      .onGet('/opportunity/jobs', { params: { page: 2, sector: 'tech' } })
+      .onGet('/opportunity/jobs', { params: { page: 2 } })
       .reply(200, { jobs: [second, third] });
     mock
-      .onGet('/opportunity/jobs', { params: { page: 3, sector: 'tech' } })
+      .onGet('/opportunity/jobs', { params: { page: 3 } })
       .reply(200, { jobs: [first] });
     const store = useOpportunityStore();
     store.jobs = [first, second];

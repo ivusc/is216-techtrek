@@ -6,12 +6,11 @@ const props = defineProps({
   tab: { type: String, required: true },
   // theme names found in the loaded hackathons, most common first
   themes: { type: Array, required: true },
-  // [{ key, label, roles: [{ key, label }] }] from the server
-  sectors: { type: Array, default: () => [] }
+  // [{ key, label }] IT roles from the server
+  roles: { type: Array, default: () => [] }
 })
 
 // job filters (sent to the server)
-const jobSector = defineModel('jobSector', { type: String, required: true })
 const jobField = defineModel('jobField', { type: String, required: true })
 const jobType = defineModel('jobType', { type: String, required: true })
 // hackathon filters (done in the browser, the hackathon list is small)
@@ -31,17 +30,8 @@ const showHackathonFilters = computed(() => props.tab === 'hackathons')
 
 // filters picked on the Jobs / Hackathons tab keep applying on the Overview tab, so say so there
 const hasTabFilters = computed(() => {
-  return jobSector.value !== 'tech' || jobField.value !== '' || jobType.value !== '' || theme.value !== '' || closingWithin.value !== ''
+  return jobField.value !== '' || jobType.value !== '' || theme.value !== '' || closingWithin.value !== ''
 })
-
-// the roles of the chosen sector (they come from the server's opportunity-service)
-const roleOptions = computed(() => props.sectors.find((sector) => sector.key === jobSector.value)?.roles ?? [])
-
-// a new sector has different roles, so clear the role at the same time (the jobs then reload once)
-function chooseSector(value) {
-  jobField.value = ''
-  jobSector.value = value
-}
 
 const sortOptions = [
   { value: 'closing', label: 'Closing soonest' },
@@ -55,9 +45,6 @@ const showFilters = ref(false)
 // shown on the "Filters" button
 const activeFilterCount = computed(() => {
   let count = 0
-  if (jobSector.value !== 'tech') {
-    count++
-  }
   for (const value of [jobField.value, jobType.value, theme.value, closingWithin.value, location.value]) {
     if (value !== '') {
       count++
@@ -98,25 +85,14 @@ const activeFilterCount = computed(() => {
     <!-- jobs tab only -->
     <template v-if="showJobFilters">
       <select
-        :value="jobSector"
-        class="form-select form-select-sm rounded-pill w-auto"
-        :class="{ 'bg-primary-subtle border-primary text-primary-emphasis': jobSector !== 'tech' }"
-        aria-label="Sector"
-        @change="chooseSector($event.target.value)"
-      >
-        <option v-if="sectors.length === 0" value="tech">Sector: Tech</option>
-        <option v-for="sector in sectors" :key="sector.key" :value="sector.key">Sector: {{ sector.label }}</option>
-      </select>
-
-      <select
-        v-if="roleOptions.length > 0"
+        v-if="roles.length > 0"
         v-model="jobField"
         class="form-select form-select-sm rounded-pill w-auto"
         :class="{ 'bg-primary-subtle border-primary text-primary-emphasis': jobField !== '' }"
         aria-label="Role"
       >
         <option value="">Role: Any</option>
-        <option v-for="option in roleOptions" :key="option.key" :value="option.key">Role: {{ option.label }}</option>
+        <option v-for="option in roles" :key="option.key" :value="option.key">Role: {{ option.label }}</option>
       </select>
 
       <select

@@ -180,7 +180,7 @@ describe('OpportunitiesView', () => {
     await flushPromises();
 
     expect(jobRequests()).toHaveLength(1);
-    expect(jobRequests()[0].params).toEqual({ page: 2, sector: 'tech' });
+    expect(jobRequests()[0].params).toEqual({ page: 2 });
     expect(titles(wrapper)).toHaveLength(25);
   });
 
