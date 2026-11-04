@@ -73,8 +73,9 @@ for (const [device, size] of Object.entries(DEVICES)) {
       await form.getByRole('button', { name: 'Log in' }).click();
       await page.waitForURL((url) => url.pathname === '/home');
 
-      // every response renews the session cookie, so let the dashboard's requests finish first
-      await page.waitForLoadState('networkidle');
+      // every response renews the session cookie, so leave the dashboard first: that cancels its
+      // in-flight requests, and none of them can set the cookie again after it is cleared
+      await page.goto('about:blank');
       await page.context().clearCookies();
       await page.goto('/login');
 
