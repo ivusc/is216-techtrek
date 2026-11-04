@@ -1,0 +1,329 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+// TechTrek theme: Bootstrap 5.3 overrides generated from the Figma "🎨 Design System" page.
+// Source: figma.com/design/2o6lq5VUBR1h1QyCEDWGaN/techtrek (node 0:1).
+
+html,
+body {
+  overscroll-behavior: none;
+}
+
+
+// ─── 1. Brand tokens ──────────────────────────────────────────────────────
+$tt-primary:       #5b3fe4; // brand/primary (purple)
+$tt-primary-dark:  #4a2fcc; // brand/primary-dark (hover)
+$tt-secondary:     #38b2e8; // brand/secondary (sky blue, in place of the lime)
+$tt-cream:         #f3f2f8; // page background: soft lilac-grey so white cards stand out
+$tt-peach:         #dcf1fb; // light sky panel (hackathon chips, practice card)
+$tt-accent:        #ef5d7a; // rose: urgency + max one CTA per screen
+$tt-accent-text:   #b3304c; // rose-dark
+
+$tt-text:          #1c1a3d; // text/primary (deep navy)
+$tt-text-secondary:#46445f; // text/secondary (8.6:1 on white)
+$tt-text-muted:    #67657f; // text/muted (5.6:1 on white, 5.1:1 on the page)
+
+// ─── 2. Bootstrap Sass overrides (must come before the import) ────────────
+// Theme colours
+$primary:   $tt-primary;
+$info:      $tt-secondary;
+$danger:    $tt-accent;
+$dark:      #1c1a3d;       // bg/inverse
+// Not in the design: $success and $warning keep Bootstrap defaults (green, yellow).
+
+$color-contrast-dark: $tt-text; // dark text on light/auto-contrast components is navy, not black
+
+// Surfaces, text, borders
+$body-bg:                 $tt-cream;   // bg/page
+$body-color:              $tt-text;
+$body-secondary-color:    $tt-text-secondary;
+$body-tertiary-color:     $tt-text-muted;
+$body-secondary-bg:       #ebeaf3;     // bg/subtle (segmented controls, columns, tiles)
+$body-tertiary-bg:        #ffffff;     // bg/surface
+$border-color:            #dddbe9;     // border/default: visible on white and on the page
+$border-color-translucent:#c9c7da;     // border/strong (inputs)
+
+// Subtle backgrounds + emphasis text (used by badges, alerts)
+$primary-bg-subtle:    #eeebfd;        // lavender
+$info-bg-subtle:       #dcf1fb;        // light sky
+$warning-bg-subtle:    #fff4e0;
+$danger-bg-subtle:     #fde6ec;        // rose-subtle
+$primary-text-emphasis:$tt-primary-dark;
+$danger-text-emphasis: $tt-accent-text;
+
+// Links
+$link-color:       $tt-primary;
+$link-hover-color: $tt-primary-dark;
+
+// Typography: Inter body, Plus Jakarta Sans headings
+$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+$font-size-base:         1rem;         // 16px body: easier to read
+$line-height-base:       1.55;
+$small-font-size:        .875em;       // 14px
+$badge-font-size:        .8125rem;     // 13px badges and tags (Bootstrap's .75em was 12px or less)
+$badge-font-weight:      600;
+$badge-padding-y:        .3em;
+$badge-padding-x:        .7em;
+
+$headings-font-family: 'Plus Jakarta Sans', $font-family-sans-serif;
+$headings-font-weight: 700;
+$headings-color:       $tt-text;
+$h1-font-size: 1.875rem;               // 30px
+$h2-font-size: 1.375rem;               // 22px
+$h3-font-size: 1.125rem;               // 18px
+$h4-font-size: 1rem;                   // 16px
+$h5-font-size: .9375rem;               // not in design
+$h6-font-size: .8125rem;               // not in design
+
+$display-font-family: $headings-font-family;
+$display-font-weight: 800;
+$display-line-height: 1.18;            // 52 / 44
+$display-font-sizes: (
+  1: 2.75rem,                          // Display 44px
+  2: 2.5rem,
+  3: 2.25rem,
+  4: 2rem,
+  5: 1.75rem,
+  6: 1.5rem
+);
+
+// Radius: controls md, cards lg, chips pill
+$border-radius-sm:   .375rem;          // 6px
+$border-radius:      .625rem;          // 10px
+$border-radius-lg:   .75rem;           // 12px
+$border-radius-pill: 999px;
+
+// Shadows
+$box-shadow-sm: 0 1px 2px rgba(28, 26, 61, .06), 0 4px 12px -2px rgba(28, 26, 61, .07); // cards: lifted off the page
+$box-shadow:    0 2px 4px rgba(28, 26, 61, .06), 0 12px 28px -6px rgba(91, 63, 228, .22); // hovered cards, dropdowns
+$box-shadow-lg: 0 24px 48px rgba(28, 26, 61, .18);                                  // modals, drawers
+
+// Spacing: design uses Bootstrap's default $spacers (4/8/16/24/48px); no override needed.
+
+// Components
+$card-bg:            var(--tt-surface);
+$card-border-color:  $border-color;
+$card-border-radius: $border-radius-lg;
+$modal-content-bg:   var(--tt-surface);
+$modal-content-border-radius: $border-radius-lg;
+$dropdown-bg:        var(--tt-surface);
+$input-bg:           var(--tt-surface);
+$input-border-color: $border-color-translucent;
+$input-focus-border-color: $tt-primary;
+$input-focus-box-shadow:   0 0 0 1px $tt-primary; // with the 1px border = "2px primary border" focus, no layout shift
+$form-select-focus-box-shadow: $input-focus-box-shadow;
+$form-check-input-focus-box-shadow: 0 0 0 .2rem rgba($tt-primary, .25);
+$nav-underline-link-active-color: $tt-primary;
+
+// Dark mode (Bootstrap colour modes: <html data-bs-theme="dark">). Same hues, deep navy surfaces.
+$body-bg-dark:                 #121120;
+$body-color-dark:              #e8e7f2;
+$body-secondary-color-dark:    #b8b6cc;
+$body-tertiary-color-dark:     #9a98b0;
+$body-secondary-bg-dark:       #2e2c47;
+$body-tertiary-bg-dark:        #232139;
+$border-color-dark:            #302e48;
+$border-color-translucent-dark:#45435e;
+$headings-color-dark:          #f3f2fa;
+$tt-primary-dark-mode:         #7b63f6; // white text 4.2:1 (fine for the bold button labels)
+$tt-primary-dark-mode-hover:   #8c77ff;
+$link-color-dark:              #a594ff;
+$link-hover-color-dark:        #c2b7ff;
+$primary-bg-subtle-dark:       #2a2452;
+$info-bg-subtle-dark:          #12334a;
+$warning-bg-subtle-dark:       #3a2c12;
+$danger-bg-subtle-dark:        #40202b;
+$primary-text-emphasis-dark:   #c2b7ff;
+$info-text-emphasis-dark:      #8fd4f3;
+$danger-text-emphasis-dark:    #ff9fb3;
+
+@import 'bootstrap/scss/bootstrap';
+
+// ─── 3. App CSS variables (things Bootstrap has no variable for) ─────────
+:root {
+  --tt-cream:       #{$tt-cream};
+  --tt-peach:       #{$tt-peach};
+  --tt-accent:      #{$tt-accent};
+  --tt-accent-text: #{$tt-accent-text};
+  --bs-primary-hover: #{$tt-primary-dark};
+  --tt-sky:         #{$tt-secondary};
+  --tt-sky-subtle:  #{$info-bg-subtle};
+  --tt-lavender:    #{$primary-bg-subtle};
+  --tt-surface-subtle: #{$body-secondary-bg};
+  --tt-surface:     #ffffff;     // cards, modals, inputs, white panels
+  --tt-card-header: #f8f7fc;
+
+  // Tracker status (column dots, badges, calendar events)
+  --tt-status-saved:     #{$tt-text-muted};
+  --tt-status-applied:   #{$tt-primary};
+  --tt-status-interview: #f0a24a;
+  --tt-status-offer:     #{$tt-secondary};
+  --tt-status-rejected:  #{$tt-accent};
+  // hackathon steps
+  --tt-status-registered: #{$tt-primary};
+  --tt-status-team:       #c58bd6;
+  --tt-status-submitted:  #f0a24a;
+  --tt-status-results:    #{$tt-secondary};
+}
+
+[data-bs-theme="dark"] {
+  --tt-surface:        #{$body-tertiary-bg-dark};
+  --tt-card-header:    #2a2842;
+  --tt-cream:          #{$body-bg-dark};
+  --tt-peach:          #{$info-bg-subtle-dark};
+  --tt-sky-subtle:     #{$info-bg-subtle-dark};
+  --tt-lavender:       #{$primary-bg-subtle-dark};
+  --tt-surface-subtle: #{$body-secondary-bg-dark};
+  --tt-accent-text:    #{$danger-text-emphasis-dark};
+  color-scheme: dark;
+
+  // .bg-white is used as "surface" all over the templates
+  .bg-white { background-color: var(--tt-surface) !important; }
+  .btn-light {
+    --bs-btn-bg: var(--bs-primary-bg-subtle);
+    --bs-btn-border-color: var(--bs-primary-bg-subtle);
+    --bs-btn-color: var(--bs-primary-text-emphasis);
+    --bs-btn-hover-bg: #342d63;
+    --bs-btn-hover-border-color: #342d63;
+    --bs-btn-hover-color: var(--bs-primary-text-emphasis);
+    --bs-btn-active-bg: #342d63;
+    --bs-btn-active-color: var(--bs-primary-text-emphasis);
+  }
+  .btn-outline-primary { --bs-btn-color: #{$link-color-dark}; }
+  .text-primary { color: #{$link-color-dark} !important; }
+  // no borders on dark cards: the lighter surface does the separating
+  .card { border-color: transparent; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+  .card-header { border-bottom-color: transparent; }
+
+  // brand purple, lifted so it doesn't sink into the navy background
+  --bs-primary:     #{$tt-primary-dark-mode};
+  --bs-primary-rgb: #{to-rgb($tt-primary-dark-mode)};
+  --bs-primary-hover: #{$tt-primary-dark-mode-hover};
+  .btn-primary {
+    --bs-btn-bg: #{$tt-primary-dark-mode};
+    --bs-btn-border-color: #{$tt-primary-dark-mode};
+    --bs-btn-hover-bg: #{$tt-primary-dark-mode-hover};
+    --bs-btn-hover-border-color: #{$tt-primary-dark-mode-hover};
+    --bs-btn-active-bg: #{$tt-primary-dark-mode-hover};
+    --bs-btn-active-border-color: #{$tt-primary-dark-mode-hover};
+    --bs-btn-disabled-bg: #{$tt-primary-dark-mode};
+    --bs-btn-disabled-border-color: #{$tt-primary-dark-mode};
+  }
+  .btn-outline-primary {
+    --bs-btn-border-color: #{$tt-primary-dark-mode};
+    --bs-btn-hover-bg: #{$tt-primary-dark-mode};
+    --bs-btn-hover-border-color: #{$tt-primary-dark-mode};
+    --bs-btn-active-bg: #{$tt-primary-dark-mode};
+  }
+}
+
+// ─── 4. Component rules the Sass variables can't express ─────────────────
+// Buttons. Primary text is forced white so it never flips to navy.
+.btn-primary {
+  @include button-variant(
+    $tt-primary, $tt-primary,
+    $color: $white,
+    $hover-background: $tt-primary-dark, $hover-border: $tt-primary-dark, $hover-color: $white,
+    $active-background: $tt-primary-dark, $active-border: $tt-primary-dark, $active-color: $white,
+    $disabled-color: $white
+  );
+}
+// Rose CTA, max one per screen. Navy text so it stays readable.
+.btn-tt-accent {
+  @include button-variant($tt-accent, $tt-accent, $color: $tt-text, $hover-color: $tt-text, $active-color: $tt-text);
+}
+// Light button = primary-subtle background with primary text
+.btn-light {
+  @include button-variant(
+    $primary-bg-subtle, $primary-bg-subtle,
+    $color: $tt-primary-dark,
+    $hover-background: shade-color($primary-bg-subtle, 5%), $hover-border: shade-color($primary-bg-subtle, 5%), $hover-color: $tt-primary-dark
+  );
+}
+.btn-outline-primary {
+  @include button-outline-variant($tt-primary, $color-hover: $white, $active-background: $tt-primary);
+}
+
+// Utility classes for the extra brand colours
+.bg-tt-accent   { background-color: var(--tt-accent) !important; }
+.bg-tt-peach    { background-color: var(--tt-peach) !important; }
+.text-tt-accent { color: var(--tt-accent-text) !important; } // coral-dark: readable on cream/white
+
+// Shadows: Bootstrap only applies these when $enable-shadows is on, which also adds
+// inset shadows to buttons and inputs. Apply them directly instead.
+.card          { box-shadow: $box-shadow-sm; }
+// cards you can click: lift a little on hover, press down on click, ring on keyboard focus
+.card-hover {
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: $box-shadow;
+  border-color: rgba($tt-primary, .55);
+}
+.card-hover:active {
+  transform: translateY(-1px) scale(.995);
+  transition-duration: .08s;
+}
+.card-hover:focus-visible {
+  outline: 2px solid $tt-primary;
+  outline-offset: 2px;
+}
+// rows inside a card (e.g. upcoming deadlines): a soft background on hover instead of a lift
+.row-hover {
+  cursor: pointer;
+  border-radius: $border-radius;
+  transition: background-color .15s ease;
+}
+.row-hover:hover {
+  background-color: rgba($tt-primary, .06);
+}
+// phones: no lift, so a tapped card doesn't stay "lifted"
+@media (hover: none) {
+  .card-hover:hover { transform: none; box-shadow: $box-shadow-sm; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-hover, .card-hover:hover, .card-hover:active { transform: none; transition: none; }
+}
+.dropdown-menu { box-shadow: $box-shadow; }
+.modal-content { box-shadow: $box-shadow-lg; }
+
+// Type scale details: heading weights, line heights, tracking
+h1, .h1 { line-height: 38px; letter-spacing: -1px; }
+h2, .h2 { line-height: 30px; letter-spacing: -.5px; }
+h3, .h3 { line-height: 26px; letter-spacing: -.25px; font-weight: 600; }
+h4, .h4 { line-height: 22px; font-weight: 600; }
+.display-1 { letter-spacing: -1.5px; }
+
+// Extra text styles from the design
+.text-stat     { font-family: $headings-font-family; font-size: 2rem; font-weight: 800; line-height: 38px; letter-spacing: -1px; }
+.text-caption  { font-size: .8125rem; font-weight: 500; line-height: 18px; } // 13px: the smallest text on the site
+.text-overline { font-size: .8125rem; font-weight: 600; line-height: 18px; letter-spacing: .04em; }
+
+// Line clamp helpers (.line-clamp-1 … .line-clamp-5).
+// Not done via $utilities: the utilities API can only set one property per class.
+@for $i from 1 through 5 {
+  .line-clamp-#{$i} {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: $i;
+    line-clamp: $i;
+    overflow: hidden;
+  }
+}
+
+// ─── 5. Dashboard look (soft page, white bordered cards, light card headers) ───
+.card { border: 1px solid $border-color; }
+.card-header {
+  background-color: var(--tt-card-header);
+  border-bottom-color: $border-color;
+}
+// headings inside cards read as headings, not body text
+.card .card-title { color: var(--bs-heading-color); font-weight: 600; }
+
+// browser surfaces in the theme colours
+::selection { background-color: rgba($tt-primary, .2); color: var(--bs-body-color); }
+:focus-visible { outline-color: $tt-primary; }
+html { accent-color: $tt-primary; scrollbar-color: var(--bs-border-color-translucent) transparent; }
+a { text-underline-offset: .18em; }
+.text-stat, .tabular { font-variant-numeric: tabular-nums; }

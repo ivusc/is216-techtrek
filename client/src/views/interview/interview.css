@@ -1,0 +1,20 @@
+.interview-card {
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: none;
+}
+
+.interview-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
+}
+
+.interview-empty {
+  max-width: 640px;
+  min-height: 60vh;
+}
+
+.interview-question {
+  flex: 1 1 20rem;
+  min-width: 0;
+}

@@ -1,0 +1,88 @@
+/* dashboard (home page) */
+.home-stat-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+.deadline-row + .deadline-row {
+  border-top: 1px solid var(--bs-border-color);
+}
+
+.date-tile {
+  width: 48px;
+  height: 52px;
+  line-height: 1.1;
+}
+
+.status-dot-home {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+}
+
+.days-left {
+  min-width: 80px;
+}
+
+.request-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.practice-card {
+  background-color: var(--tt-peach);
+}
+
+.home-stat-card {
+  padding: 12px 16px;
+}
+
+/* long lists (deadlines, team requests) scroll inside their card instead of making the page very long */
+.scroll-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* fit the whole dashboard on one screen on a laptop or bigger that is tall enough for it.
+   Shorter windows (or zoomed-in browsers) scroll like a normal page, so no card gets squashed. */
+@media (min-width: 992px) and (min-height: 800px) {
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 3rem); /* the screen minus <main>'s top and bottom padding */
+  }
+  .dashboard-body {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* if a column still runs out of room, it scrolls inside itself rather than squashing its cards */
+  .dashboard-col {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  /* these cards take the space that is left, and their list scrolls inside them,
+     but never get smaller than the title plus a couple of rows */
+  .fill-card {
+    flex: 1 1 auto;
+    min-height: 120px;
+  }
+  .scroll-list {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+}
+
+/* Team requests card: always tall enough to show one whole request or invite
+   (names, event and note) before its list starts scrolling */
+@media (min-width: 992px) and (min-height: 800px) {
+  .requests-card {
+    min-height: 164px; /* title + one whole request or invite + padding */
+  }
+  .requests-card .scroll-list > * {
+    flex-shrink: 0;
+  }
+}

@@ -1,0 +1,330 @@
+.kanban-column {
+  flex: 1 0 0;
+  min-width: 210px;
+  overflow-y: auto; /* the column scrolls when its cards overflow */
+  padding: 10px;
+  gap: 10px;
+  border-radius: 14px;
+}
+
+/* cards keep their height instead of shrinking when the column is full */
+.kanban-column > * {
+  flex-shrink: 0;
+}
+
+/* the board only scrolls sideways when 5 columns don't fit; columns scroll vertically */
+.kanban-board {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kanban-card {
+  padding: 14px;
+  gap: 10px;
+  border-radius: 12px;
+  cursor: grab;
+}
+
+.kanban-card.is-rejected {
+  opacity: 0.6;
+}
+
+.org-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+
+.add-dashed {
+  border: 1px dashed var(--bs-border-color-translucent);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.chip {
+  border: 1px solid var(--bs-border-color-translucent);
+  padding: 7px 12px 7px 14px;
+  font-weight: 500;
+}
+
+/* 44px tall like the design: 9 + 24 line height + 9 + 2px border */
+.btn-cta {
+  padding: 9px 18px;
+}
+
+.icon-14 {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.icon-16 {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.application-modal {
+  max-width: min(680px, calc(100% - 2 * var(--bs-modal-margin)));
+}
+
+.application-modal .modal-content {
+  border: 0;
+  border-radius: 20px;
+  overflow: hidden; /* keeps the footer background inside the rounded corners */
+}
+
+.application-modal .modal-header {
+  padding: 24px 28px;
+}
+
+.application-modal .modal-body {
+  padding: 24px 28px;
+  gap: 20px;
+}
+
+.application-modal .modal-footer {
+  --bs-modal-footer-gap: 10px;
+  padding: 16px 28px;
+  border-top: 0;
+  flex-wrap: nowrap; /* Delete, Cancel and Save stay on one row on phones */
+}
+
+.modal-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.modal-close-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* 48px tall fields; only the left padding changes so .form-select keeps room for its arrow */
+.field-lg {
+  padding-top: 11px;
+  padding-bottom: 11px;
+  padding-left: 14px;
+}
+
+.field-lg::placeholder,
+.notes-field ::placeholder {
+  opacity: 0.45;
+}
+
+.notes-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background-color: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color-translucent);
+  border-radius: 10px;
+}
+
+/* same focus look as the other inputs */
+.notes-field:focus-within {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 1px var(--bs-primary);
+}
+
+/* checklist rename / delete buttons: faint until the row is hovered or focused (always shown on touch screens) */
+.checklist-action {
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.checklist-row:hover .checklist-action,
+.checklist-action:focus-visible {
+  opacity: 1;
+}
+
+.activity-step {
+  padding: 6px 12px;
+}
+
+.status-dot-sm {
+  width: 8px;
+  height: 8px;
+}
+
+.calendar-month {
+  min-width: 0; /* lets the card shrink so the grid can scroll inside it */
+  padding: 20px;
+}
+
+.calendar-month-header {
+  margin-bottom: 12px;
+}
+
+.calendar-nav-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--bs-border-color-translucent);
+  border-radius: 10px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 12px;
+}
+
+/* 7 columns get too narrow on phones, so the grid scrolls sideways like the kanban board */
+@media (max-width: 767.98px) {
+  .calendar-scroll {
+    overflow-x: auto;
+  }
+
+  .calendar-scroll > .calendar-grid {
+    min-width: 640px;
+  }
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 112px; /* grows instead of hiding events on a busy day */
+  padding: 8px;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 10px;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.calendar-day.is-weekend {
+  background-color: var(--bs-secondary-bg);
+}
+
+.calendar-day.is-outside {
+  background-color: transparent;
+  color: var(--bs-tertiary-color);
+}
+
+.calendar-date {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.calendar-date.is-today {
+  background-color: var(--bs-primary);
+  color: var(--bs-white);
+}
+
+/* event colours: each event-* class sets the background and the colour of its bar */
+.event-job {
+  background-color: var(--bs-primary-bg-subtle);
+  --event-colour: var(--bs-primary);
+}
+
+.event-hackathon {
+  background-color: var(--tt-peach);
+  --event-colour: var(--tt-accent);
+}
+
+.event-competition {
+  background-color: var(--bs-info-bg-subtle);
+  --event-colour: var(--bs-info);
+}
+
+.event-interview {
+  background-color: var(--bs-warning-bg-subtle);
+  --event-colour: var(--tt-status-interview);
+}
+
+.event-bar {
+  flex-shrink: 0;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background-color: var(--event-colour);
+}
+
+/* the small event pill inside a day */
+.calendar-chip {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--bs-body-color);
+  text-align: left;
+}
+
+.calendar-side {
+  width: 100%;
+}
+
+@media (min-width: 1200px) {
+  .calendar-side {
+    width: 300px;
+    flex-shrink: 0;
+  }
+}
+
+.calendar-panel {
+  gap: 14px;
+  padding: 20px;
+}
+
+.calendar-legend {
+  gap: 10px;
+}
+
+/* the bigger event row in the "This week" panel */
+.calendar-week-event {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--bs-body-color);
+}
+
+.calendar-week-event .event-bar {
+  width: 4px;
+  height: 36px;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background-color: var(--event-colour);
+}
+
+.calendar-export {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  color: var(--bs-primary);
+}
+
+/* lets flex children shrink below their content so they can scroll */
+.min-h-0 {
+  min-height: 0;
+}

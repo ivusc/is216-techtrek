@@ -1,0 +1,70 @@
+
+.team-search {
+  width: 260px;
+  min-width: 0;
+}
+
+.size-40 {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.mw-50 {
+  max-width: 50%;
+}
+
+.avatar-stack > * + * {
+  margin-left: -8px;
+}
+
+.team-avatar {
+  line-height: 1;
+}
+
+.team-backdrop {
+  --bs-backdrop-bg: #1c1a3d;
+  --bs-backdrop-opacity: 0.85;
+}
+
+.skill-input:focus-within {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 1px var(--bs-primary);
+}
+
+.skill-text {
+  min-width: 120px;
+  outline: none;
+  font-size: 0.8125rem;
+}
+
+.skill-remove {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0.125rem;
+  font-size: 0.5rem;
+}
+
+.skills-label {
+  max-width: 220px;
+}
+
+.event-select {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skills-menu {
+  min-width: 200px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.open-slot {
+  border: 1px dashed var(--bs-border-color-translucent);
+}

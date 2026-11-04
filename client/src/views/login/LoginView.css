@@ -1,0 +1,113 @@
+/* shared by the log in and sign up panels */
+.form-field {
+  display:flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-field .form-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* error box above the submit button */
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--bs-border-radius);
+  background-color: var(--bs-danger-bg-subtle);
+  color: var(--tt-accent-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  animation: form-error-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.form-error i {
+  margin-top: 1px;
+}
+@keyframes form-error-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+/* taller fields and button: the whole page is this one task */
+.form-field .form-control {
+  min-height: 46px;
+}
+.btn-auth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(28, 26, 61, 0.08), 0 6px 16px -6px rgba(91, 63, 228, 0.55);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+.btn-auth:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn-auth:disabled {
+  opacity: 0.75;
+}
+
+/* password needs, ticked off as you type */
+.password-rules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--bs-tertiary-color);
+}
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease;
+}
+.password-rules .met,
+.match-hint.met {
+  color: var(--bs-success-text-emphasis);
+}
+.password-rules i {
+  font-size: 12px;
+}
+.match-hint {
+  font-size: 13px;
+}
+
+/* "New to TechTrek? Create an account" under the form */
+.form-switch-line {
+  margin: 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--bs-border-color);
+  text-align: center;
+  font-size: 14px;
+  color: var(--bs-secondary-color);
+}
+.form-switch-line .btn-link {
+  padding: 0;
+  border: 0;
+  vertical-align: baseline;
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+.form-switch-line .btn-link:hover {
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-error { animation: none; }
+}
+
+@media (max-width: 767.98px) {
+  #panel .form-control {
+    font-size: 1rem;
+  }
+}

@@ -1,0 +1,222 @@
+<script setup>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import './tracker.css';
+import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
+import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
+import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
+import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
+import AddApplicationModal from '@/components/tracker/AddApplicationModal.vue';
+import OfferCelebrationModal from '@/components/tracker/OfferCelebrationModal.vue';
+import { trackerStages, hackathonStages } from '@/constants';
+import { isDueThisWeek, isOverdue, isEventType } from '@/utils/application';
+import { storeToRefs } from 'pinia';
+import { useApplicationsStore } from '@/store/applications';
+import { buildIcsFile } from '@/utils/calendar';
+import PageHeader from '@/components/PageHeader.vue';
+import TrekLoader from '@/components/TrekLoader.vue';
+
+const applicationStore = useApplicationsStore();
+const { applications, status, isLoading, isSaving, celebration } = storeToRefs(applicationStore);
+const {
+  fetchApplications,
+  updateApplicationStatus,
+  updateApplication,
+  deleteApplication,
+  celebrate,
+  dismissCelebration,
+  submitReview,
+} = applicationStore;
+
+const search = ref('');
+const viewMode = ref('board'); // 'board' or 'calendar'
+const typeFilter = ref(''); // '' = all types
+const deadlineFilter = ref(''); // '' | 'week' | 'overdue'
+const hideRejected = ref(false);
+// which board: jobs & internships, or hackathons & competitions (they have different steps).
+// /tracker?board=hackathons opens the hackathon board
+const board = ref(useRoute().query.board === 'hackathons' ? 'hackathons' : 'jobs');
+
+// a type filter from the other board would hide everything, so clear it when switching
+watch(board, () => {
+  typeFilter.value = '';
+});
+
+onMounted(fetchApplications);
+onUnmounted(dismissCelebration);
+
+function clearFilters() {
+  search.value = '';
+  typeFilter.value = '';
+  deadlineFilter.value = '';
+  hideRejected.value = false;
+}
+
+const filteredApplications = computed(() => {
+  const keyword = search.value.trim().toLowerCase();
+
+  return applications.value.filter((application) => {
+    const opportunity = application.opportunityId;
+
+    if (keyword !== '') {
+      const text = (opportunity.title + ' ' + opportunity.organisation).toLowerCase();
+      if (!text.includes(keyword)) {
+        return false;
+      }
+    }
+    if (typeFilter.value !== '' && opportunity.type !== typeFilter.value) {
+      return false;
+    }
+    if (hideRejected.value && application.status === 'rejected') {
+      return false;
+    }
+    if (deadlineFilter.value === 'week' && !isDueThisWeek(application)) {
+      return false;
+    }
+    if (deadlineFilter.value === 'overdue' && !isOverdue(application)) {
+      return false;
+    }
+    return true;
+  });
+});
+
+function onBoard(application, name) {
+  return isEventType(application.opportunityId.type) === (name === 'hackathons');
+}
+
+// the board only shows its own kind; the calendar shows both
+const boardApplications = computed(() => filteredApplications.value.filter((application) => onBoard(application, board.value)));
+const boardCounts = computed(() => ({
+  jobs: filteredApplications.value.filter((application) => onBoard(application, 'jobs')).length,
+  hackathons: filteredApplications.value.filter((application) => onBoard(application, 'hackathons')).length,
+}));
+
+// hackathons have their own columns; "Hide rejected" removes the jobs' Rejected column
+const visibleStages = computed(() => {
+  if (board.value === 'hackathons') {
+    return hackathonStages;
+  }
+  if (hideRejected.value) {
+    return trackerStages.filter((stage) => stage.status !== 'rejected');
+  }
+  return trackerStages;
+});
+
+const shownApplications = computed(() => (viewMode.value === 'board' ? boardApplications.value : filteredApplications.value));
+const dueThisWeekCount = computed(() => shownApplications.value.filter(isDueThisWeek).length);
+
+function applicationsInStage(status) {
+  return boardApplications.value.filter((application) => application.status === status);
+}
+
+//move to a diff status type
+async function moveApplication(applicationId, newStatus) {
+  await updateApplicationStatus(applicationId, newStatus);
+}
+
+// stage the add form starts in (null = form is closed); the form opens on the board's own tab
+const addFormStatus = ref(null);
+const addFormKind = computed(() => (board.value === 'hackathons' ? 'event' : 'job'));
+
+// "Add application", a column's + button or its "Add" button (stage = the column, or 'saved' from the toolbar)
+function openAddForm(stage) {
+  status.value = null;
+  addFormStatus.value = stage;
+}
+
+function closeAddForm() {
+  addFormStatus.value = null;
+}
+
+async function addNewApplication(opportunity, details) {
+  const added = await applicationStore.addApplication(opportunity, details);
+  if (added) closeAddForm();
+}
+
+// calendar view's "Export to Google Calendar (.ics)" button
+function exportCalendar() {
+  const text = buildIcsFile(filteredApplications.value)
+  const file = new Blob([text], { type: 'text/calendar' });
+  const url = URL.createObjectURL(file);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'techtrek-applications.ics';
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+// the application shown in the detail modal (null = modal is closed)
+const selectedApplication = ref(null);
+
+function openDetails(application) {
+  selectedApplication.value = application;
+}
+
+function closeDetails() {
+  selectedApplication.value = null;
+}
+
+// UPDATE changes = { status, notes, interviewAt, deadline }
+async function saveDetails(changes) {
+  await updateApplication(selectedApplication.value._id, changes);
+  if (!status.value) closeDetails();
+}
+
+// DELETE
+async function deleteSelected() {
+  await deleteApplication(selectedApplication.value._id);
+  if (!status.value) closeDetails();
+}
+
+function shareTips() {
+  const application = selectedApplication.value;
+  closeDetails();
+  status.value = null;
+  celebrate(application, 'form');
+}
+</script>
+
+<template>
+  <div class="p-2 h-100 d-flex flex-column overflow-hidden">
+    <PageHeader v-model="search" title="Application tracker" :subtitle="viewMode === 'board'
+      ? 'Drag cards between stages. Deadlines sync to your calendar.'
+      : 'Every deadline, interview and hackathon in one month view.'" type="applications" />
+
+    <div v-if="status" class="alert alert-danger" role="alert">{{ status }}</div>
+
+    <TrekLoader
+      v-if="isLoading"
+      title="Loading your tracker"
+      :captions="['Gathering your applications…', 'Sorting cards into columns…', 'Checking upcoming deadlines…']"
+    />
+
+    <div v-else class="d-flex flex-column flex-grow-1 min-h-0">
+      <TrackerToolbar v-model:view-mode="viewMode" v-model:board="board" v-model:type="typeFilter" v-model:deadline="deadlineFilter"
+        v-model:hide-rejected="hideRejected" :board-counts="boardCounts" :total="shownApplications.length" :due-this-week="dueThisWeekCount"
+        @add="openAddForm('saved')" @clear="clearFilters" />
+
+      <div v-if="viewMode === 'board'" class="kanban-board d-flex gap-3 pb-2 flex-grow-1 min-h-0">
+        <KanbanColumn v-for="stage in visibleStages" :key="stage.status" :stage="stage"
+          :applications="applicationsInStage(stage.status)" @add="openAddForm(stage.status)" @open="openDetails"
+          @move="moveApplication" />
+      </div>
+
+      <CalendarView v-else class="flex-grow-1 min-h-0 overflow-auto" :applications="filteredApplications" @open="openDetails" @export="exportCalendar" />
+
+      <AddApplicationModal v-if="addFormStatus" :status="addFormStatus" :kind="addFormKind" :is-saving="isSaving" :error="status ?? ''"
+        @close="closeAddForm" @add="addNewApplication" />
+
+      <!-- Details Modal -->
+      <ApplicationDetailModal v-if="selectedApplication" :key="selectedApplication._id"
+        :application="selectedApplication" @close="closeDetails" @save="saveDetails" @delete="deleteSelected"
+        @share-tips="shareTips" />
+
+      <OfferCelebrationModal v-if="celebration" :key="celebration.step" :application="celebration.application"
+        :step="celebration.step" :busy="isSaving" :error="status ?? ''" @close="dismissCelebration"
+        @next="celebrate(celebration.application, 'form')"
+        @submit="(review) => submitReview(celebration.application._id, review)" />
+    </div>
+  </div>
+</template>

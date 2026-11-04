@@ -1,0 +1,122 @@
+.profile-page {
+  max-width: 1112px;
+}
+
+.profile-card {
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: none;
+}
+
+.identity-card {
+  border-radius: 20px;
+}
+
+.identity-banner {
+  height: 84px;
+}
+
+.banner-circle {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.banner-circle-teal {
+  width: 140px;
+  top: -50px;
+  right: -22px;
+  background-color: var(--bs-info);
+}
+
+.banner-circle-coral {
+  width: 40px;
+  top: 40px;
+  right: 32%;
+  background-color: var(--tt-accent);
+}
+
+.banner-circle-peach {
+  width: 70px;
+  top: 30px;
+  left: 12%;
+  background-color: var(--tt-peach);
+}
+
+.identity-avatar {
+  border-width: 3px !important;
+}
+
+.identity-photo-button {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--tt-surface);
+  cursor: pointer;
+}
+
+.identity-photo-input:focus-visible + .identity-photo-button {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
+.profile-link {
+  padding: 12px;
+  background-color: var(--bs-secondary-bg);
+}
+
+a.profile-link:hover,
+a.profile-link:focus-visible {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+.profile-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--bs-border-radius);
+  font-size: 1.125rem;
+  color: var(--bs-body-color);
+  background-color: var(--tt-surface);
+}
+
+.profile-link-text {
+  min-width: 0;
+}
+
+.profile-about {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.profile-switch {
+  width: 40px;
+  height: 24px;
+  cursor: pointer;
+}
+
+@media (max-width: 991.98px) {
+  .profile-page.has-save-bar {
+    padding-bottom: 6rem;
+  }
+
+  .save-bar {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1020;
+    padding: 0.75rem;
+    background-color: var(--tt-surface);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    box-shadow: var(--bs-box-shadow-lg);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .save-bar {
+    left: 1rem;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}

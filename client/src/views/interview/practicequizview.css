@@ -1,0 +1,103 @@
+.practice-info {
+  color: var(--bs-secondary-color);
+  margin-bottom: 25px;
+  font-size: 16px;
+}
+
+.practice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 992px) {
+  .practice-layout {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+.answer-box {
+  width: 100%;
+  min-height: 250px;
+  padding: 24px;
+  margin-top:20px;
+  border: 2px solid var(--bs-primary);
+  border-radius: 18px;
+
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--bs-body-color);
+
+  resize: vertical;
+  box-sizing: border-box;
+  background: var(--tt-surface);
+}
+
+.answer-box:focus {
+  outline: none;
+  border-color: var(--bs-primary);
+}
+.submit {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+
+  padding: 12px 18px;
+
+  font-weight: 600;
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.submit-btn:hover {
+  background: var(--bs-primary-hover);
+}
+.submit-btn:disabled {
+  background: var(--bs-tertiary-color);
+  cursor: not-allowed;
+}
+
+.progress-bar-container {
+    width: 100%;
+    background-color: var(--bs-secondary-bg);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.progress-bar-container .progress-bar {
+    height: 15px;
+    width: 0%;
+    background-color: var(--bs-primary);
+    border-radius: 5px;
+    transition: width 0.4s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 0.75em;
+    font-weight: bold;
+}
+.error-message{
+  text-align:center;
+  border: 1px solid;
+	margin: 10px auto;
+	padding: 15px 10px 15px 50px;
+	background-repeat: no-repeat;
+	background-position: 10px center;
+	max-width: 460px;color: #D8000C;
+	background-color: #FFBABA;
+	background-image: url('https://i.imgur.com/GnyDvKN.png');
+}
