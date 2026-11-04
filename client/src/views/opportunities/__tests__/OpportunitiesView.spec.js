@@ -75,8 +75,11 @@ describe('OpportunitiesView', () => {
     expect(wrapper.text()).toContain('24 results');
     expect(wrapper.text()).toContain('· 1 closing this week');
     expect(wrapper.text()).toMatch(/· updated \S/);
-    expect(wrapper.find('.chip-row').text()).toContain('Jobs · 20');
-    expect(wrapper.find('.chip-row').text()).toContain('Hackathons · 4');
+    expect(wrapper.findAll('[role="tab"] .tab-count').map((count) => count.text())).toEqual([
+      '24 listings',
+      '20 roles',
+      '4 events',
+    ]);
 
     const [hackathonSection, jobSection] = wrapper.findAll('section');
     expect(titles(hackathonSection)).toEqual([

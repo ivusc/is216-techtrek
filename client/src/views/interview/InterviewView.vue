@@ -4,6 +4,7 @@ import './interview.css';
 import serverAPI from '@/services/serverAPI';
 import PageHeader from '@/components/PageHeader.vue';
 import TrekLoader from '@/components/TrekLoader.vue';
+import TabCards from '@/components/TabCards.vue';
 import SeniorTips from '@/components/interviews/SeniorTips.vue';
 
 const search = ref('');
@@ -67,10 +68,14 @@ const visibleTips = computed(() => {
   );
 });
 
-const tabs = computed(() => [
-  { id: 'bank', label: 'Question bank', count: filteredQuestions.value.length },
-  { id: 'tips', label: 'Senior tips', count: visibleTips.value.length },
-]);
+const tabs = computed(() => {
+  const questionCount = filteredQuestions.value.length;
+  const tipCount = visibleTips.value.length;
+  return [
+    { key: 'bank', label: 'Question bank', hint: 'Practise questions for your roles', icon: 'bi-patch-question-fill', count: `${questionCount} ${questionCount === 1 ? 'question' : 'questions'}` },
+    { key: 'tips', label: 'Senior tips', hint: 'Advice from those who went before', icon: 'bi-lightbulb-fill', count: `${tipCount} ${tipCount === 1 ? 'tip' : 'tips'}` },
+  ];
+});
 
 const isEmpty = computed(() => applicationCards.value.length === 0 && questions.value.length === 0);
 
@@ -319,34 +324,13 @@ function shortDate(value) {
         </div>
 
         <div>
-          <nav
+          <TabCards
             v-if="applicationCards.length"
-            class="nav nav-underline column-gap-4 border-bottom mb-3"
-            role="tablist"
-          >
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              type="button"
-              role="tab"
-              class="nav-link d-flex align-items-center gap-2 fw-semibold py-3"
-              :class="{ active: activeTab === tab.id }"
-              :aria-selected="activeTab === tab.id"
-              @click="activeTab = tab.id"
-            >
-              {{ tab.label }}
-              <span
-                class="badge rounded-pill fw-medium"
-                :class="
-                  activeTab === tab.id
-                    ? 'bg-primary-subtle text-primary-emphasis'
-                    : 'bg-body-secondary text-body-secondary'
-                "
-              >
-                {{ tab.count }}
-              </span>
-            </button>
-          </nav>
+            v-model:tab="activeTab"
+            :tabs="tabs"
+            label="Interview prep sections"
+            id-prefix="interview-tab-"
+          />
 
           <SeniorTips
             v-if="applicationCards.length"

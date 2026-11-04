@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue'
 import MiniCalendar from '@/components/home/MiniCalendar.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
+import TabCards from '@/components/TabCards.vue'
 import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import { useUserStore } from '@/store/user'
 import { useApplicationsStore } from '@/store/applications'
@@ -106,43 +107,45 @@ const dueThisWeek = computed(() => applications.value.filter(isDueThisWeek))
 
 const stats = computed(() => {
   const nextDue = upcomingDeadlines.value[0]
+  const requestCount = incoming.value.length + invites.value.length
   return [
     {
+      key: 'saved',
       label: 'Saved opportunities',
       to: '/tracker',
-      value: countStatus('saved'),
-      note: '+' + savedThisWeek.value + ' this week',
-      icon: 'bi-clipboard-check',
-      tile: 'bg-primary-subtle text-primary',
+      count: countStatus('saved') + ' saved',
+      hint: '+' + savedThisWeek.value + ' this week',
+      icon: 'bi-clipboard-check-fill',
     },
     {
+      key: 'active',
       label: 'Active applications',
       to: '/tracker',
-      value: countStatus('applied', 'interview'),
-      note: countStatus('interview') + ' at interview',
-      icon: 'bi-briefcase',
-      tile: 'bg-info-subtle text-primary',
+      count: countStatus('applied', 'interview') + ' active',
+      hint: countStatus('interview') + ' at interview',
+      icon: 'bi-briefcase-fill',
     },
     {
+      key: 'deadlines',
       label: 'Deadlines this week',
       to: '/tracker',
-      value: dueThisWeek.value.length,
-      note: nextDue ? 'Next: ' + formatDate(nextDue.deadline) : 'Nothing due',
-      icon: 'bi-calendar-event',
-      tile: 'bg-tt-peach text-body',
+      count: dueThisWeek.value.length + ' due',
+      hint: nextDue ? 'Next: ' + formatDate(nextDue.deadline) : 'Nothing due',
+      icon: 'bi-calendar-event-fill',
     },
     {
+      key: 'requests',
       label: 'Team requests',
       to: { path: '/teams', query: { tab: 'requests' } },
-      value: incoming.value.length + invites.value.length,
-      note:
+      count: requestCount + ' waiting',
+      hint:
         invites.value.length > 0
           ? invites.value.length + (invites.value.length === 1 ? ' invite for you' : ' invites for you')
           : incoming.value.length > 0
             ? 'Waiting for you'
             : 'All caught up',
-      icon: 'bi-person-plus',
-      tile: 'bg-danger-subtle text-tt-accent',
+      icon: 'bi-person-plus-fill',
+      news: requestCount > 0,
     },
   ]
 })
@@ -323,22 +326,8 @@ async function respond(request, status) {
       :captions="['Counting your deadlines…', 'Picking opportunities for your skills…', 'Checking your team requests…']"
     />
     <template v-else>
-    <!-- stat cards -->
-    <div class="row g-3 mb-3">
-      <div v-for="stat in stats" :key="stat.label" class="col-6 col-xl-3">
-        <!-- each number links to where it comes from -->
-        <RouterLink :to="stat.to" class="card home-stat-card card-hover h-100 text-decoration-none text-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="home-stat-icon rounded-3 d-flex align-items-center justify-content-center" :class="stat.tile">
-              <i :class="`bi ${stat.icon}`"></i>
-            </span>
-            <span class="text-caption text-body-tertiary text-end">{{ stat.note }}</span>
-          </div>
-          <div class="text-stat">{{ stat.value }}</div>
-          <div class="small text-body-secondary">{{ stat.label }}</div>
-        </RouterLink>
-      </div>
-    </div>
+    <!-- stat cards: each one links to where its number comes from -->
+    <TabCards :tabs="stats" label="Your summary" id-prefix="home-stat-" />
 
     <div class="row g-3 dashboard-body">
       <!-- left column -->

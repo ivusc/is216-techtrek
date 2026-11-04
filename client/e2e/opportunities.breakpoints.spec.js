@@ -59,12 +59,8 @@ async function openOpportunities(page, size, payload = OPPORTUNITIES) {
   await expect(page.getByText(`${total} results`, { exact: true })).toBeVisible();
 }
 
-function visibleTabs(page, width) {
-  return page.locator(width < MD ? 'nav.chip-row' : 'nav.nav-underline');
-}
-
-async function openJobsTab(page, width) {
-  await visibleTabs(page, width).getByRole('button', { name: /^Jobs/ }).click();
+async function openJobsTab(page) {
+  await page.getByRole('tab', { name: /^Jobs/ }).click();
   await expect(page.locator('.opp-card')).toHaveCount(9);
 }
 
@@ -114,8 +110,7 @@ test.describe('opportunities layout', () => {
     }, testInfo) => {
       await openOpportunities(page, { width, height: 900 });
 
-      await expect(page.locator('nav.chip-row')).toBeVisible({ visible: phone });
-      await expect(page.locator('nav.nav-underline')).toBeVisible({ visible: !phone });
+      await expect(page.getByRole('tablist', { name: 'Opportunity types' })).toBeVisible();
       await expect(page.getByRole('button', { name: /List$/ })).toBeVisible({ visible: !phone });
       await expect(page.getByRole('button', { name: /^Filters/ })).toBeVisible({ visible: phone });
       await expect(page.locator('#opportunity-filters')).toBeVisible({ visible: !phone });
@@ -123,7 +118,7 @@ test.describe('opportunities layout', () => {
         visible: !phone,
       });
 
-      await openJobsTab(page, width);
+      await openJobsTab(page);
       const cards = page.locator('.opp-card');
       expect(await columnCount(cards)).toBe(columnsAt(width));
       await expectNoHorizontalOverflow(page);
@@ -214,7 +209,7 @@ test.describe('opportunities layout', () => {
   for (const width of WIDTHS.filter((candidate) => candidate >= MD)) {
     test(`${width} lays out the list rows`, async ({ loggedIn: page }, testInfo) => {
       await openOpportunities(page, { width, height: 900 }, WITH_URGENT_HACKATHON);
-      await openJobsTab(page, width);
+      await openJobsTab(page);
 
       await page.getByRole('button', { name: /List$/ }).click();
       const row = page.locator('.opp-row').first();
@@ -230,9 +225,7 @@ test.describe('opportunities layout', () => {
         true,
       );
 
-      await visibleTabs(page, width)
-        .getByRole('button', { name: /^Hackathons/ })
-        .click();
+      await page.getByRole('tab', { name: /^Hackathons/ }).click();
       const urgentRow = page.locator('.opp-row', { hasText: URGENT_TITLE });
       await expect(urgentRow.locator('.badge')).toHaveText(['Hackathon', '3 days left']);
       const urgentTitle = await urgentRow.locator('.opp-row-title').boundingBox();
