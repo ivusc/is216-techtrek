@@ -22,7 +22,7 @@ import { useOpportunityStore } from '@/store/opportunity'
 
 // the store holds the fetched opportunities and does all the server calls
 const opportunityStore = useOpportunityStore()
-const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, jobSector, sectorOptions, savedItems } =
+const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, roleOptions, savedItems } =
   storeToRefs(opportunityStore)
 
 const activeTab = ref('overview')
@@ -47,7 +47,7 @@ const findTeamItem = ref(null)
 
 onMounted(() => {
   opportunityStore.fetchOpportunities()
-  opportunityStore.loadSectorOptions()
+  opportunityStore.loadRoleOptions()
 })
 
 // displayedItems: the items of the tab that is selected (same as before)
@@ -219,16 +219,15 @@ const canLoadMore = computed(() => {
 })
 
 //listens to changes in these variables, and resets to first 9 cards if changed
-watch([activeTab, search, locationFilter, paidOnly, sortBy, jobSector, jobType, jobField, themeFilter, closingWithin], () => {
+watch([activeTab, search, locationFilter, paidOnly, sortBy, jobType, jobField, themeFilter, closingWithin], () => {
   visibleCount.value = PAGE_SIZE
 })
 
-// sector, role and work type are filtered by the server, so get the jobs again when they change
-watch([jobSector, jobType, jobField], opportunityStore.reloadJobs)
+// role and work type are filtered by the server, so get the jobs again when they change
+watch([jobType, jobField], opportunityStore.reloadJobs)
 
 function clearAll() {
   search.value = ''
-  jobSector.value = 'tech'
   jobType.value = ''
   jobField.value = ''
   themeFilter.value = ''
@@ -261,9 +260,8 @@ const loadMore = async () => {
     />
 
     <OpportunityFilters
-      v-model:job-sector="jobSector"
       v-model:job-field="jobField"
-      :sectors="sectorOptions"
+      :roles="roleOptions"
       v-model:job-type="jobType"
       v-model:theme="themeFilter"
       v-model:closing-within="closingWithin"

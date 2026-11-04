@@ -22,16 +22,15 @@ export const useOpportunityStore = defineStore('opportunity', () => {
 
   // job filters, '' = any
   const jobType = ref(''); // fulltime | intern
-  const jobField = ref(''); // a role key from the chosen sector, e.g. frontend (tech) or audit (finance)
-  const jobSector = ref('tech'); // tech | finance | consulting | ... | all - Tech is the default
-  // [{ key, label, roles: [{ key, label }] }] from the server
-  const sectorOptions = ref([]);
+  const jobField = ref(''); // an IT role key, e.g. frontend or data
+  // [{ key, label }] IT roles from the server
+  const roleOptions = ref([]);
 
-  async function loadSectorOptions() {
-    if (sectorOptions.value.length > 0) return;
+  async function loadRoleOptions() {
+    if (roleOptions.value.length > 0) return;
     try {
       const data = await fetchJobFilterOptions();
-      sectorOptions.value = data.sectors;
+      roleOptions.value = data.roles;
     } catch (error) {
       console.error(error);
     }
@@ -48,7 +47,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchAllOpportunities({ sector: jobSector.value, type: jobType.value, field: jobField.value });
+      const data = await fetchAllOpportunities({ type: jobType.value, field: jobField.value });
 
       // the server sends null for a source that failed, so check before using it
       if (data.jobs != null) {
@@ -98,7 +97,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     status.value = '';
 
     try {
-      const data = await fetchJobs(1, { sector: jobSector.value, type: jobType.value, field: jobField.value });
+      const data = await fetchJobs(1, { type: jobType.value, field: jobField.value });
       jobs.value = data.jobs;
       jobsPage.value = 1;
       hasMoreJobs.value = data.jobs.length > 0;
@@ -113,7 +112,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
   // gets the next page of jobs and adds the ones we do not have yet
   async function fetchMoreJobs() {
     try {
-      const data = await fetchJobs(jobsPage.value + 1, { sector: jobSector.value, type: jobType.value, field: jobField.value });
+      const data = await fetchJobs(jobsPage.value + 1, { type: jobType.value, field: jobField.value });
 
       let addedCount = 0;
       
@@ -201,9 +200,8 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     hasMoreJobs,
     jobType,
     jobField,
-    jobSector,
-    sectorOptions,
-    loadSectorOptions,
+    roleOptions,
+    loadRoleOptions,
     savedItems,
     teamCounts,
     fetchOpportunities,
