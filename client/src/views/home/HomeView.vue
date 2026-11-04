@@ -340,7 +340,6 @@ async function respond(request, status) {
         <div class="flex-shrink-0">
           <div class="d-flex justify-content-between align-items-end mb-2">
             <div>
-              <p class="text-overline text-body-tertiary mb-1">RECOMMENDED FOR YOU</p>
               <h2 class="h5 fw-semibold mb-0">
                 <template v-if="skills.length > 0">Based on your skills: {{ skills.slice(0, 3).join(', ') }}</template>
                 <template v-else>Fresh picks for you</template>

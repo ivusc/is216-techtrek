@@ -22,7 +22,6 @@
       <slot></slot>
     </div>
 
-    <p class="banner-footer text-caption position-relative mb-0">IS216 · G10 · Team TechTrek</p>
   </div>
 </template>
 
@@ -77,7 +76,7 @@
 
 .banner-content :deep(.banner-text) {
   max-width: 460px;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .banner-content :deep(.feature-icon) {
@@ -94,11 +93,7 @@
 }
 
 .banner-content :deep(.feature-text) {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.banner-footer {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 @media (min-width: 992px) {

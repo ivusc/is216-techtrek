@@ -128,8 +128,8 @@ function switchToSignUp() {
   color: var(--bs-body-color);
   background-color: white;
   box-shadow:
-    0 2px 3px rgba(18, 52, 63, 0.06),
-    0 1px 1px rgba(18, 52, 63, 0.06);
+    0 2px 3px rgba(28, 26, 61, 0.06),
+    0 1px 1px rgba(28, 26, 61, 0.06);
 }
 
 @media (min-width: 576px) and (max-width: 767.98px), (min-width: 992px) {

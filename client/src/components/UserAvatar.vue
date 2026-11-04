@@ -30,7 +30,7 @@ const style = computed(() => ({
   ...getAvatarStyle(props.name),
   width: `${props.size}px`,
   height: `${props.size}px`,
-  fontSize: `${Math.round(props.size * 0.36)}px`,
+  fontSize: `${Math.max(12, Math.round(props.size * 0.38))}px`, // initials never smaller than 12px
 }));
 </script>
 

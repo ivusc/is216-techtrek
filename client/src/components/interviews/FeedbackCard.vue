@@ -160,11 +160,11 @@ const emit = defineEmits(['next'])
 <style scoped>
 .feedback-card {
   background: white;
-  border: 1px solid #ded8c3;
+  border: 1px solid var(--bs-border-color);
   border-radius: 18px;
   padding: 22px;
   height: fit-content;
-  color: #17394a;
+  color: var(--bs-body-color);
 }
 
 .feedback-header {
@@ -178,8 +178,8 @@ const emit = defineEmits(['next'])
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  background: #fff0e2;
-  color: #fa8565;
+  background: var(--bs-danger-bg-subtle);
+  color: var(--tt-accent-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -193,8 +193,8 @@ const emit = defineEmits(['next'])
 }
 
 .feedback-subtitle {
-  font-size: 10px;
-  color: #78909c;
+  font-size: 13px;
+  color: var(--bs-tertiary-color);
   margin: 3px 0 0;
 }
 
@@ -211,8 +211,8 @@ const emit = defineEmits(['next'])
   min-width: 100px;
   border-radius: 50%;
   background: conic-gradient(
-    #00b1b9 calc(v-bind('feedback.score') * 10%),
-    #f3f0d6 0
+    var(--bs-primary) calc(v-bind('feedback.score') * 10%),
+    var(--bs-primary-bg-subtle) 0
   );
   display: flex;
   flex-direction: column;
@@ -239,8 +239,8 @@ const emit = defineEmits(['next'])
 }
 
 .score-label {
-  font-size: 10px;
-  color: #78909c;
+  font-size: 13px;
+  color: var(--bs-tertiary-color);
   margin-top: 2px;
   position: relative;
   z-index: 1;
@@ -259,9 +259,9 @@ const emit = defineEmits(['next'])
 }
 
 .score-summary p {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
-  color: #526b79;
+  color: var(--bs-secondary-color);
   margin: 0;
 }
 
@@ -277,31 +277,31 @@ const emit = defineEmits(['next'])
   grid-template-columns: 76px 1fr 24px;
   align-items: center;
   gap: 9px;
-  font-size: 11px;
-  color: #526b79;
+  font-size: 13px;
+  color: var(--bs-secondary-color);
 }
 
 .score-row strong {
-  color: #17394a;
-  font-size: 11px;
+  color: var(--bs-body-color);
+  font-size: 13px;
   text-align: right;
 }
 
 .score-bar {
   height: 7px;
-  background: #f3f0d6;
+  background: var(--bs-primary-bg-subtle);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .score-fill {
   height: 100%;
-  background: #00b1b9;
+  background: var(--bs-primary);
   border-radius: 999px;
 }
 
 .impact-fill {
-  background: #ed985d;
+  background: var(--tt-status-interview);
 }
 
 .feedback-section {
@@ -309,7 +309,7 @@ const emit = defineEmits(['next'])
 }
 
 .feedback-section h3 {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   margin: 0 0 10px;
 }
@@ -327,9 +327,9 @@ const emit = defineEmits(['next'])
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
-  color: #526b79;
+  color: var(--bs-secondary-color);
 }
 
 .list-icon {
@@ -340,25 +340,25 @@ const emit = defineEmits(['next'])
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   margin-top: 1px;
 }
 
 .good-icon {
-  border: 2px solid #00b8bd;
-  color: #00a9b4;
+  border: 2px solid var(--bs-primary);
+  color: var(--bs-primary);
 }
 
 .improve-icon {
-  border: 2px solid #ff695d;
-  color: #ff695d;
+  border: 2px solid var(--tt-accent);
+  color: var(--tt-accent);
 }
 
 .sample-answer {
   margin-top: 22px;
   padding: 14px;
-  background: #f5f2d9;
+  background: var(--bs-secondary-bg);
   border-radius: 12px;
 }
 
@@ -370,7 +370,7 @@ const emit = defineEmits(['next'])
 }
 
 .sample-header h3 {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   margin: 0;
 }
@@ -380,9 +380,9 @@ const emit = defineEmits(['next'])
 }
 
 .sample-answer p {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
-  color: #526b79;
+  color: var(--bs-secondary-color);
   margin: 8px 0 0;
 }
 
@@ -399,18 +399,18 @@ const emit = defineEmits(['next'])
   gap: 8px;
   flex: 1;
   text-align: center;
-  background: #0088aa;
+  background: var(--bs-primary);
   color: white;
   border: none;
   border-radius: 10px;
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
 }
 
 .submit-btn:hover {
-  background: #007493;
+  background: var(--bs-primary-hover);
 }
 </style>

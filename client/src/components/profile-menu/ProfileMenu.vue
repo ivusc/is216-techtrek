@@ -23,7 +23,7 @@ const profileRoutes = [{ label: 'Profile', location: '/profile', icon: 'bi-perso
   <div class="dropup">
     <button
       type="button"
-      class="btn border-0 p-0 d-flex align-items-center gap-2 w-100 text-start text-white dropdown-toggle"
+      class="btn border-0 p-0 d-flex align-items-center gap-2 w-100 text-start text-body dropdown-toggle profile-toggle"
       id="profile"
       data-bs-toggle="dropdown"
       aria-expanded="false"
@@ -34,12 +34,12 @@ const profileRoutes = [{ label: 'Profile', location: '/profile', icon: 'bi-perso
         :name="displayName"
         :avatar-updated-at="authStore.avatarUpdatedAt"
         :size="36"
-        class="bg-tt-peach text-body"
+        class="bg-primary text-white"
       />
       <span v-if="!collapsed" class="d-flex flex-column flex-grow-1 lh-sm" style="min-width: 0">
         <strong class="small text-truncate" :title="displayName">{{ displayName }}</strong>
         <span
-          class="small fw-medium text-truncate"
+          class="small text-body-secondary text-truncate"
           :title="authStore.faculty ?? authStore.username"
           >{{ authStore.faculty ?? authStore.username }}</span
         >

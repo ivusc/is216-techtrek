@@ -100,7 +100,7 @@ onUnmounted(() => clearInterval(timer))
   width: 64px;
   height: 10px;
   margin-left: -32px;
-  background-color: rgba(18, 52, 63, 0.15);
+  background-color: rgba(28, 26, 61, 0.15);
   animation: trek-shadow 1.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
