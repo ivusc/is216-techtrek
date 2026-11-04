@@ -36,13 +36,13 @@ describe('TeamCard', () => {
     },
   );
 
-  it('emits request from the Request to join button', async () => {
+  it('opens the team window with the request form from the Request to join button', async () => {
     const wrapper = mountCard();
 
     await button(wrapper, 'Request to join').trigger('click');
 
-    expect(wrapper.emitted('request')).toHaveLength(1);
-    expect(wrapper.text()).not.toContain("Who's in the team");
+    expect(wrapper.text()).toContain("Who's in the team");
+    expect(wrapper.find('.request-form').exists()).toBe(true);
   });
 
   it('opens the team details from the card or Enter, and can ask to join from there', async () => {
@@ -56,9 +56,11 @@ describe('TeamCard', () => {
     expect(wrapper.text()).not.toContain("Who's in the team");
 
     await wrapper.find('.card').trigger('keydown', { key: 'Enter' });
+    expect(wrapper.find('.request-form').exists()).toBe(false);
     await wrapper.findAll('.modal-footer button').find((candidate) => candidate.text() === 'Request to join').trigger('click');
-    expect(wrapper.emitted('request')).toHaveLength(1);
-    expect(wrapper.text()).not.toContain("Who's in the team");
+    // the form opens in the same window, under the team
+    expect(wrapper.text()).toContain("Who's in the team");
+    expect(wrapper.find('.request-form').exists()).toBe(true);
   });
 
   it('opens details but offers no request on a full team', async () => {

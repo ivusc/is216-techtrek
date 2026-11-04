@@ -33,14 +33,25 @@ async function closeIfFull(team) {
   return closePending(team, 'full');
 }
 
-// teams past their closing date that still have pending requests or invites
-async function closeExpired(now = new Date()) {
+// teams past their closing date that still have pending requests or invites.
+// It runs when people open their requests or notifications; to save trips to the database it only
+// really checks once every 30 seconds (tests pass force: true).
+const EXPIRY_CHECK_EVERY = 30 * 1000;
+let lastExpiryCheck = 0;
+
+async function closeExpired(now = new Date(), { force = false } = {}) {
+  if (!force && now.getTime() - lastExpiryCheck < EXPIRY_CHECK_EVERY) return 0;
+  lastExpiryCheck = now.getTime();
   const waitingTeamIds = await TeamRequest.find({ status: 'pending' }).distinct('teamId');
   if (waitingTeamIds.length === 0) return 0;
   const expired = await Team.find({ _id: { $in: waitingTeamIds }, closesAt: { $lt: now } });
-  let closed = 0;
-  for (const team of expired) closed += await closePending(team, 'closed');
-  return closed;
+  const counts = await Promise.all(expired.map((team) => closePending(team, 'closed')));
+  return counts.reduce((sum, count) => sum + count, 0);
 }
 
-module.exports = { closePending, closeIfFull, closeExpired };
+// tests: forget when the last check ran
+function resetExpiryCheck() {
+  lastExpiryCheck = 0;
+}
+
+module.exports = { closePending, closeIfFull, closeExpired, resetExpiryCheck };

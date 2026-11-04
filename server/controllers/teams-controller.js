@@ -163,16 +163,18 @@ async function getTeams(req, res) {
   const userId = req.session.user._id;
 
   try {
-    const teams = await populateTeam(
-      Team.find({
-        status: { $in: ['open', 'closed'] },
-        leaderId: { $ne: userId },
-        'members.userId': { $ne: userId },
-        $or: [{ closesAt: {$gte: new Date() } }, { closesAt: null }],
-      }).sort('closesAt')
-    );
-
-    const requests = await TeamRequest.find({ userId, kind: { $ne: 'invite' }, teamId: { $in: teams.map((t) => t._id) } });
+    // the teams and my requests load at the same time
+    const [teams, requests] = await Promise.all([
+      populateTeam(
+        Team.find({
+          status: { $in: ['open', 'closed'] },
+          leaderId: { $ne: userId },
+          'members.userId': { $ne: userId },
+          $or: [{ closesAt: {$gte: new Date() } }, { closesAt: null }],
+        }).sort('closesAt')
+      ),
+      TeamRequest.find({ userId, kind: { $ne: 'invite' } }),
+    ]);
     // my request to each team, so the page can show "Request sent" and undo it
     const requestByTeam = {};
     for (const r of requests) requestByTeam[String(r.teamId)] = r;
@@ -370,12 +372,13 @@ async function deleteTeam(req, res) {
     if (!team) return res.status(404).json({ error: 'Team not found' });
     if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only leader can delete' });
 
-    await TeamRequest.deleteMany({ teamId });
-    await Team.findByIdAndDelete(teamId);
-    // everyone else in the team finds out it is gone
-    for (const member of team.members) {
-      await notificationService.notify({ userId: member.userId, type: 'team-deleted', actorId: userId, team });
-    }
+    await Promise.all([TeamRequest.deleteMany({ teamId }), Team.findByIdAndDelete(teamId)]);
+    // everyone else in the team finds out it is gone (all at once, not one after another)
+    await Promise.all(
+      team.members.map((member) =>
+        notificationService.notify({ userId: member.userId, type: 'team-deleted', actorId: userId, team }),
+      ),
+    );
     res.status(204).end();
   } catch (err) {
     handleError(res, err, 'Failed to delete team');
@@ -388,8 +391,7 @@ async function createRequest(req, res) {
   const { role, message, shareProfile } = req.body ?? {};
 
   try {
-    const team = await populateTeam(Team.findById(teamId));
-    const user = await User.findById(userId);
+    const [team, user] = await Promise.all([Team.findById(teamId), User.findById(userId)]);
     if (!team || !user) return res.status(404).json({ error: 'Team or User not found' });
     if (isMember(team, userId)) {
       return res.status(409).json({ error: 'You are already in this team' });
@@ -422,15 +424,16 @@ async function createRequest(req, res) {
       team.members.push({ userId, role: askedRole });
       team.fillRole(askedRole);
       team.syncStatus();
-      await team.save();
-      await applicationService.markTeamFormed(userId, team.event?.opportunityId);
       request.status = 'accepted';
-      await request.save();
-      await teamRequestService.closeIfFull(team);
-      await notificationService.notify({ userId: team.leaderId._id, type: 'member-joined', actor: user, team, role: askedRole });
-      await notificationService.notify({ userId, type: 'request-accepted', actorId: team.leaderId._id, team, role: askedRole });
+      await Promise.all([team.save(), request.save()]);
+      await Promise.all([
+        applicationService.markTeamFormed(userId, team.event?.opportunityId),
+        teamRequestService.closeIfFull(team),
+        notificationService.notify({ userId: team.leaderId, type: 'member-joined', actor: user, team, role: askedRole }),
+        notificationService.notify({ userId, type: 'request-accepted', actorId: team.leaderId, team, role: askedRole }),
+      ]);
     } else {
-      await notificationService.notify({ userId: team.leaderId._id, type: 'request-received', actor: user, team, role: askedRole });
+      await notificationService.notify({ userId: team.leaderId, type: 'request-received', actor: user, team, role: askedRole });
     }
 
     res.status(201).json({ _id: request._id, status: request.status });
@@ -452,7 +455,9 @@ async function respondToRequest(req, res) {
     const request = await TeamRequest.findById(requestId);
     if (!request) return res.status(404).json({ error: 'Request not found' });
 
-    const team = await populateTeam(Team.findById(request.teamId));
+    // only the team itself is needed here, not everyone's profile
+    const team = await Team.findById(request.teamId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
     if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only leader can respond' });
     if (status === 'accepted' && team.slotsOpen === 0) {
       return res.status(409).json({ error: 'This team is already full' });
@@ -478,17 +483,20 @@ async function respondToRequest(req, res) {
       team.fillRole(answered.role);
       team.syncStatus();
       await team.save();
-      await applicationService.markTeamFormed(answered.userId, team.event?.opportunityId);
-      // that was the last spot: everyone else still waiting is told the team is full
-      await teamRequestService.closeIfFull(team);
     }
-    await notificationService.notify({
-      userId: answered.userId,
-      type: status === 'accepted' ? 'request-accepted' : 'request-declined',
-      actorId: userId,
-      team,
-      role: status === 'accepted' ? answered.role : undefined,
-    });
+    // the follow-ups don't depend on each other, so they run together
+    await Promise.all([
+      status === 'accepted' ? applicationService.markTeamFormed(answered.userId, team.event?.opportunityId) : null,
+      // that was the last spot: everyone else still waiting is told the team is full
+      status === 'accepted' ? teamRequestService.closeIfFull(team) : null,
+      notificationService.notify({
+        userId: answered.userId,
+        type: status === 'accepted' ? 'request-accepted' : 'request-declined',
+        actorId: userId,
+        team,
+        role: status === 'accepted' ? answered.role : undefined,
+      }),
+    ]);
 
     res.json({ _id: answered._id, status: answered.status, role: answered.role });
   } catch (err) {

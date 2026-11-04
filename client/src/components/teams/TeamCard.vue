@@ -21,16 +21,29 @@ const props = defineProps({
   undoing: { type: Boolean, default: false } // true while this team's request is being withdrawn
 })
 
-const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite', 'leave', 'updated'])
+const emit = defineEmits(['request-sent', 'undo', 'edit', 'view-requests', 'invite', 'leave', 'updated'])
 
 // on Browse, a team I can still join can be asked to join
 const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
 
 // clicking the card (anywhere but its buttons) opens the team's details: members, roles and open spots
 const showDetails = ref(false)
+const detailsRequesting = ref(false) // open the window with the request form showing
 function onCardClick(event) {
   if (event.target.closest('button, a, input, select')) return
+  detailsRequesting.value = false
   showDetails.value = true
+}
+
+// the card's own "Request to join" opens the same window, with the request form already open
+function openRequest() {
+  detailsRequesting.value = true
+  showDetails.value = true
+}
+
+function requestSent(created) {
+  showDetails.value = false
+  emit('request-sent', created)
 }
 
 // the details window hands its buttons to the page: close it, then open the request or invite window
@@ -129,7 +142,7 @@ function isUrgent() {
         class="btn btn-sm fw-semibold text-nowrap"
         :class="team.requestStatus === null && team.slotsOpen > 0 ? 'btn-primary' : 'btn-light'"
         :disabled="team.requestStatus !== null || team.slotsOpen === 0"
-        @click="$emit('request')"
+        @click="openRequest"
       >
         <template v-if="team.requestStatus === 'declined'">Request declined</template>
         <template v-else-if="team.requestStatus === 'accepted'">You're in!</template>
@@ -161,8 +174,9 @@ function isUrgent() {
         v-if="showDetails"
         :team="team"
         :can-request="canRequest"
+        :start-requesting="detailsRequesting"
         @close="showDetails = false"
-        @request="fromDetails('request')"
+        @sent="requestSent"
         @invite="fromDetails('invite', $event)"
         @updated="$emit('updated', $event)"
       />

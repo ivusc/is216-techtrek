@@ -4,6 +4,11 @@ import { useUserStore } from '@/store/user';
 import { mount } from '@vue/test-utils';
 import TeamDetailsModal from '@/components/teams/TeamDetailsModal.vue';
 import { team, LEADER, REQUESTER, ME } from '@/__tests__/fixtures/teams';
+import { flushPromises } from '@vue/test-utils';
+import MockAdapter from 'axios-mock-adapter';
+import serverAPI from '@/services/serverAPI';
+
+const mock = new MockAdapter(serverAPI);
 
 beforeEach(() => {
   setActivePinia(createPinia());
@@ -69,7 +74,39 @@ describe('TeamDetailsModal', () => {
     expect(footer(mountDetails())).toEqual(['Close']);
     const wrapper = mountDetails({}, { canRequest: true });
     expect(footer(wrapper)).toEqual(['Close', 'Request to join']);
+  });
+
+  it('opens the request form inside the window, and Back closes it again', async () => {
+    const footer = (wrapper) => wrapper.findAll('.modal-footer button').map((button) => button.text());
+    const wrapper = mountDetails({ openRoles: ['Frontend developer'] }, { canRequest: true });
+
     await wrapper.findAll('.modal-footer button')[1].trigger('click');
-    expect(wrapper.emitted('request')).toHaveLength(1);
+
+    expect(wrapper.find('.request-form').text()).toContain('Ask to join');
+    expect(footer(wrapper)).toEqual(['Back', 'Send request']);
+    // the only open role is picked, and I'm shown in its spot
+    expect(wrapper.find('.is-you .person-role').text()).toBe('Frontend developer');
+
+    await wrapper.findAll('.modal-footer button')[0].trigger('click');
+    expect(wrapper.find('.request-form').exists()).toBe(false);
+    expect(footer(wrapper)).toEqual(['Close', 'Request to join']);
+  });
+
+  it('sends the request from the window and shows the server reason there', async () => {
+    const t = team({ openRoles: ['Frontend developer'] });
+    mock.onPost(`/teams/${t._id}/requests`).replyOnce(409, { error: 'This team is not taking requests' });
+    mock.onPost(`/teams/${t._id}/requests`).replyOnce(201, { _id: 'r9', status: 'pending' });
+    const wrapper = mount(TeamDetailsModal, { props: { team: t, canRequest: true, startRequesting: true } });
+    const send = () => wrapper.findAll('.modal-footer button').find((b) => b.text().includes('Send request'));
+
+    await wrapper.find('#join-message').setValue('Keen!');
+    await send().trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.request-form').text()).toContain('This team is not taking requests');
+
+    await send().trigger('click');
+    await flushPromises();
+    expect(JSON.parse(mock.history.post[1].data)).toEqual({ role: 'Frontend developer', message: 'Keen!', shareProfile: true });
+    expect(wrapper.emitted('sent')).toEqual([[{ _id: 'r9', status: 'pending' }]]);
   });
 });

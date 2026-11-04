@@ -7,6 +7,7 @@ const app = require('../app');
 const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
 const Notification = require('../models/Notification');
+const teamRequestService = require('../service/team-request-service');
 
 const DAY = 24 * 60 * 60 * 1000;
 const TEAM = { name: 'Byte Me', eventName: 'Hack&Roll', teamSize: 2, openSlots: 1, pitch: 'Build' };
@@ -67,7 +68,8 @@ describe('closing requests that can no longer be answered', () => {
     const request = await ask(first, team._id);
     await Team.updateOne({ _id: team._id }, { closesAt: new Date(Date.now() - DAY) });
 
-    // checked when people look at their requests or notifications
+    // checked when people look at their requests or notifications (at most every 30 s, so reset the timer)
+    teamRequestService.resetExpiryCheck();
     await leader.get('/teams/requests/incoming').expect(200);
 
     expect((await TeamRequest.findById(request._id)).closedReason).toBe('closed');
@@ -97,5 +99,19 @@ describe('closing requests that can no longer be answered', () => {
     await leader.patch(`/teams/requests/${firstRequest._id}`).send({ status: 'accepted' }).expect(200);
 
     expect((await TeamRequest.findById(secondRequest._id)).status).toBe('pending');
+  });
+
+  it('only checks for past-date teams once every 30 seconds', async () => {
+    const { first, team } = await setUp({ ...TEAM, teamSize: 3, openSlots: 2 });
+    const request = await ask(first, team._id);
+    teamRequestService.resetExpiryCheck();
+    await first.get('/notifications').expect(200);
+    await Team.updateOne({ _id: team._id }, { closesAt: new Date(Date.now() - DAY) });
+
+    // straight after a check, the next page load doesn't check again
+    await first.get('/notifications').expect(200);
+    expect((await TeamRequest.findById(request._id)).status).toBe('pending');
+
+    expect(await teamRequestService.closeExpired(new Date(Date.now() + 31 * 1000))).toBe(1);
   });
 });

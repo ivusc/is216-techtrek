@@ -289,7 +289,7 @@ function clearAll() {
 const ledTeams = computed(() => myTeams.value.filter((team) => team.isLeader && team.status !== 'draft'))
 
 // send a request, show the "Request sent" toast, undo it
-const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, undoRequest } =
+const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, requestSent, undoRequest } =
   useJoinRequests(() => loadAll(false))
 
 // eventName: the hackathon to start the form on (e.g. the one being filtered)
@@ -617,7 +617,7 @@ onUnmounted(() => {
                 :mode="myTeamIds.has(team._id) ? 'mine' : 'browse'"
                 :my-skills="matchMySkills ? mySkills : []"
                 :undoing="undoingId === team.requestId"
-                @request="openJoin(team)"
+                @request-sent="(created) => requestSent(team, created)"
                 @undo="undoRequest(team.requestId, team)"
                 @invite="(role) => openInvite(team, role)"
                 @edit="openCreate(team)"

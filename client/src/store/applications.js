@@ -80,13 +80,18 @@ export const useApplicationsStore = defineStore('applications', () => {
     status.value = null;
     isSaving.value = true;
     const previous = application.status;
+    // move the card (and celebrate an offer) straight away; the server catches up in the background.
+    // If saving fails the card goes back where it was.
+    application.status = newStatus;
+    const celebrated = reachedOffer(previous, application);
+    if (celebrated) celebrate(application);
     try {
       await updateApplicationService(id, { status: newStatus });
-      application.status = newStatus;
-      if (reachedOffer(previous, application)) celebrate(application);
     } catch (error) {
       console.error(error);
-      status.value = 'There was an error: ' + error.message;
+      application.status = previous;
+      if (celebrated) dismissCelebration();
+      status.value = 'Could not move the card, so it went back: ' + (error.response?.data?.error ?? error.message);
     } finally {
       isSaving.value = false;
     }

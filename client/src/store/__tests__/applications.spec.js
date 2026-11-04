@@ -299,3 +299,35 @@ describe('useApplicationsStore offer celebration', () => {
     expect(store.applications[2].review.tips).toBe(REVIEW.tips);
   });
 });
+
+describe('useApplicationsStore moving a card', () => {
+  it('moves the card straight away, before the server answers', async () => {
+    let answer;
+    mock.onPatch('/application/a1').reply(() => new Promise((resolve) => (answer = resolve)));
+    const store = seededStore();
+
+    const moving = store.updateApplicationStatus('a1', 'applied');
+    expect(store.applications[0].status).toBe('applied');
+    expect(store.isSaving).toBe(true);
+
+    answer([200, {}]);
+    await moving;
+    expect(store.applications[0].status).toBe('applied');
+    expect(store.isSaving).toBe(false);
+  });
+
+  it('puts the card back and closes the celebration if saving fails', async () => {
+    mock.onPatch('/application/a3').reply(500, { error: 'Database is down' });
+    const store = seededStore();
+    const before = store.applications[2].status;
+
+    const moving = store.updateApplicationStatus('a3', 'offer');
+    expect(store.celebration?.step).toBe('congrats');
+    await moving;
+
+    expect(store.applications[2].status).toBe(before);
+    expect(store.celebration).toBeNull();
+    expect(store.status).toBe('Could not move the card, so it went back: Database is down');
+  });
+});
+

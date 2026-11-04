@@ -110,3 +110,19 @@ export function uniqueRoles(roles = []) {
     return true
   })
 }
+
+// what someone asking to join picks from: the team's open roles, or else the skills it wants
+export function joinChoices(team) {
+  const openRoles = uniqueRoles(team.openRoles ?? [])
+  return { hasOpenRoles: openRoles.length > 0, choices: openRoles.length > 0 ? openRoles : team.skills ?? [] }
+}
+
+// the role a join request starts with: the one from a role's link, the only open role,
+// or one that matches my skills ('' = none picked yet)
+export function startingJoinRole(team, mySkills = [], initialRole = '') {
+  const { hasOpenRoles, choices } = joinChoices(team)
+  const fromLink = choices.find((choice) => choice.toLowerCase() === initialRole.trim().toLowerCase())
+  if (fromLink) return fromLink
+  if (hasOpenRoles && choices.length === 1) return choices[0]
+  return choices.find((choice) => mySkills.some((mine) => sameSkill(mine, choice))) ?? ''
+}

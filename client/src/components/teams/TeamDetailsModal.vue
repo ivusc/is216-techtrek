@@ -1,20 +1,23 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import TeamModal from './TeamModal.vue'
 import TeamPeople from './TeamPeople.vue'
+import JoinRequestFields from './JoinRequestFields.vue'
 import { useUserStore } from '@/store/user'
 import { formatDate } from '@/utils/date'
-import { getDisplayName, getEventBadgeClass, sameSkill } from '@/utils/team'
-import { assignRole, getErrorMessage } from '@/services/teamService'
+import { getDisplayName, getEventBadgeClass, sameSkill, joinChoices, startingJoinRole } from '@/utils/team'
+import { assignRole, sendRequest, getErrorMessage } from '@/services/teamService'
 
 // everything about one team: who is already in it (with their role and profile), how many more
 // people it needs, and what skills it is looking for
 const props = defineProps({
   team: { type: Object, required: true },
-  canRequest: { type: Boolean, default: false } // show "Request to join"
+  canRequest: { type: Boolean, default: false }, // show "Request to join"
+  startRequesting: { type: Boolean, default: false } // open with the request form already showing
 })
 
-const emit = defineEmits(['close', 'request', 'invite', 'updated'])
+// sent: the request went out (the page shows the "Request sent" toast)
+const emit = defineEmits(['close', 'sent', 'invite', 'updated'])
 
 const filled = computed(() => props.team.teamSize - props.team.slotsOpen)
 
@@ -39,6 +42,43 @@ async function saveRole({ userId, role }) {
 
 // wanted skills I have (from my profile) get a tick
 const auth = useUserStore()
+
+// "Request to join" opens the request form right here, under the team, instead of a new window
+const requesting = ref(false)
+const role = ref('')
+const message = ref('')
+const shareProfile = ref(true)
+const sending = ref(false)
+const requestError = ref('')
+const requestForm = ref(null)
+const roleNeeded = computed(() => joinChoices(props.team).choices.length > 0 && role.value === '')
+// me in the spot of the role I pick, while the form is open
+const you = computed(() =>
+  requesting.value ? { id: auth._id, name: auth.displayName ?? '', avatarUpdatedAt: auth.avatarUpdatedAt, role: role.value } : null
+)
+
+async function startRequest(pickedRole = '') {
+  if (!requesting.value) role.value = startingJoinRole(props.team, auth.skills, pickedRole)
+  else if (pickedRole) role.value = pickedRole
+  requesting.value = true
+  requestError.value = ''
+  await nextTick()
+  requestForm.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+}
+
+async function sendJoinRequest() {
+  sending.value = true
+  requestError.value = ''
+  try {
+    const created = await sendRequest(props.team._id, { role: role.value, message: message.value, shareProfile: shareProfile.value })
+    emit('sent', created)
+  } catch (error) {
+    requestError.value = getErrorMessage(error)
+  }
+  sending.value = false
+}
+
+if (props.startRequesting && props.canRequest) startRequest()
 function isMine(skill) {
   return auth.skills.some((mine) => sameSkill(mine, skill))
 }
@@ -68,14 +108,26 @@ function isMine(skill) {
     <h3 class="h5 fw-semibold mb-3">Who's in the team</h3>
     <TeamPeople
       :team="team"
+      :you="you"
       :saving-role="savingRole"
       :role-error="roleError"
       class="mb-4"
       @invite="$emit('invite', $event)"
       @assign-role="saveRole"
+      @pick-role="role = $event"
     />
 
-    <template v-if="team.skills.length > 0">
+    <!-- the request form slides open here when "Request to join" is pressed -->
+    <Transition name="drop">
+      <section v-if="requesting" ref="requestForm" class="request-form rounded-3 p-3 mb-4" aria-labelledby="request-form-title">
+        <h3 id="request-form-title" class="h5 fw-semibold mb-3">
+          <i class="bi bi-send me-1 text-primary" aria-hidden="true"></i>Ask to join {{ team.name }}
+        </h3>
+        <JoinRequestFields v-model:role="role" v-model:message="message" v-model:share-profile="shareProfile" :team="team" :error="requestError" />
+      </section>
+    </Transition>
+
+    <template v-if="team.skills.length > 0 && !requesting">
       <h3 class="h5 fw-semibold mb-2">Skills they're looking for</h3>
       <div class="d-flex flex-wrap gap-2">
         <span
@@ -91,13 +143,40 @@ function isMine(skill) {
     </template>
 
     <template #footer>
-      <button type="button" class="btn btn-light fw-semibold" @click="$emit('close')">Close</button>
-      <button v-if="canRequest" type="button" class="btn btn-primary fw-semibold" @click="$emit('request')">Request to join</button>
+      <template v-if="requesting">
+        <button type="button" class="btn btn-light fw-semibold" :disabled="sending" @click="requesting = false">Back</button>
+        <button type="button" class="btn btn-primary fw-semibold" :disabled="sending || roleNeeded" @click="sendJoinRequest">
+          <i class="bi bi-send" aria-hidden="true"></i> {{ sending ? 'Sending...' : 'Send request' }}
+        </button>
+      </template>
+      <template v-else>
+        <button type="button" class="btn btn-light fw-semibold" @click="$emit('close')">Close</button>
+        <button v-if="canRequest" type="button" class="btn btn-primary fw-semibold" @click="startRequest()">Request to join</button>
+      </template>
     </template>
   </TeamModal>
 </template>
 
 <style scoped>
+.request-form {
+  background-color: var(--bs-primary-bg-subtle);
+  border: 1px solid var(--bs-primary-border-subtle);
+}
+
+/* the form drops down into place */
+.drop-enter-active {
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.drop-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .drop-enter-active {
+    transition: none;
+  }
+}
+
 .team-progress {
   height: 10px;
   background-color: var(--bs-secondary-bg);

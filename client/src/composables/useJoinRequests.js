@@ -21,6 +21,18 @@ export function useJoinRequests(reload) {
     joinTarget.value = null
   }
 
+  // a request went out (from the request window, or from the form inside the team details window)
+  async function requestSent(team, created) {
+    // update the card straight away; the reload below then confirms it
+    team.requestStatus = created.status
+    team.requestId = created._id
+    // teams that auto-accept add you straight away, so there is nothing to undo
+    if (created.status === 'pending') {
+      sentToast.value = { teamName: team.name, requestId: created._id, team }
+    }
+    await reload()
+  }
+
   async function submitJoin(request) {
     isSending.value = true
     joinError.value = ''
@@ -28,14 +40,7 @@ export function useJoinRequests(reload) {
       const team = joinTarget.value
       const created = await sendRequest(team._id, request)
       joinTarget.value = null
-      // update the card straight away; the reload below then confirms it
-      team.requestStatus = created.status
-      team.requestId = created._id
-      // teams that auto-accept add you straight away, so there is nothing to undo
-      if (created.status === 'pending') {
-        sentToast.value = { teamName: team.name, requestId: created._id, team }
-      }
-      await reload()
+      await requestSent(team, created)
     } catch (error) {
       console.error(error)
       joinError.value = getErrorMessage(error)
@@ -74,6 +79,7 @@ export function useJoinRequests(reload) {
     openJoin,
     closeJoin,
     submitJoin,
+    requestSent,
     undoRequest,
   }
 }

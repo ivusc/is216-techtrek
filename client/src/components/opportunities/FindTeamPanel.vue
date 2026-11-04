@@ -44,7 +44,7 @@ async function loadTeams() {
 
 onMounted(loadTeams)
 
-const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, undoRequest } =
+const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, requestSent, undoRequest } =
   useJoinRequests(async () => {
     await loadTeams()
     opportunityStore.fetchTeamCounts()
@@ -160,7 +160,7 @@ function inviteFromCelebration() {
             :team="team"
             :my-skills="auth.skills"
             :undoing="undoingId === team.requestId"
-            @request="openJoin(team)"
+            @request-sent="(created) => requestSent(team, created)"
             @undo="undoRequest(team.requestId, team)"
           />
         </div>

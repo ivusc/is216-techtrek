@@ -46,7 +46,7 @@ function mockLists({
 }
 
 async function mountTeams() {
-  const wrapper = mount(TeamsView, { global: { stubs: { RouterLink: true } } });
+  const wrapper = mount(TeamsView, { global: { stubs: { RouterLink: true, teleport: true } } });
   await flushPromises();
   return wrapper;
 }
@@ -459,7 +459,8 @@ describe('TeamsView', () => {
     await flushPromises();
 
     expect(dialog(wrapper).text()).toContain('This team is not taking requests');
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    // shown in the window, not as a page alert
+    expect(wrapper.find('.alert').exists()).toBe(false);
   });
 
   it('saves skills from the banner and re-filters the browse list', async () => {

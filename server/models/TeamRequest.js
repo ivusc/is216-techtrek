@@ -21,5 +21,6 @@ const teamRequestSchema = new mongoose.Schema(
 
 teamRequestSchema.index({ teamId: 1, userId: 1 }, { unique: true });
 teamRequestSchema.index({ userId: 1, createdAt: -1 });
+teamRequestSchema.index({ status: 1, teamId: 1 }); // finding requests still waiting (closing full or past-date teams)
 
 module.exports = mongoose.model('TeamRequest', teamRequestSchema);
