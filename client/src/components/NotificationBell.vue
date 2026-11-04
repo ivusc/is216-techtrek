@@ -137,7 +137,7 @@ function markRead(item) {
 }
 .tone-primary { background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary); }
 .tone-success { background-color: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
-.tone-warning { background-color: var(--bs-warning-bg-subtle); color: #8a5a00; }
+.tone-warning { background-color: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
 .tone-muted { background-color: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
 
 .unread-dot {

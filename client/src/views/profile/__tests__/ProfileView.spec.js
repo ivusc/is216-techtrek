@@ -62,6 +62,23 @@ describe('ProfileView', () => {
     expect(button(wrapper, 'Save changes')).toBeUndefined();
   });
 
+  it('shows the school picked during onboarding and saves a new one', async () => {
+    useUserStore().user = { ...USER, faculty: 'SCIS' };
+    mock.onPatch('/me').reply((config) => [200, { user: { ...USER, ...JSON.parse(config.data) } }]);
+    const wrapper = mountProfile();
+
+    expect(wrapper.text()).toContain('Year 1 · Information Systems · SCIS');
+
+    await button(wrapper, 'Edit profile').trigger('click');
+    expect(wrapper.find('#profile-faculty').element.value).toBe('SCIS');
+    await wrapper.find('#profile-faculty').setValue('SOE');
+    await button(wrapper, 'Save changes').trigger('click');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ faculty: 'SOE' });
+    expect(wrapper.text()).toContain('Year 1 · Information Systems · SOE');
+  });
+
   it('discards unsaved edits', async () => {
     const wrapper = mountProfile();
 

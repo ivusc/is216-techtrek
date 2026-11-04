@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
+const mongoose = require('mongoose');
+const { MongoStore } = require('connect-mongo');
 
 const opportunityRouter = require('./routes/opportunity');
 const applicationRouter = require('./routes/application');
@@ -11,6 +13,14 @@ const notificationRouter = require('./routes/notifications');
 const { requireLogin } = require('./middleware/auth');
 
 const app = express();
+
+// On Vercel this file is the serverless entrypoint (server.js never runs), so it
+// connects to Mongo itself and keeps sessions there: function instances share no memory.
+const onVercel = Boolean(process.env.VERCEL);
+const mongoClient = onVercel
+  ? mongoose.connect(process.env.MONGO_URI).then((m) => m.connection.getClient())
+  : null;
+if (onVercel) app.set('trust proxy', 1);
 
 app.use(
   cors({
@@ -25,10 +35,11 @@ app.use(
     resave: false,
     saveUninitialized: false,
     rolling: true,
+    store: onVercel ? MongoStore.create({ clientPromise: mongoClient }) : undefined,
     cookie: {
       maxAge: 1000 * 60 * 60,
       httpOnly: true,
-      secure: false,
+      secure: onVercel,
       sameSite: 'lax',
     },
   }),

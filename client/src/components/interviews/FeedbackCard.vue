@@ -159,7 +159,7 @@ const emit = defineEmits(['next'])
 
 <style scoped>
 .feedback-card {
-  background: white;
+  background: var(--tt-surface);
   border: 1px solid var(--bs-border-color);
   border-radius: 18px;
   padding: 22px;
@@ -227,7 +227,7 @@ const emit = defineEmits(['next'])
   position: absolute;
   inset: 9px;
   border-radius: 50%;
-  background: white;
+  background: var(--tt-surface);
 }
 
 .score-number {
