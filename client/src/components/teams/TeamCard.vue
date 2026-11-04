@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { formatDate } from '@/utils/date'
 import {
   getDisplayName,
@@ -11,6 +11,7 @@ import {
 } from '@/utils/team'
 import UserAvatar from '@/components/UserAvatar.vue'
 import SuggestedTeammates from './SuggestedTeammates.vue'
+import TeamDetailsModal from './TeamDetailsModal.vue'
 
 const props = defineProps({
   team: { type: Object, required: true },
@@ -22,11 +23,18 @@ const props = defineProps({
 
 const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite', 'leave'])
 
-// on Browse, a team I can still join opens "Request to join" when the card itself is clicked
+// on Browse, a team I can still join can be asked to join
 const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
 
+// clicking the card (anywhere but its buttons) opens the team's details: members, roles and open spots
+const showDetails = ref(false)
 function onCardClick(event) {
-  if (!canRequest.value || event.target.closest('button, a, input, select')) return
+  if (event.target.closest('button, a, input, select')) return
+  showDetails.value = true
+}
+
+function requestFromDetails() {
+  showDetails.value = false
   emit('request')
 }
 
@@ -42,12 +50,11 @@ function isUrgent() {
 
 <template>
   <div
-    class="card p-3 h-100"
-    :class="{ 'card-hover': canRequest }"
-    :tabindex="canRequest ? 0 : undefined"
-    :aria-label="canRequest ? 'Ask to join ' + team.name : undefined"
+    class="card card-hover p-3 h-100"
+    tabindex="0"
+    :aria-label="'See who is in ' + team.name"
     @click="onCardClick"
-    @keydown.enter.self="canRequest && emit('request')"
+    @keydown.enter.self="showDetails = true"
   >
 
     <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
@@ -137,5 +144,16 @@ function isUrgent() {
         <i class="bi bi-box-arrow-left" aria-hidden="true"></i> Leave team
       </button>
     </div>
+
+    <!-- teleported to the page body so the card's hover lift doesn't move the window -->
+    <Teleport to="body">
+      <TeamDetailsModal
+        v-if="showDetails"
+        :team="team"
+        :can-request="canRequest"
+        @close="showDetails = false"
+        @request="requestFromDetails"
+      />
+    </Teleport>
   </div>
 </template>
