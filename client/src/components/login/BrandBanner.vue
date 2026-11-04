@@ -66,7 +66,7 @@
   width: 36px;
   height: 36px;
   border-radius: var(--bs-border-radius);
-  background-color: var(--tt-cream);
+  background-color: rgba(255, 255, 255, 0.95); /* banner is purple in both themes, so no theme colour */
 }
 
 /* :deep so the page's slot content (title, text) gets these styles too */
@@ -88,7 +88,7 @@
   height: 40px;
   border-radius: 12px;
   font-size: 1.25rem;
-  color: var(--tt-cream);
+  color: #fff;
   background-color: rgba(255, 255, 255, 0.14);
 }
 
