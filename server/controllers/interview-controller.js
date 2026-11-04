@@ -4,7 +4,7 @@ const Application = require('../models/Application');
 const Opportunity = require('../models/Opportunity');
 
 const ai = require('../ai/gemini-config');
-const prompt = require('../ai/prompt');
+const { questionPrompt, feedbackPrompt } = require('../ai/prompt');
 
 const matchKey = (opportunity) => opportunity.organisation.toLowerCase() + '|' + opportunity.title.toLowerCase()
 
@@ -200,7 +200,7 @@ async function generateQuestions(req, res) {
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
 
-      contents: prompt(opportunity,existingQuestions),
+      contents: questionPrompt(opportunity, existingQuestions),
       config: {
         responseMimeType: 'application/json'
       }
@@ -210,7 +210,7 @@ async function generateQuestions(req, res) {
 
     try {
       questions = JSON.parse(response.text)
-      console.log(questions);
+      // console.log(questions);
     } catch {
       return res.status(500).json({
         error: 'Invalid AI response'
@@ -286,61 +286,7 @@ async function generateFeedback(req, res) {
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
 
-      contents: `
-You are evaluating a candidate's interview answer.
-
-Organisation: ${opportunity.organisation}
-Role: ${opportunity.title}
-Type: ${opportunity.type}
-
-Description:
-${opportunity.description || 'No description provided'}
-
-Interview Question:
-${question}
-
-Candidate Answer:
-${answer}
-
-Evaluate the candidate's answer based on:
-
-1. Structure
-- Is the answer organised and easy to follow?
-
-2. Clarity
-- Is the answer clear and understandable?
-
-3. Relevance
-- Does the answer address the question?
-
-4. Impact
-- Are outcomes, results and achievements demonstrated?
-
-Give each category a score from 0 to 10.
-
-Also provide:
-- An overall score from 0 to 10
-- A short summary
-- A short overall evaluation
-- Exactly 2 strengths
-- Exactly 2 specific improvements
-- A stronger version of the answer
-
-Return JSON in this format:
-
-{
-  "score": 0,
-  "summary": "",
-  "overallFeedback": "",
-  "structure": 0,
-  "clarity": 0,
-  "relevance": 0,
-  "impact": 0,
-  "strengths": [],
-  "improvements": [],
-  "sampleAnswer": ""
-}
-`,
+      contents: feedbackPrompt(opportunity, question, answer),
       config: {
         responseMimeType: 'application/json'
       }
