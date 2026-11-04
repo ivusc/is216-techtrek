@@ -89,7 +89,7 @@ onUnmounted(() => clearTimeout(timer))
   font-size: 22px;
   color: var(--tt-accent);
   background-color: var(--bs-primary-bg-subtle);
-  box-shadow: 0 2px 8px rgba(91, 63, 228, 0.18);
+  box-shadow: 0 2px 8px rgba(85, 64, 191, 0.18);
   animation:
     envelope-hop 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) 0.1s backwards,
     envelope-wiggle 0.5s ease-in-out 0.75s 2;

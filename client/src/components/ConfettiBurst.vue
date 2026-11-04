@@ -7,7 +7,7 @@ const props = defineProps({
   pieces: { type: Number, default: 36 } // per corner
 })
 
-const COLOURS = ['#5b3fe4', '#38b2e8', '#ef5d7a', '#f5a524', '#2fbf71', '#b9a8ff']
+const COLOURS = ['#5540bf', '#38b2e8', '#ef5d7a', '#f5a524', '#2fbf71', '#b9a8ff']
 
 // a fixed "random" spread, so every burst looks lively but tests stay predictable
 function wobble(index, salt) {

@@ -124,7 +124,7 @@ function markRead(item) {
   background-color: var(--bs-secondary-bg);
 }
 .notification-item.is-unread {
-  background-color: rgba(91, 63, 228, 0.05);
+  background-color: rgba(85, 64, 191, 0.05);
 }
 .notification-item.is-unread:hover {
   background-color: var(--bs-primary-bg-subtle);

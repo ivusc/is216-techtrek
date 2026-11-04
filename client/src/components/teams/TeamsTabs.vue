@@ -125,7 +125,7 @@ function countText(item, count) {
 .tab-card.active {
   border-color: var(--bs-primary);
   background-color: var(--bs-primary-bg-subtle);
-  box-shadow: 0 6px 16px rgba(91, 63, 228, 0.16);
+  box-shadow: 0 6px 16px rgba(85, 64, 191, 0.16);
 }
 .tab-card.active .tab-icon {
   color: var(--bs-white);

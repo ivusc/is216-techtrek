@@ -367,8 +367,8 @@ onMounted(() => dialog.value.focus())
   animation: card-glow 1.2s ease-out 0.2s 2;
 }
 @keyframes card-glow {
-  0% { box-shadow: 0 0 0 0 rgba(91, 63, 228, 0.45); }
-  100% { box-shadow: 0 0 0 12px rgba(91, 63, 228, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(85, 64, 191, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(85, 64, 191, 0); }
 }
 .tips-saved {
   animation: saved-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4);
@@ -382,8 +382,8 @@ onMounted(() => dialog.value.focus())
   animation: card-glow 1.2s ease-out 0.2s 2;
 }
 @keyframes card-glow {
-  0% { box-shadow: 0 0 0 0 rgba(91, 63, 228, 0.45); }
-  100% { box-shadow: 0 0 0 12px rgba(91, 63, 228, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(85, 64, 191, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(85, 64, 191, 0); }
 }
 .tips-saved { animation: none; }
 }

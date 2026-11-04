@@ -10,8 +10,8 @@ body {
 
 
 // ─── 1. Brand tokens ──────────────────────────────────────────────────────
-$tt-primary:       #5b3fe4; // brand/primary (purple)
-$tt-primary-dark:  #4a2fcc; // brand/primary-dark (hover)
+$tt-primary:       #5540bf; // brand/primary (purple, toned down so it doesn't glare; white text 7.3:1)
+$tt-primary-dark:  #4736a1; // brand/primary-dark (hover)
 $tt-secondary:     #38b2e8; // brand/secondary (sky blue, in place of the lime)
 $tt-cream:         #f3f2f8; // page background: soft lilac-grey so white cards stand out
 $tt-peach:         #dcf1fb; // light sky panel (hackathon chips, practice card)
@@ -94,7 +94,7 @@ $border-radius-pill: 999px;
 
 // Shadows
 $box-shadow-sm: 0 1px 2px rgba(28, 26, 61, .06), 0 4px 12px -2px rgba(28, 26, 61, .07); // cards: lifted off the page
-$box-shadow:    0 2px 4px rgba(28, 26, 61, .06), 0 12px 28px -6px rgba(91, 63, 228, .22); // hovered cards, dropdowns
+$box-shadow:    0 2px 4px rgba(28, 26, 61, .06), 0 12px 28px -6px rgba(85, 64, 191, .22); // hovered cards, dropdowns
 $box-shadow-lg: 0 24px 48px rgba(28, 26, 61, .18);                                  // modals, drawers
 
 // Spacing: design uses Bootstrap's default $spacers (4/8/16/24/48px); no override needed.
@@ -124,8 +124,8 @@ $body-tertiary-bg-dark:        #232139;
 $border-color-dark:            #302e48;
 $border-color-translucent-dark:#45435e;
 $headings-color-dark:          #f3f2fa;
-$tt-primary-dark-mode:         #7b63f6; // white text 4.2:1 (fine for the bold button labels)
-$tt-primary-dark-mode-hover:   #8c77ff;
+$tt-primary-dark-mode:         #7662da; // white text 4.2:1 (fine for the bold button labels)
+$tt-primary-dark-mode-hover:   #8877df;
 $link-color-dark:              #a594ff;
 $link-hover-color-dark:        #c2b7ff;
 $primary-bg-subtle-dark:       #2a2452;
@@ -154,7 +154,7 @@ $danger-text-emphasis-dark:    #ff9fb3;
 
   // lavender chips (open roles, the role someone asks for, tab counts) and the pink "create" card
   --tt-chip-bg:          #e2dcfc;
-  --tt-chip-text:        #3f28b8;
+  --tt-chip-text:        #413091;
   --tt-chip-border:      #cbc0f7;
   --tt-create-bg:        #fff4f6;
   --tt-create-bg-hover:  #ffe9ee;
