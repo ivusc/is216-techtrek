@@ -140,4 +140,15 @@ describe('JoinRequestModal', () => {
     expect(wrapper.find('.share-panel').exists()).toBe(false);
     expect(wrapper.findAll('.person.is-open')).toHaveLength(0);
   });
+
+  it('moves my circle to the spot of the role I switch to', async () => {
+    const wrapper = mountModal({ team: team({ slotsOpen: 2, openRoles: ['Frontend developer', 'Backend developer'] }) });
+    const order = () => wrapper.findAll('.person').slice(-2).map((person) => person.find('.person-name').text());
+
+    await wrapper.findAll('[role="radio"]')[0].trigger('click');
+    expect(order()).toEqual(['You', 'Backend developer']);
+
+    await wrapper.findAll('[role="radio"]')[1].trigger('click');
+    expect(order()).toEqual(['Frontend developer', 'You']);
+  });
 });

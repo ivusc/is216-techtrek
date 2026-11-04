@@ -105,4 +105,14 @@ describe('OfferCelebrationModal', () => {
     expect(wrapper.emitted('submit')[0]).toEqual([{ difficulty: 5, rounds: 'Two rounds', tips: 'Know the product.' }]);
     wrapper.unmount();
   });
+
+  it('pops confetti for the congratulations, not on the tips form', () => {
+    const congrats = mountModal();
+    expect(document.querySelectorAll('.confetti-piece').length).toBeGreaterThan(0);
+    congrats.unmount();
+
+    const form = mountModal({ step: 'form' });
+    expect(document.querySelector('.confetti-layer')).toBeNull();
+    form.unmount();
+  });
 });

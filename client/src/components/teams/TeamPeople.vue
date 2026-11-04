@@ -38,22 +38,23 @@ const shownYou = computed(() => {
   return props.you
 })
 
-// the roles still to fill; in the request window the role I picked is shown on me instead
-const rolesLeft = computed(() => {
-  const roles = [...(props.team.openRoles ?? [])]
-  const mine = String(props.you?.role ?? '').toLowerCase()
-  const index = roles.findIndex((role) => role.toLowerCase() === mine)
-  if (shownYou.value && index !== -1) roles.splice(index, 1)
-  return roles
-})
-
-// when I am shown in the first open spot, there is one fewer empty circle
-const openSpots = computed(() =>
-  Array.from({ length: Math.max(props.team.slotsOpen - (shownYou.value ? 1 : 0), 0) }, (_, index) => ({
+// the open spots in order, one per open role (spots past the roles have none). In the request
+// window I sit in the spot of the role I picked, so picking another role moves me there.
+const spots = computed(() => {
+  const roles = props.team.openRoles ?? []
+  const list = Array.from({ length: Math.max(props.team.slotsOpen, 0) }, (_, index) => ({
+    kind: 'open',
     index,
-    role: rolesLeft.value[index] ?? null
+    role: roles[index] ?? null
   }))
-)
+  if (shownYou.value && list.length > 0) {
+    const mine = String(shownYou.value.role ?? '').toLowerCase()
+    const match = list.findIndex((spot) => spot.role !== null && spot.role.toLowerCase() === mine)
+    list[match === -1 ? 0 : match] = { kind: 'you', index: match === -1 ? 0 : match }
+  }
+  return list
+})
+const openSpots = computed(() => spots.value.filter((spot) => spot.kind === 'open'))
 
 function roleOf(member) {
   if (member.isLead) return 'Team lead'
@@ -150,7 +151,7 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
 
 <template>
   <div>
-    <div class="people-grid mb-3">
+    <TransitionGroup tag="div" name="spot" class="people-grid mb-3">
       <button
         v-for="member in members"
         :key="member.user._id"
@@ -182,35 +183,36 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
         <span class="person-role text-caption text-body-secondary">Not on TechTrek</span>
       </div>
 
-      <!-- request window: where I would go -->
-      <div v-if="shownYou" class="person is-static is-you" :class="{ 'is-chosen': Boolean(shownYou.role) }">
-        <span class="person-ring you-ring">
-          <UserAvatar :user-id="shownYou.id ?? ''" :name="shownYou.name ?? ''" :avatar-updated-at="shownYou.avatarUpdatedAt ?? ''" :size="76" />
-        </span>
-        <span class="person-name fw-semibold text-primary">You</span>
-        <span class="person-role text-caption text-body-secondary text-truncate">{{ shownYou.role || 'Your spot' }}</span>
-      </div>
-
-      <!-- empty spots: click to invite someone or share the team -->
-      <button
-        v-for="spot in openSpots"
-        :key="'open' + spot.index"
-        type="button"
-        class="person"
-        :class="{ 'is-open': openId === 'share' + spot.index }"
-        :aria-expanded="you && spot.role ? undefined : openId === 'share' + spot.index"
-        :aria-label="you && spot.role ? 'Ask to be the ' + spot.role : spot.role ? 'Invite someone to be the ' + spot.role : 'Invite someone to this open spot'"
-        @click="openSpotClicked(spot)"
-      >
-        <span class="person-ring">
-          <span class="spot spot-open rounded-circle d-flex align-items-center justify-content-center">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+      <!-- the open spots in order; in the request window I sit in the spot of the role I picked -->
+      <template v-for="spot in spots" :key="spot.kind === 'you' ? 'you' : 'open' + spot.index">
+        <div v-if="spot.kind === 'you'" class="person is-static is-you" :class="{ 'is-chosen': Boolean(shownYou.role) }">
+          <span class="person-ring you-ring">
+            <UserAvatar :user-id="shownYou.id ?? ''" :name="shownYou.name ?? ''" :avatar-updated-at="shownYou.avatarUpdatedAt ?? ''" :size="76" />
           </span>
-        </span>
-        <span class="person-name spot-name fw-semibold text-primary">{{ spot.role ?? 'Open spot' }}</span>
-        <span class="person-role text-caption text-body-secondary">{{ you && spot.role ? 'Tap to pick' : spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
-      </button>
-    </div>
+          <span class="person-name fw-semibold text-primary">You</span>
+          <span class="person-role text-caption text-body-secondary text-truncate">{{ shownYou.role || 'Your spot' }}</span>
+        </div>
+
+        <!-- an empty spot: in the request window it picks its role, elsewhere it opens invite / share -->
+        <button
+          v-else
+          type="button"
+          class="person"
+          :class="{ 'is-open': openId === 'share' + spot.index }"
+          :aria-expanded="you && spot.role ? undefined : openId === 'share' + spot.index"
+          :aria-label="you && spot.role ? 'Ask to be the ' + spot.role : spot.role ? 'Invite someone to be the ' + spot.role : 'Invite someone to this open spot'"
+          @click="openSpotClicked(spot)"
+        >
+          <span class="person-ring">
+            <span class="spot spot-open rounded-circle d-flex align-items-center justify-content-center">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </span>
+          </span>
+          <span class="person-name spot-name fw-semibold text-primary">{{ spot.role ?? 'Open spot' }}</span>
+          <span class="person-role text-caption text-body-secondary">{{ you && spot.role ? 'Tap to pick' : spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
+        </button>
+      </template>
+    </TransitionGroup>
 
     <!-- the clicked member's profile -->
     <div v-if="openMember" class="people-panel rounded-3 p-3">
@@ -413,7 +415,28 @@ button.person:hover .spot-open {
   background-color: var(--bs-primary-bg-subtle);
 }
 
+/* picking another role: my circle slides into that spot, and the role I left fades back in */
+.spot-move {
+  transition: transform 0.35s cubic-bezier(0.3, 0.9, 0.4, 1);
+}
+.spot-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.spot-enter-from {
+  opacity: 0;
+  transform: scale(0.85);
+}
+/* the circle I'm moving into goes straight away, so the row never has an extra circle in it */
+.spot-leave-active {
+  display: none !important;
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .spot-move,
+  .spot-enter-active {
+    transition: none;
+  }
   .person-ring {
     transition: none;
   }

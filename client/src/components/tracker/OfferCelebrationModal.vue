@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { reviewDifficulties, typeBadge } from '@/constants';
+import ConfettiBurst from '@/components/ConfettiBurst.vue';
 
 const props = defineProps({
   application: { type: Object, required: true },
@@ -43,6 +44,9 @@ onMounted(() => dialog.value.focus());
 
 <template>
   <div class="modal-backdrop fade show"></div>
+
+  <!-- the offer is in: confetti pops out from both corners -->
+  <ConfettiBurst v-if="step === 'congrats'" />
 
   <div
     ref="dialog"
