@@ -101,8 +101,8 @@ function card(wrapper, heading) {
 
 function stat(wrapper, label) {
   return wrapper
-    .findAll('.col-6')
-    .find((candidate) => candidate.text().includes(label))
+    .findAll('.tab-card')
+    .find((candidate) => candidate.find('.tab-label').text() === label)
     .text();
 }
 
@@ -137,7 +137,7 @@ describe('HomeView', () => {
     expect(stat(wrapper, 'Saved opportunities')).toContain('+1 this week');
     expect(stat(wrapper, 'Active applications')).toContain('1 at interview');
     expect(stat(wrapper, 'Deadlines this week')).toContain('Next:');
-    expect(stat(wrapper, 'Team requests')).toMatch(/2\s*Team requests|Team requests\s*2/);
+    expect(stat(wrapper, 'Team requests')).toContain('2 waiting');
     expect(stat(wrapper, 'Team requests')).toContain('1 invite for you');
   });
 

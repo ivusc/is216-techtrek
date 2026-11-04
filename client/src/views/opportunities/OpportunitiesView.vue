@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import './opportunities.css'
-import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
+import TabCards from '@/components/TabCards.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
@@ -36,6 +36,16 @@ const themeFilter = ref('')
 const closingWithin = ref('') // '' = any, otherwise a number of days
 const sortBy = ref('closing')
 const viewMode = ref('grid')
+
+function plural(count, one, many) {
+  return count + ' ' + (count === 1 ? one : many)
+}
+
+const tabs = computed(() => [
+  { key: 'overview', label: 'Overview', hint: 'Everything at a glance', icon: 'bi-grid-1x2-fill', count: plural(jobs.value.length + hackathons.value.length, 'listing', 'listings') },
+  { key: 'jobs', label: 'Jobs & internships', hint: 'Roles open for students', icon: 'bi-briefcase-fill', count: plural(jobs.value.length, 'role', 'roles') },
+  { key: 'hackathons', label: 'Hackathons', hint: 'Build, compete and win', icon: 'bi-trophy-fill', count: plural(hackathons.value.length, 'event', 'events') }
+])
 
 const PAGE_SIZE = 9
 const visibleCount = ref(PAGE_SIZE)
@@ -253,11 +263,7 @@ const loadMore = async () => {
   <div class="p-2">
     <PageHeader v-model="search" />
 
-    <OpportunityTabs
-      v-model:tab="activeTab"
-      v-model:view-mode="viewMode"
-      :counts="{ jobs: jobs.length, hackathons: hackathons.length }"
-    />
+    <TabCards v-model:tab="activeTab" :tabs="tabs" label="Opportunity types" id-prefix="opportunities-tab-" />
 
     <OpportunityFilters
       v-model:job-field="jobField"
@@ -274,11 +280,33 @@ const loadMore = async () => {
     />
 
     <!-- results line, error, loading, nothing found -->
-    <p v-if="!isLoading" class="text-body-tertiary mb-3">
-      <strong class="text-body">{{ filteredItems.length }} results</strong>
-      <small v-if="closingThisWeek > 0"> · {{ closingThisWeek }} closing this week</small>
-      <small v-if="lastUpdated !== ''"> · updated {{ lastUpdated }}</small>
-    </p>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <p v-if="!isLoading" class="text-body-tertiary mb-0">
+        <strong class="text-body">{{ filteredItems.length }} results</strong>
+        <small v-if="closingThisWeek > 0"> · {{ closingThisWeek }} closing this week</small>
+        <small v-if="lastUpdated !== ''"> · updated {{ lastUpdated }}</small>
+      </p>
+
+      <!-- grid / list toggle (tablets and up; phones are 1 card per row anyway) -->
+      <div class="btn-group bg-body-secondary rounded p-1 d-none d-md-inline-flex ms-auto">
+        <button
+          class="btn btn-sm border-0 rounded-1"
+          :class="viewMode === 'grid' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
+          :aria-pressed="viewMode === 'grid'"
+          @click="viewMode = 'grid'"
+        >
+          <i class="bi bi-grid"></i> Grid
+        </button>
+        <button
+          class="btn btn-sm border-0 rounded-1"
+          :class="viewMode === 'list' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
+          :aria-pressed="viewMode === 'list'"
+          @click="viewMode = 'list'"
+        >
+          <i class="bi bi-three-dots"></i> List
+        </button>
+      </div>
+    </div>
 
     <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2" role="alert">
       {{ status }}
