@@ -1,7 +1,7 @@
 // one spelling per common skill, so "vue", "VueJS" and "Vue.js" all count as the same skill.
 // keys are the skill in lower case with spaces, dots, dashes and underscores removed.
 // keep in sync with server/service/skills.js
-const SKILL_ALIASES = {
+export const SKILL_ALIASES = {
   vue: 'Vue.js', vuejs: 'Vue.js', vue3: 'Vue.js',
   react: 'React', reactjs: 'React',
   js: 'JavaScript', javascript: 'JavaScript',
