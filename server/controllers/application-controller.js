@@ -133,6 +133,48 @@ async function createReview(req, res) {
   }
 }
 
+// my application with tips already on it, or the error response to send (null when it was sent)
+async function findReviewed(req, res) {
+  const { id: applicationId } = req.params;
+  if (!mongoose.isValidObjectId(applicationId)) {
+    res.status(400).json({ error: 'Invalid ID' });
+    return null;
+  }
+  const application = await applicationService.getApplicationById(applicationId, req.session.user._id);
+  if (!application) {
+    res.status(404).json({ error: 'Application not found' });
+    return null;
+  }
+  if (!application.review) {
+    res.status(404).json({ error: 'You have not shared tips for this application yet.' });
+    return null;
+  }
+  return application;
+}
+
+// PUT /application/:id/review  body: { difficulty, rounds, tips } - edit my own tips
+async function updateReview(req, res) {
+  const { difficulty, rounds, tips } = req.body ?? {};
+  try {
+    const application = await findReviewed(req, res);
+    if (!application) return;
+    res.json(await applicationService.updateReview(application, { difficulty, rounds, tips }));
+  } catch (err) {
+    handleError(res, err, 'Failed to update the tips');
+  }
+}
+
+// DELETE /application/:id/review - take my tips down
+async function deleteReview(req, res) {
+  try {
+    const application = await findReviewed(req, res);
+    if (!application) return;
+    res.json(await applicationService.removeReview(application));
+  } catch (err) {
+    handleError(res, err, 'Failed to remove the tips');
+  }
+}
+
 module.exports = {
   createApplication,
   getApplications,
@@ -140,4 +182,6 @@ module.exports = {
   updateApplication,
   deleteApplication,
   createReview,
+  updateReview,
+  deleteReview,
 };

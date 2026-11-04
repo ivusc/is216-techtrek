@@ -37,18 +37,12 @@ describe('GET /opportunity/jobs', () => {
     });
   });
 
-  it.each([
-    [
-      'sector=finance&field=audit',
-      { ...BASE_PARAMS, category: 'accounting-finance-jobs', what_or: 'audit auditor assurance' },
-    ],
-    ['sector=all', { app_id: 'app', app_key: 'key', results_per_page: 20 }],
-  ])('maps %s onto Adzuna params', async (query, params) => {
+  it('ignores a sector param and still only asks Adzuna for IT jobs', async () => {
     const get = stubAdzuna(adzuna);
 
-    await request(app).get(`/opportunity/jobs?${query}`).expect(200);
+    await request(app).get('/opportunity/jobs?sector=finance').expect(200);
 
-    expect(get).toHaveBeenCalledWith('https://adzuna.test/jobs/sg/search/1', { params });
+    expect(get).toHaveBeenCalledWith('https://adzuna.test/jobs/sg/search/1', { params: BASE_PARAMS });
   });
 
   it('sends no filter params when none are given', async () => {
@@ -98,14 +92,9 @@ describe('GET /opportunity/jobs', () => {
       'field must be one of: frontend, backend, fullstack, data, ai, devops, cybersecurity, mobile',
     ],
     [
-      'sector=space',
-      'sector must be one of: tech, finance, consulting, marketing, sales, hr, legal, design, engineering, logistics, all',
+      'field=audit',
+      'field must be one of: frontend, backend, fullstack, data, ai, devops, cybersecurity, mobile',
     ],
-    [
-      'sector=finance&field=frontend',
-      'field must be one of: audit, tax, accounting, banking, investment, risk',
-    ],
-    ['sector=all&field=audit', 'field must be one of: (none for this sector)'],
   ])('rejects %s', async (query, error) => {
     const get = stubAdzuna(adzuna);
 
@@ -133,16 +122,14 @@ describe('GET /opportunity/jobs', () => {
 });
 
 describe('GET /opportunity/job-filters', () => {
-  it('lists every sector with its roles, Tech first and by default', async () => {
+  it('lists only the IT roles', async () => {
     const response = await request(app).get('/opportunity/job-filters').expect(200);
 
-    expect(response.body.defaultSector).toBe('tech');
-    expect(response.body.sectors[0]).toMatchObject({
-      key: 'tech',
-      label: 'Tech',
-      roles: expect.arrayContaining([{ key: 'frontend', label: 'Frontend' }]),
-    });
-    expect(response.body.sectors.at(-1)).toEqual({ key: 'all', label: 'All sectors', roles: [] });
+    expect(Object.keys(response.body)).toEqual(['roles']);
+    expect(response.body.roles.map((role) => role.key)).toEqual([
+      'frontend', 'backend', 'fullstack', 'data', 'ai', 'devops', 'cybersecurity', 'mobile',
+    ]);
+    expect(response.body.roles[0]).toEqual({ key: 'frontend', label: 'Frontend' });
   });
 });
 

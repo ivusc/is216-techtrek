@@ -2,17 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue';
 
-const SECTORS = [
-  {
-    key: 'tech',
-    label: 'Tech',
-    roles: [
-      { key: 'frontend', label: 'Frontend' },
-      { key: 'data', label: 'Data' },
-    ],
-  },
-  { key: 'finance', label: 'Finance & Accounting', roles: [{ key: 'audit', label: 'Audit' }] },
-  { key: 'all', label: 'All sectors', roles: [] },
+const ROLES = [
+  { key: 'frontend', label: 'Frontend' },
+  { key: 'data', label: 'Data' },
 ];
 
 function mountFilters(props) {
@@ -20,8 +12,7 @@ function mountFilters(props) {
     props: {
       tab: 'overview',
       themes: ['AI', 'Fintech'],
-      sectors: SECTORS,
-      jobSector: 'tech',
+      roles: ROLES,
       jobField: '',
       jobType: '',
       theme: '',
@@ -51,11 +42,10 @@ describe('OpportunityFilters', () => {
     const hackathonsTab = mountFilters({ tab: 'hackathons' });
     const overview = mountFilters({ tab: 'overview' });
 
-    expect(selectLabels(jobsTab)).toEqual(['Sort by', 'Sector', 'Role', 'Work type', 'Location']);
+    expect(selectLabels(jobsTab)).toEqual(['Sort by', 'Role', 'Work type', 'Location']);
     expect(jobsTab.find('select[aria-label="Role"]').text()).toContain('Role: Data');
-    expect(selectLabels(mountFilters({ tab: 'jobs', jobSector: 'all' }))).toEqual([
+    expect(selectLabels(mountFilters({ tab: 'jobs', roles: [] }))).toEqual([
       'Sort by',
-      'Sector',
       'Work type',
       'Location',
     ]);
@@ -84,20 +74,6 @@ describe('OpportunityFilters', () => {
     expect(toggle.attributes('aria-expanded')).toBe('true');
     expect(panel()).toContain('d-flex');
     expect(panel()).not.toContain('d-none');
-  });
-
-  it('clears the role when another sector is picked and counts a sector other than Tech', async () => {
-    const filters = mountFilters({ tab: 'jobs', jobField: 'data' });
-
-    await filters.find('select[aria-label="Sector"]').setValue('finance');
-
-    expect(filters.emitted('update:jobField')).toEqual([['']]);
-    expect(filters.emitted('update:jobSector')).toEqual([['finance']]);
-    expect(
-      mountFilters({ jobSector: 'finance' })
-        .find('button[aria-controls="opportunity-filters"]')
-        .text(),
-    ).toBe('Filters · 1');
   });
 
   it('updates the filter models and emits clear', async () => {

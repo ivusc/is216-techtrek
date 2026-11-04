@@ -1,6 +1,9 @@
 <script setup>
+// the Teams page sections as big tappable cards (Browse, My teams, Requests), plus a card to post a team
+import { computed } from 'vue'
+import TabCards from '@/components/TabCards.vue'
 
-defineProps({
+const props = defineProps({
   counts: { type: Object, required: true }
 })
 
@@ -8,53 +11,33 @@ const tab = defineModel('tab', { type: String, required: true })
 
 defineEmits(['create'])
 
-const tabs = [
-  { key: 'browse', label: 'Browse teams' },
-  { key: 'mine', label: 'My teams' },
-  { key: 'requests', label: 'Requests' }
+const sections = [
+  { key: 'browse', label: 'Browse teams', hint: 'Find a team to join', icon: 'bi-search', unit: ['recruiting', 'recruiting'] },
+  { key: 'mine', label: 'My teams', hint: 'Teams you lead or joined', icon: 'bi-people-fill', unit: ['team', 'teams'] },
+  { key: 'requests', label: 'Requests', hint: 'Requests and invites', icon: 'bi-inbox-fill', unit: ['waiting', 'waiting'] }
 ]
+
+const tabs = computed(() =>
+  sections.map((item) => {
+    const count = props.counts[item.key] ?? 0
+    return {
+      ...item,
+      count: count + ' ' + (count === 1 ? item.unit[0] : item.unit[1]),
+      news: item.key === 'requests' && count > 0
+    }
+  })
+)
+
+const createCard = { label: 'Create team post', hint: 'Advertise your open spots', icon: 'bi-plus-lg' }
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom mb-3">
-    <nav class="nav nav-underline flex-nowrap column-gap-2 column-gap-md-4 tabs-scroll">
-      <button
-        v-for="item in tabs"
-        :key="item.key"
-        class="nav-link bg-transparent border-0 d-flex align-items-center gap-2 fw-semibold py-3"
-        :class="{ active: tab === item.key }"
-        @click="tab = item.key"
-      >
-        {{ item.label }}
-        <span class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis">{{ counts[item.key] }}</span>
-      </button>
-    </nav>
-
-    <button class="btn btn-tt-accent fw-semibold mb-2" @click="$emit('create')">
-      <i class="bi bi-plus-lg"></i> Create team post
-    </button>
-  </div>
+  <TabCards
+    v-model:tab="tab"
+    :tabs="tabs"
+    label="Teams sections"
+    id-prefix="teams-tab-"
+    :action="createCard"
+    @action="$emit('create')"
+  />
 </template>
-
-<style scoped>
-/* on phones the three tabs stay on one line and scroll sideways if they ever don't fit */
-.tabs-scroll {
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabs-scroll .nav-link {
-  white-space: nowrap;
-}
-/* small phones: the tabs share the full width and use slightly smaller text so all three fit */
-@media (max-width: 575.98px) {
-  .tabs-scroll {
-    width: 100%;
-  }
-  .tabs-scroll .nav-link {
-    flex: 1 1 auto;
-    justify-content: center;
-    gap: .375rem !important;
-    font-size: .875rem;
-  }
-}
-</style>

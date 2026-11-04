@@ -176,7 +176,38 @@ describe('ApplicationDetailModal', () => {
       ...offer,
       review: { difficulty: 3, tips: 'Know the product.', createdAt: '2026-11-03T02:00:00.000Z' },
     });
-    expect(reviewed.text()).toContain('You shared your tips on 3 Nov');
+    expect(reviewed.text()).toContain('Shared on 3 Nov');
     expect(button(reviewed, 'Share your interview tips')).toBeUndefined();
+  });
+
+  it('shows my own tips in full, with edit and a confirmed delete', async () => {
+    const wrapper = mountModal({
+      ...applications()[2],
+      status: 'offer',
+      review: {
+        difficulty: 4,
+        rounds: 'Case study, then a panel',
+        tips: 'Know the product.',
+        createdAt: '2026-11-03T02:00:00.000Z',
+        updatedAt: '2026-11-04T02:00:00.000Z',
+      },
+    });
+
+    const card = wrapper.find('.tips-card');
+    expect(card.text()).toContain('Your interview tips');
+    expect(card.text()).toContain('Difficulty 4/5 · Hard');
+    expect(card.text()).toContain('Rounds: Case study, then a panel');
+    expect(card.text()).toContain('Know the product.');
+    expect(card.text()).toContain('Shared on 3 Nov · Edited 4 Nov');
+
+    await button(wrapper, 'Edit tips').trigger('click');
+    expect(wrapper.emitted('share-tips')).toHaveLength(1);
+
+    await button(wrapper, 'Delete').trigger('click');
+    expect(wrapper.emitted('delete-tips')).toBeUndefined();
+    await button(wrapper, 'Keep them').trigger('click');
+    await button(wrapper, 'Delete').trigger('click');
+    await button(wrapper, 'Delete tips').trigger('click');
+    expect(wrapper.emitted('delete-tips')).toHaveLength(1);
   });
 });

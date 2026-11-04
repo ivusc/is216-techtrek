@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import './opportunities.css'
-import OpportunityTabs from '@/components/opportunities/OpportunityTabs.vue'
+import TabCards from '@/components/TabCards.vue'
 import OpportunityFilters from '@/components/opportunities/OpportunityFilters.vue'
 import OpportunityCardList from '@/components/opportunities/OpportunityCardList.vue'
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue'
@@ -24,7 +24,7 @@ import { useUserStore } from '@/store/user'
 
 // the store holds the fetched opportunities and does all the server calls
 const opportunityStore = useOpportunityStore()
-const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, jobSector, sectorOptions, savedItems } =
+const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, jobField, roleOptions, savedItems } =
   storeToRefs(opportunityStore)
 
 const userStore = useUserStore()
@@ -43,6 +43,17 @@ const closingWithin = ref('') // '' = any, otherwise a number of days
 const sortBy = ref('closing')
 const viewMode = ref('grid')
 
+function plural(count, one, many) {
+  return count + ' ' + (count === 1 ? one : many)
+}
+
+// counts follow the current search + filters (tabCounts, below)
+const tabs = computed(() => [
+  { key: 'overview', label: 'Overview', hint: 'Everything at a glance', icon: 'bi-grid-1x2-fill', count: plural(tabCounts.value.jobs + tabCounts.value.hackathons, 'listing', 'listings') },
+  { key: 'jobs', label: 'Jobs & internships', hint: 'Roles open for students', icon: 'bi-briefcase-fill', count: plural(tabCounts.value.jobs, 'role', 'roles') },
+  { key: 'hackathons', label: 'Hackathons', hint: 'Build, compete and win', icon: 'bi-trophy-fill', count: plural(tabCounts.value.hackathons, 'event', 'events') }
+])
+
 const PAGE_SIZE = 9
 const visibleCount = ref(PAGE_SIZE)
 
@@ -53,7 +64,7 @@ const findTeamItem = ref(null)
 
 onMounted(() => {
   opportunityStore.fetchOpportunities()
-  opportunityStore.loadSectorOptions()
+  opportunityStore.loadRoleOptions()
 })
 
 // displayedItems: the items of the tab that is selected (same as before)
@@ -231,16 +242,15 @@ const canLoadMore = computed(() => {
 })
 
 //listens to changes in these variables, and resets to first 9 cards if changed
-watch([activeTab, search, locationFilter, paidOnly, sortBy, jobSector, jobType, jobField, themeFilter, closingWithin], () => {
+watch([activeTab, search, locationFilter, paidOnly, sortBy, jobType, jobField, themeFilter, closingWithin], () => {
   visibleCount.value = PAGE_SIZE
 })
 
-// sector, role and work type are filtered by the server, so get the jobs again when they change
-watch([jobSector, jobType, jobField], opportunityStore.reloadJobs)
+// role and work type are filtered by the server, so get the jobs again when they change
+watch([jobType, jobField], opportunityStore.reloadJobs)
 
 function clearAll() {
   search.value = ''
-  jobSector.value = 'tech'
   jobType.value = ''
   jobField.value = ''
   themeFilter.value = ''
@@ -266,16 +276,11 @@ const loadMore = async () => {
   <div class="p-2">
     <PageHeader v-model="search" />
 
-    <OpportunityTabs
-      v-model:tab="activeTab"
-      v-model:view-mode="viewMode"
-      :counts="tabCounts"
-    />
+    <TabCards v-model:tab="activeTab" :tabs="tabs" label="Opportunity types" id-prefix="opportunities-tab-" />
 
     <OpportunityFilters
-      v-model:job-sector="jobSector"
       v-model:job-field="jobField"
-      :sectors="sectorOptions"
+      :roles="roleOptions"
       v-model:job-type="jobType"
       v-model:theme="themeFilter"
       v-model:closing-within="closingWithin"
@@ -303,6 +308,26 @@ const loadMore = async () => {
       >
         <i class="bi bi-stack"></i> Quick pick
       </button>
+
+      <!-- grid / list toggle (tablets and up; phones are 1 card per row anyway) -->
+      <div class="btn-group bg-body-secondary rounded p-1 d-none d-md-inline-flex">
+        <button
+          class="btn btn-sm border-0 rounded-1"
+          :class="viewMode === 'grid' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
+          :aria-pressed="viewMode === 'grid'"
+          @click="viewMode = 'grid'"
+        >
+          <i class="bi bi-grid"></i> Grid
+        </button>
+        <button
+          class="btn btn-sm border-0 rounded-1"
+          :class="viewMode === 'list' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
+          :aria-pressed="viewMode === 'list'"
+          @click="viewMode = 'list'"
+        >
+          <i class="bi bi-three-dots"></i> List
+        </button>
+      </div>
     </div>
 
     <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2" role="alert">

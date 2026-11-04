@@ -5,12 +5,12 @@ import { storeToRefs } from 'pinia'
 import './home.css'
 import PageHeader from '@/components/PageHeader.vue'
 import MiniCalendar from '@/components/home/MiniCalendar.vue'
-import HomeStatCards from '@/components/home/HomeStatCards.vue'
 import UpcomingDeadlines from '@/components/home/UpcomingDeadlines.vue'
 import RecommendedOpportunities from '@/components/home/RecommendedOpportunities.vue'
 import TeamRequestsCard from '@/components/home/TeamRequestsCard.vue'
 import DailyPracticeCard from '@/components/home/DailyPracticeCard.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
+import TabCards from '@/components/TabCards.vue'
 import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import { useUserStore } from '@/store/user'
 import { useApplicationsStore } from '@/store/applications'
@@ -25,18 +25,20 @@ const router = useRouter()
 const auth = useUserStore()
 const applicationStore = useApplicationsStore()
 const opportunityStore = useOpportunityStore()
-const { applications, isLoading } = storeToRefs(applicationStore)
+const { applications } = storeToRefs(applicationStore)
 
 const search = ref('')
 const skills = computed(() => auth.skills)
 const incoming = ref([]) // people asking to join my teams
 const invites = ref([]) // teams inviting me
 const busyRequestId = ref('')
+// the loader is for the first load only; later refreshes (e.g. after tracking a pick) keep the dashboard on screen
+const firstLoadDone = ref(false)
 const requestError = ref('')
 
 onMounted(() => {
   // each part loads on its own, so one failing does not blank the whole dashboard
-  applicationStore.fetchApplications()
+  applicationStore.fetchApplications().finally(() => (firstLoadDone.value = true))
   opportunityStore.fetchOpportunities()
   loadRequests()
 })
@@ -98,43 +100,45 @@ const dueThisWeek = computed(() => applications.value.filter(isDueThisWeek))
 
 const stats = computed(() => {
   const nextDue = upcomingDeadlines.value[0]
+  const requestCount = incoming.value.length + invites.value.length
   return [
     {
+      key: 'saved',
       label: 'Saved opportunities',
       to: '/tracker',
-      value: countStatus('saved'),
-      note: '+' + savedThisWeek.value + ' this week',
-      icon: 'bi-clipboard-check',
-      tile: 'bg-primary-subtle text-primary',
+      count: countStatus('saved') + ' saved',
+      hint: '+' + savedThisWeek.value + ' this week',
+      icon: 'bi-clipboard-check-fill',
     },
     {
+      key: 'active',
       label: 'Active applications',
       to: '/tracker',
-      value: countStatus('applied', 'interview'),
-      note: countStatus('interview') + ' at interview',
-      icon: 'bi-briefcase',
-      tile: 'bg-info-subtle text-primary',
+      count: countStatus('applied', 'interview') + ' active',
+      hint: countStatus('interview') + ' at interview',
+      icon: 'bi-briefcase-fill',
     },
     {
+      key: 'deadlines',
       label: 'Deadlines this week',
       to: '/tracker',
-      value: dueThisWeek.value.length,
-      note: nextDue ? 'Next: ' + formatDate(nextDue.deadline) : 'Nothing due',
-      icon: 'bi-calendar-event',
-      tile: 'bg-tt-peach text-body',
+      count: dueThisWeek.value.length + ' due',
+      hint: nextDue ? 'Next: ' + formatDate(nextDue.deadline) : 'Nothing due',
+      icon: 'bi-calendar-event-fill',
     },
     {
+      key: 'requests',
       label: 'Team requests',
       to: { path: '/teams', query: { tab: 'requests' } },
-      value: incoming.value.length + invites.value.length,
-      note:
+      count: requestCount + ' waiting',
+      hint:
         invites.value.length > 0
           ? invites.value.length + (invites.value.length === 1 ? ' invite for you' : ' invites for you')
           : incoming.value.length > 0
             ? 'Waiting for you'
             : 'All caught up',
-      icon: 'bi-person-plus',
-      tile: 'bg-danger-subtle text-tt-accent',
+      icon: 'bi-person-plus-fill',
+      news: requestCount > 0,
     },
   ]
 })
@@ -183,7 +187,7 @@ function showRequestAccepted(request) {
   joinedToast.value = {
     key: request._id,
     title: 'Welcome aboard!',
-    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + (request.role ? ' as ' + request.role : '') + '.',
     left: personFrom(request.user),
     right: me()
   }
@@ -192,7 +196,7 @@ function showInviteAccepted(invite) {
   joinedToast.value = {
     key: invite._id,
     title: "You're in!",
-    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    message: 'You joined ' + invite.team.name + (invite.role ? ' as ' + invite.role : '') + '. Say hi to your new team.',
     left: me(),
     right: personFrom(invite.team.leader)
   }
@@ -214,13 +218,14 @@ async function respondToInvite(invite, status) {
   busyRequestId.value = ''
 }
 
-async function respond(request, status) {
+// role: the open role the lead picked on the card (accepting only)
+async function respond(request, status, role) {
   busyRequestId.value = request._id
   requestError.value = ''
   try {
-    await answerRequest(request._id, status)
+    await answerRequest(request._id, status, role)
     if (status === 'accepted') {
-      showRequestAccepted(request)
+      showRequestAccepted({ ...request, role: role ?? request.role })
     }
     await loadRequests()
   } catch (error) {
@@ -243,12 +248,13 @@ async function respond(request, status) {
 
     <!-- only the first time: after that the old numbers stay on screen while they refresh -->
     <TrekLoader
-      v-if="isLoading && applications.length === 0"
+      v-if="!firstLoadDone"
       title="Setting up your dashboard"
       :captions="['Counting your deadlines…', 'Picking opportunities for your skills…', 'Checking your team requests…']"
     />
     <template v-else>
-      <HomeStatCards :stats="stats" />
+      <!-- stat cards: each one links to where its number comes from -->
+      <TabCards :tabs="stats" label="Your summary" id-prefix="home-stat-" />
 
       <div class="row g-3 dashboard-body">
         <div class="col-12 col-lg-8 d-flex flex-column gap-3 dashboard-col">

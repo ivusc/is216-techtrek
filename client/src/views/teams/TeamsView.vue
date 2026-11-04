@@ -6,7 +6,7 @@ import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTe
 from '@/services/teamService'
 import { fetchHackathons } from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
-import TeamsHeader from '@/components/teams/TeamsHeader.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import TeamsTabs from '@/components/teams/TeamsTabs.vue'
 import TeamFilters from '@/components/teams/TeamFilters.vue'
 import SkillMatchBanner from '@/components/teams/SkillMatchBanner.vue'
@@ -22,6 +22,8 @@ import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue'
 import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue'
 import LeaveTeamModal from '@/components/teams/LeaveTeamModal.vue'
+import TeamLeftToast from '@/components/teams/TeamLeftToast.vue'
+import DeleteTeamModal from '@/components/teams/DeleteTeamModal.vue'
 import InvitesBanner from '@/components/teams/InvitesBanner.vue'
 import { fetchMyInvites, answerInvite } from '@/services/teamService'
 import { isClosed } from '@/utils/opportunity'
@@ -157,6 +159,14 @@ const matchCount = computed(() => {
 })
 
 // Browse teams = my own published teams first (so a new team shows up here straight away), then everyone else's
+// a team changed (e.g. the lead gave someone a role): swap in the new copy wherever it is shown
+function replaceTeam(updated) {
+  for (const list of [teams, myTeams]) {
+    const index = list.value.findIndex((team) => team._id === updated._id)
+    if (index !== -1) list.value[index] = updated
+  }
+}
+
 const myTeamIds = computed(() => new Set(myTeams.value.map((team) => team._id)))
 const browseTeams = computed(() => [...myTeams.value.filter((team) => team.status !== 'draft'), ...teams.value])
 
@@ -165,6 +175,8 @@ const pendingSent = computed(() => sent.value.filter((request) => request.status
 
 // opened from an invite link (/teams?team=<id>): show that team's join form once the teams have loaded
 const teamFromLink = typeof route.query.team === 'string' ? route.query.team : ''
+// a link from an open role also says which role (&role=Designer), so the join form starts with it picked
+const linkRole = ref(typeof route.query.role === 'string' ? route.query.role : '')
 async function openTeamFromLink() {
   await loadAll()
   if (teamFromLink === '') return
@@ -277,7 +289,7 @@ function clearAll() {
 const ledTeams = computed(() => myTeams.value.filter((team) => team.isLeader && team.status !== 'draft'))
 
 // send a request, show the "Request sent" toast, undo it
-const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, undoRequest } =
+const { joinTarget, joinError, isSending, sentToast, undoingId, undoError, openJoin, closeJoin, submitJoin, requestSent, undoRequest } =
   useJoinRequests(() => loadAll(false))
 
 // eventName: the hackathon to start the form on (e.g. the one being filtered)
@@ -308,8 +320,15 @@ const openCreate = async (team = null, eventName = '') => {
 // after a new post is published: the "team is live" celebration, then maybe the invite pop-up
 const celebrateTeam = ref(null)
 const inviteTeam = ref(null)
+// the open role the invite is for, when it came from a role's open spot
+const inviteRole = ref('')
+function openInvite(team, role = '') {
+  inviteRole.value = typeof role === 'string' ? role : ''
+  inviteTeam.value = team
+}
 
 function inviteFromCelebration() {
+  inviteRole.value = ''
   inviteTeam.value = celebrateTeam.value
   celebrateTeam.value = null
 }
@@ -330,7 +349,7 @@ function showRequestAccepted(request) {
   joinedToast.value = {
     key: request._id,
     title: 'Welcome aboard!',
-    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + (request.role ? ' as ' + request.role : '') + '.',
     left: personFrom(request.user),
     right: me()
   }
@@ -339,7 +358,7 @@ function showInviteAccepted(invite) {
   joinedToast.value = {
     key: invite._id,
     title: "You're in!",
-    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    message: 'You joined ' + invite.team.name + (invite.role ? ' as ' + invite.role : '') + '. Say hi to your new team.',
     left: me(),
     right: personFrom(invite.team.leader)
   }
@@ -390,26 +409,46 @@ const submitTeam = async (post) => {
   isBusy.value = false
 }
 
-const removeTeam = async () => {
-  isBusy.value = true
-  modalError.value = ''
+// "Delete post" in the edit form asks first; Keep team goes back to the form
+const deletingTeam = ref(null)
+const deleteBusy = ref(false)
+const deleteError = ref('')
+
+function removeTeam() {
+  deletingTeam.value = editingTeam.value
+  deleteError.value = ''
+  showCreate.value = false
+}
+
+function keepTeam() {
+  deletingTeam.value = null
+  showCreate.value = true
+}
+
+async function confirmDelete() {
+  deleteBusy.value = true
+  deleteError.value = ''
   try {
-    await deleteTeam(editingTeam.value._id)
+    const name = deletingTeam.value.name
+    await deleteTeam(deletingTeam.value._id)
+    deletingTeam.value = null
     closeCreate()
+    leftMessage.value = 'You deleted ' + name + '.'
+    setTimeout(() => (leftMessage.value = ''), 5000)
     await loadAll(false)
   } catch (error) {
     console.error(error)
-    modalError.value = getErrorMessage(error)
+    deleteError.value = getErrorMessage(error)
   }
-  isBusy.value = false
+  deleteBusy.value = false
 }
 
-const answer = async (request, newStatus) => {
+const answer = async (request, newStatus, role) => {
   busyRequestId.value = request._id
   try {
-    await answerRequest(request._id, newStatus)
+    const answered = await answerRequest(request._id, newStatus, role)
     if (newStatus === 'accepted') {
-      showRequestAccepted(request)
+      showRequestAccepted({ ...request, role: answered?.role ?? role ?? request.role })
     }
     await loadAll(false)
   } catch (error) {
@@ -424,6 +463,7 @@ const leavingTeam = ref(null)
 const leaveBusy = ref(false)
 const leaveError = ref('')
 const leftMessage = ref('')
+const leftToast = ref(null)
 
 function askToLeave(team) {
   leavingTeam.value = team
@@ -434,9 +474,14 @@ async function confirmLeave() {
   leaveBusy.value = true
   leaveError.value = ''
   try {
-    await leaveTeam(leavingTeam.value._id)
-    leftMessage.value = 'You left ' + leavingTeam.value.name + '.'
-    setTimeout(() => (leftMessage.value = ''), 5000)
+    const team = leavingTeam.value
+    await leaveTeam(team._id)
+    // the goodbye pop-up: me waving to the people still in the team, then out the door
+    leftToast.value = {
+      key: team._id + Date.now(),
+      teamName: team.name,
+      team: team.members.filter((member) => member.user._id !== auth._id).map((member) => personFrom(member.user))
+    }
     leavingTeam.value = null
     await loadAll(false)
   } catch (error) {
@@ -483,7 +528,7 @@ function openSkills() {
 // keep requests, invites and new teams up to date while the page is open: when the Requests or Browse tab
 // is opened, when the browser tab comes back into view, and every 20 seconds (skipped while a form is open)
 function refreshInBackground() {
-  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value || leavingTeam.value
+  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value || leavingTeam.value || deletingTeam.value
   if (document.visibilityState === 'visible' && !formOpen && !isLoading.value) {
     loadAll(false)
   }
@@ -509,7 +554,12 @@ onUnmounted(() => {
   <div class="p-2">
 
     <template v-if="auth._id">
-      <TeamsHeader v-model="search" />
+      <PageHeader
+        v-model="search"
+        title="Teammate finder"
+        subtitle="Find teammates for hackathons and competitions — or advertise your open slots."
+        type="teams"
+      />
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />
 
@@ -572,12 +622,13 @@ onUnmounted(() => {
                 :mode="myTeamIds.has(team._id) ? 'mine' : 'browse'"
                 :my-skills="matchMySkills ? mySkills : []"
                 :undoing="undoingId === team.requestId"
-                @request="openJoin(team)"
+                @request-sent="(created) => requestSent(team, created)"
                 @undo="undoRequest(team.requestId, team)"
-                @invite="inviteTeam = team"
+                @invite="(role) => openInvite(team, role)"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
                 @leave="askToLeave(team)"
+                @updated="replaceTeam"
               />
             </div>
           </div>
@@ -597,8 +648,9 @@ onUnmounted(() => {
                 :matches="matchesByTeam[team._id]"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
-                @invite="inviteTeam = team"
+                @invite="(role) => openInvite(team, role)"
                 @leave="askToLeave(team)"
+                @updated="replaceTeam"
               />
             </div>
           </div>
@@ -620,6 +672,7 @@ onUnmounted(() => {
     <JoinRequestModal
       v-if="joinTarget"
       :team="joinTarget"
+      :initial-role="joinTarget._id === teamFromLink ? linkRole : ''"
       :my-skills="mySkills"
       :busy="isSending"
       :error="joinError"
@@ -634,6 +687,15 @@ onUnmounted(() => {
       :busy="undoingId === sentToast.requestId"
       @undo="undoRequest(sentToast.requestId, sentToast.team)"
       @close="sentToast = null"
+    />
+
+    <TeamLeftToast
+      v-if="leftToast"
+      :key="leftToast.key"
+      :team-name="leftToast.teamName"
+      :me="me()"
+      :team="leftToast.team"
+      @close="leftToast = null"
     />
 
     <TeamJoinedToast
@@ -669,7 +731,16 @@ onUnmounted(() => {
       @close="celebrateTeam = null"
     />
 
-    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" @close="inviteTeam = null" />
+    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null" />
+
+    <DeleteTeamModal
+      v-if="deletingTeam"
+      :team="deletingTeam"
+      :busy="deleteBusy"
+      :error="deleteError"
+      @close="keepTeam"
+      @confirm="confirmDelete"
+    />
 
     <LeaveTeamModal
       v-if="leavingTeam"

@@ -13,11 +13,14 @@ const teamRequestSchema = new mongoose.Schema(
     shareProfile: { type: Boolean, default: true },
     status: { type: String, enum: STATUS_TYPES, required: true, default: 'pending' },
     kind: { type: String, enum: KIND_TYPES, required: true, default: 'request' },
+    // set when TechTrek closed it, not the people involved: the team filled up, or its closing date passed
+    closedReason: { type: String, enum: ['full', 'closed'] },
   },
   { timestamps: true },
 );
 
 teamRequestSchema.index({ teamId: 1, userId: 1 }, { unique: true });
 teamRequestSchema.index({ userId: 1, createdAt: -1 });
+teamRequestSchema.index({ status: 1, teamId: 1 }); // finding requests still waiting (closing full or past-date teams)
 
 module.exports = mongoose.model('TeamRequest', teamRequestSchema);

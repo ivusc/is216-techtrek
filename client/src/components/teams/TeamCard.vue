@@ -12,6 +12,7 @@ import {
 import UserAvatar from '@/components/UserAvatar.vue'
 import SuggestedTeammates from './SuggestedTeammates.vue'
 import TeamDetailsModal from './TeamDetailsModal.vue'
+import { useUserStore } from '@/store/user'
 
 const props = defineProps({
   team: { type: Object, required: true },
@@ -21,22 +22,46 @@ const props = defineProps({
   undoing: { type: Boolean, default: false } // true while this team's request is being withdrawn
 })
 
-const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite', 'leave'])
+const emit = defineEmits(['request-sent', 'undo', 'edit', 'view-requests', 'invite', 'leave', 'updated'])
 
 // on Browse, a team I can still join can be asked to join
 const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
 
 // clicking the card (anywhere but its buttons) opens the team's details: members, roles and open spots
 const showDetails = ref(false)
+const detailsRequesting = ref(false) // open the window with the request form showing
 function onCardClick(event) {
   if (event.target.closest('button, a, input, select')) return
+  detailsRequesting.value = false
   showDetails.value = true
 }
 
-function requestFromDetails() {
-  showDetails.value = false
-  emit('request')
+// the card's own "Request to join" opens the same window, with the request form already open
+function openRequest() {
+  detailsRequesting.value = true
+  showDetails.value = true
 }
+
+function requestSent(created) {
+  showDetails.value = false
+  emit('request-sent', created)
+}
+
+// the details window hands its buttons to the page: close it, then open the request or invite window
+function fromDetails(action, payload) {
+  showDetails.value = false
+  emit(action, payload)
+}
+
+// on My teams: my own role in this team, e.g. "Member · Backend developer"
+const auth = useUserStore()
+const myRole = computed(() => {
+  const me = props.team.members.find((member) => String(member.user?._id ?? member.user) === String(auth._id))
+  const role = me?.role ?? ''
+  // the lead's default role is just "Team lead", which the Leader badge already says
+  return role.toLowerCase() === 'team lead' ? '' : role
+})
+const myBadge = computed(() => (props.team.isLeader ? 'Leader' : 'Member') + (myRole.value ? ' · ' + myRole.value : ''))
 
 function isMatch(skill) {
   return props.mySkills.some((mine) => sameSkill(mine, skill))
@@ -74,6 +99,15 @@ function isUrgent() {
 
     <p class="small text-body-secondary mb-3">{{ team.pitch }}</p>
 
+    <div v-if="(team.openRoles ?? []).length > 0" class="mb-2">
+      <p class="text-overline text-body-tertiary mb-1">OPEN ROLES</p>
+      <div class="d-flex flex-wrap gap-1">
+        <span v-for="(role, index) in team.openRoles" :key="role + index" class="badge rounded-pill fw-semibold open-role-chip">
+          <i class="bi bi-person-plus me-1" aria-hidden="true"></i>{{ role }}
+        </span>
+      </div>
+    </div>
+
     <div v-if="team.skills.length > 0" class="mb-3">
       <p class="text-overline text-body-tertiary mb-1">LOOKING FOR</p>
       <div class="d-flex flex-wrap gap-1">
@@ -89,7 +123,9 @@ function isUrgent() {
     </div>
 
     <div v-if="mode === 'mine'" class="d-flex flex-wrap gap-1 mb-3">
-      <span class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis">{{ team.isLeader ? 'Leader' : 'Member' }}</span>
+      <span class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis">
+        <i class="bi me-1" :class="team.isLeader ? 'bi-star-fill' : 'bi-person-badge'" aria-hidden="true"></i>{{ myBadge }}
+      </span>
       <span v-if="team.status === 'draft'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Draft</span>
       <span v-else-if="team.status === 'closed'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Team full</span>
     </div>
@@ -119,7 +155,7 @@ function isUrgent() {
         class="btn btn-sm fw-semibold text-nowrap"
         :class="team.requestStatus === null && team.slotsOpen > 0 ? 'btn-primary' : 'btn-light'"
         :disabled="team.requestStatus !== null || team.slotsOpen === 0"
-        @click="$emit('request')"
+        @click="openRequest"
       >
         <template v-if="team.requestStatus === 'declined'">Request declined</template>
         <template v-else-if="team.requestStatus === 'accepted'">You're in!</template>
@@ -151,9 +187,21 @@ function isUrgent() {
         v-if="showDetails"
         :team="team"
         :can-request="canRequest"
+        :start-requesting="detailsRequesting"
         @close="showDetails = false"
-        @request="requestFromDetails"
+        @sent="requestSent"
+        @invite="fromDetails('invite', $event)"
+        @updated="$emit('updated', $event)"
       />
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* open roles: a soft lavender, a step stronger than the matched-skill chips below */
+.open-role-chip {
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
+  border: 1px solid var(--tt-chip-border);
+}
+</style>

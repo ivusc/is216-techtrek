@@ -50,8 +50,10 @@ export async function fetchSentRequests() {
   return response.data;
 }
 
-export async function answerRequest(requestId, status) {
-  const response = await serverAPI.patch(BASE_URL + '/requests/' + requestId, { status });
+// role: the open role to accept them into (left out = the role they asked for)
+export async function answerRequest(requestId, status, role) {
+  const body = role ? { status, role } : { status };
+  const response = await serverAPI.patch(BASE_URL + '/requests/' + requestId, body);
   return response.data;
 }
 
@@ -82,6 +84,12 @@ export async function fetchMyInvites() {
 
 export async function answerInvite(inviteId, status) {
   const response = await serverAPI.patch(BASE_URL + '/invites/' + inviteId, { status });
+  return response.data;
+}
+
+// the team lead gives a member (or themself) a role; returns the updated team
+export async function assignRole(teamId, userId, role) {
+  const response = await serverAPI.patch(BASE_URL + '/' + teamId + '/members/' + userId, { role });
   return response.data;
 }
 

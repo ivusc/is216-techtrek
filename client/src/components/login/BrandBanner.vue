@@ -12,9 +12,7 @@
     <span class="circle circle-coral d-none d-xl-block" aria-hidden="true"></span>
 
     <div class="d-flex align-items-center gap-2 position-relative">
-      <span class="logo-tile">
-        <img src="@/assets/logo.svg" alt="" width="22" height="22" />
-      </span>
+      <img src="/favicon.svg" alt="" width="36" height="36" class="flex-shrink-0" />
       <span class="h3 mb-0 text-white">TechTrek</span>
     </div>
 
@@ -58,17 +56,6 @@
   background-color: var(--tt-accent);
 }
 
-.logo-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--bs-border-radius);
-  background-color: var(--tt-cream);
-}
-
 /* :deep so the page's slot content (title, text) gets these styles too */
 .banner-content :deep(.banner-title) {
   max-width: 500px;
@@ -88,7 +75,7 @@
   height: 40px;
   border-radius: 12px;
   font-size: 1.25rem;
-  color: var(--tt-cream);
+  color: #fff;
   background-color: rgba(255, 255, 255, 0.14);
 }
 

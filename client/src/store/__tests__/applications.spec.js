@@ -36,7 +36,7 @@ describe('useApplicationsStore', () => {
   });
 
   it.each([
-    ['a server error', 500, undefined, 'There was an error: Request failed with status code 500'],
+    ['a server error', 500, undefined, 'Applications could not be loaded right now. Try again in a moment.'],
     ['an empty answer', 200, null, 'Applications could not be loaded right now.'],
   ])('fetchApplications reports %s', async (label, code, body, message) => {
     mock.onGet('/application').reply(code, body);
@@ -262,4 +262,72 @@ describe('useApplicationsStore offer celebration', () => {
     expect(store.applications[2].review).toBeUndefined();
     expect(store.isSaving).toBe(false);
   });
+
+  it('submitReview saves changes with PUT when the tips were already shared', async () => {
+    const store = seededStore();
+    store.applications[2] = shared({ ...store.applications[2], status: 'offer' });
+    const edited = { ...REVIEW, tips: 'Know the product and the team.' };
+    mock.onPut('/application/a3/review').reply(200, shared({ ...store.applications[2], review: undefined }));
+
+    const result = await store.submitReview('a3', edited, true);
+
+    expect(JSON.parse(mock.history.put[0].data)).toEqual(edited);
+    expect(mock.history.post).toHaveLength(0);
+    expect(result._id).toBe('a3');
+  });
+
+  it('deleteReview takes the tips down and keeps the updated copy', async () => {
+    const store = seededStore();
+    store.applications[2] = shared({ ...store.applications[2], status: 'offer' });
+    mock.onDelete('/application/a3/review').reply(200, { ...applications()[2], status: 'offer' });
+
+    await store.deleteReview('a3');
+
+    expect(store.applications[2].review).toBeUndefined();
+    expect(store.status).toBeNull();
+  });
+
+  it('submitReview sends an edit as PUT even when the list copy has no tips', async () => {
+    const store = seededStore();
+    mock.onPut('/application/a3/review').reply(200, shared({ ...store.applications[2], status: 'offer' }));
+
+    const result = await store.submitReview('a3', REVIEW, true);
+
+    expect(mock.history.put).toHaveLength(1);
+    expect(mock.history.post).toHaveLength(0);
+    expect(result.review.tips).toBe(REVIEW.tips);
+    expect(store.applications[2].review.tips).toBe(REVIEW.tips);
+  });
 });
+
+describe('useApplicationsStore moving a card', () => {
+  it('moves the card straight away, before the server answers', async () => {
+    let answer;
+    mock.onPatch('/application/a1').reply(() => new Promise((resolve) => (answer = resolve)));
+    const store = seededStore();
+
+    const moving = store.updateApplicationStatus('a1', 'applied');
+    expect(store.applications[0].status).toBe('applied');
+    expect(store.isSaving).toBe(true);
+
+    answer([200, {}]);
+    await moving;
+    expect(store.applications[0].status).toBe('applied');
+    expect(store.isSaving).toBe(false);
+  });
+
+  it('puts the card back and closes the celebration if saving fails', async () => {
+    mock.onPatch('/application/a3').reply(500, { error: 'Database is down' });
+    const store = seededStore();
+    const before = store.applications[2].status;
+
+    const moving = store.updateApplicationStatus('a3', 'offer');
+    expect(store.celebration?.step).toBe('congrats');
+    await moving;
+
+    expect(store.applications[2].status).toBe(before);
+    expect(store.celebration).toBeNull();
+    expect(store.status).toBe('Could not move the card, so it went back: Database is down');
+  });
+});
+

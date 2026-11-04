@@ -75,8 +75,11 @@ describe('OpportunitiesView', () => {
     expect(wrapper.text()).toContain('24 results');
     expect(wrapper.text()).toContain('· 1 closing this week');
     expect(wrapper.text()).toMatch(/· updated \S/);
-    expect(wrapper.find('.chip-row').text()).toContain('Jobs · 20');
-    expect(wrapper.find('.chip-row').text()).toContain('Hackathons · 4');
+    expect(wrapper.findAll('[role="tab"] .tab-count').map((count) => count.text())).toEqual([
+      '24 listings',
+      '20 roles',
+      '4 events',
+    ]);
 
     const [hackathonSection, jobSection] = wrapper.findAll('section');
     expect(titles(hackathonSection)).toEqual([
@@ -180,7 +183,7 @@ describe('OpportunitiesView', () => {
     await flushPromises();
 
     expect(jobRequests()).toHaveLength(1);
-    expect(jobRequests()[0].params).toEqual({ page: 2, sector: 'tech' });
+    expect(jobRequests()[0].params).toEqual({ page: 2 });
     expect(titles(wrapper)).toHaveLength(25);
   });
 
@@ -271,7 +274,7 @@ describe('OpportunitiesView', () => {
     expect(button(wrapper, 'Paid only').text()).toBe('Paid only · 3');
 
     await wrapper.find('input[aria-label="Search opportunities"]').setValue('ai');
-    expect(wrapper.find('.chip-row').text()).toContain('Hackathons · 1');
+    expect(wrapper.find('#opportunities-tab-hackathons .tab-count').text()).toBe('1 event');
     expect(optionText('Online')).toBe('Online / remote · 1');
     expect(optionText('Singapore')).toBe('Singapore · 0');
   });

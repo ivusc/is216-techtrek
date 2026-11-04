@@ -69,16 +69,19 @@ for (const [device, size] of Object.entries(DEVICES)) {
     test('remembers the email across reloads', async ({ page, account }) => {
       const form = await openForm(page, size, 'Log in');
       await fillLogIn(form, account);
-      await form.getByLabel('Remember me').check();
+      await form.getByLabel('Remember my email').check();
       await form.getByRole('button', { name: 'Log in' }).click();
       await page.waitForURL((url) => url.pathname === '/home');
 
+      // every response renews the session cookie, so leave the dashboard first: that cancels its
+      // in-flight requests, and none of them can set the cookie again after it is cleared
+      await page.goto('about:blank');
       await page.context().clearCookies();
       await page.goto('/login');
 
       const again = page.locator('#panel form:visible');
       await expect(again.getByLabel('SMU email')).toHaveValue(account.userName);
-      await expect(again.getByLabel('Remember me')).toBeChecked();
+      await expect(again.getByLabel('Remember my email')).toBeChecked();
       await expect(again.getByLabel('Password', { exact: true })).toHaveValue('');
     });
   });

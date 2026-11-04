@@ -8,7 +8,7 @@ import FindTeamPanel from '@/components/opportunities/FindTeamPanel.vue';
 import CreateTeamModal from '@/components/teams/CreateTeamModal.vue';
 import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue';
 import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue';
-import JoinRequestModal from '@/components/teams/JoinRequestModal.vue';
+import TeamDetailsModal from '@/components/teams/TeamDetailsModal.vue';
 import RequestSentToast from '@/components/teams/RequestSentToast.vue';
 import { ME, ledTeam, team } from '@/__tests__/fixtures/teams';
 
@@ -130,14 +130,16 @@ describe('FindTeamPanel', () => {
     mock.onPost('/teams/open/requests').reply(201, { _id: 'r1', status: 'pending' });
     const wrapper = await mountPanel();
 
+    // Request to join opens the team window with the request form already open inside it
     await button(wrapper, 'Request to join').trigger('click');
-    const modal = wrapper.findComponent(JoinRequestModal);
-    expect(modal.props('team')).toMatchObject({ _id: 'open' });
+    const details = wrapper.findComponent(TeamDetailsModal);
+    expect(details.props()).toMatchObject({ team: { _id: 'open' }, canRequest: true, startRequesting: true });
 
-    modal.vm.$emit('submit', { role: 'Vue.js', message: '' });
+    // the window sends the request itself, then hands the result to the panel
+    details.vm.$emit('sent', { _id: 'r1', status: 'pending' });
     await flushPromises();
 
-    expect(wrapper.findComponent(JoinRequestModal).exists()).toBe(false);
+    expect(wrapper.findComponent(TeamDetailsModal).exists()).toBe(false);
     expect(wrapper.findComponent(RequestSentToast).props('teamName')).toBe('Byte Me');
   });
 

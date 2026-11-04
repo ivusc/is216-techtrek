@@ -54,7 +54,7 @@ async function openTeams(page, width) {
 }
 
 function tab(page, name) {
-  return page.locator('main nav.nav-underline').getByRole('button', { name });
+  return page.locator('main .tab-cards').getByRole('tab', { name });
 }
 
 async function box(locator) {
@@ -115,9 +115,10 @@ test.describe('teams page', () => {
     test(`${width} fits the header controls`, async ({ loggedIn: page }, testInfo) => {
       await openTeams(page, width);
 
-      const search = await box(page.locator('.team-search'));
-      expect(search.width).toBeLessThanOrEqual(SEARCH_WIDTH);
-      expect(search.width < SEARCH_WIDTH).toBe(width < SM);
+      // the shared page header: a 260px search box, on its own full-width row on phones
+      await expect(page.getByRole('textbox', { name: 'Search teams' })).toBeInViewport({ ratio: 1 });
+      const search = await box(page.getByRole('textbox', { name: 'Search teams' }));
+      expect(search.width).toBeLessThanOrEqual(width < MD ? width : SEARCH_WIDTH);
       await expect(page.getByRole('link', { name: 'Your profile' })).toBeInViewport({ ratio: 1 });
       await expectNoHorizontalOverflow(page);
       await screenshot(page, testInfo, `teams-header-${width}`);

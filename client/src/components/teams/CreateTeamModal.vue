@@ -94,6 +94,56 @@ const openSlots = ref(isEditing ? Math.max(props.team.slotsOpen, fewestSlots) : 
 const pitch = ref(isEditing ? props.team.pitch : '')
 const skills = ref(isEditing ? [...props.team.skills] : [])
 const autoAccept = ref(isEditing ? props.team.autoAccept : false)
+
+// one role box per open spot; people asking to join pick one of the filled-in roles
+const ROLE_IDEAS = ['Frontend developer', 'Backend developer', 'Full-stack developer', 'UI/UX designer', 'Data / ML', 'Pitch & business']
+const MAX_ROLE = 60
+// every role typed so far is kept, even past the number of open slots, so lowering the slots doesn't
+// quietly throw roles away: the extra ones are listed with a warning and can be kept instead
+const roles = ref(isEditing ? [...(props.team.openRoles ?? [])] : [])
+function fitRoles() {
+  // filled roles first (in order), then empty boxes up to the number of open slots
+  const filled = roles.value.filter((role) => role.trim() !== '')
+  const empties = Math.max(openSlots.value - filled.length, 0)
+  roles.value = [...filled, ...Array(empties).fill('')]
+}
+fitRoles()
+watch(openSlots, fitRoles)
+
+// the boxes on screen: one per open slot
+const shownRoles = computed(() => roles.value.slice(0, openSlots.value))
+// roles past the open slots: they'd be removed on save
+const droppedRoles = computed(() =>
+  roles.value
+    .map((role, index) => ({ role: role.trim(), index }))
+    .filter((entry) => entry.index >= openSlots.value && entry.role !== '')
+)
+const filledRoles = computed(() => shownRoles.value.map((role) => role.trim()).filter((role) => role !== ''))
+
+// keep a role that would be dropped: it takes the last box, and the role there drops instead
+function keepRole(entry) {
+  const last = openSlots.value - 1
+  if (last < 0) return
+  const swapped = roles.value[last]
+  roles.value[last] = roles.value[entry.index]
+  roles.value[entry.index] = swapped
+}
+const canAddSlot = computed(() => openSlots.value < teamSize.value - memberCount)
+
+// an idea chip fills the first empty box (or clears that role if it's already in)
+function toggleRoleIdea(idea) {
+  const index = shownRoles.value.findIndex((role) => role.trim().toLowerCase() === idea.toLowerCase())
+  if (index !== -1) {
+    roles.value[index] = ''
+    return
+  }
+  const empty = shownRoles.value.findIndex((role) => role.trim() === '')
+  if (empty !== -1) roles.value[empty] = idea
+}
+function hasRole(idea) {
+  return shownRoles.value.some((role) => role.trim().toLowerCase() === idea.toLowerCase())
+}
+const rolesFull = computed(() => shownRoles.value.every((role) => role.trim() !== ''))
 const formError = ref('')
 
 const teamSizeOptions = computed(() => {
@@ -140,6 +190,7 @@ function submit(status) {
     openSlots: openSlots.value,
     pitch: pitch.value,
     skills: skills.value,
+    openRoles: filledRoles.value,
     autoAccept: autoAccept.value,
     status: status
   }
@@ -214,6 +265,63 @@ const showDelete = isEditing && props.team.status !== 'draft'
       <p class="text-caption text-body-tertiary text-end mb-0 mt-1">{{ pitch.length }} / {{ MAX_PITCH }}</p>
     </div>
 
+    <fieldset v-if="openSlots > 0" class="mb-3">
+      <legend class="small fw-semibold mb-1">Roles for your open spots <span class="fw-normal text-body-tertiary">(optional)</span></legend>
+      <p class="text-caption text-body-tertiary mb-2">
+        People asking to join pick one of these roles. Leave them blank to take anyone.
+      </p>
+      <div class="row g-2 mb-2">
+        <div v-for="(role, index) in shownRoles" :key="index" class="col-12 col-sm-6">
+          <div class="position-relative">
+            <span class="role-number position-absolute top-50 start-0 translate-middle-y ms-2 rounded-circle d-flex align-items-center justify-content-center" aria-hidden="true">{{ index + 1 }}</span>
+            <input
+              v-model="roles[index]"
+              type="text"
+              class="form-control ps-5"
+              :maxlength="MAX_ROLE"
+              :placeholder="index === 0 ? 'e.g. Frontend developer' : 'e.g. Designer'"
+              :aria-label="'Role for open spot ' + (index + 1)"
+            >
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-1">
+        <button
+          v-for="idea in ROLE_IDEAS"
+          :key="idea"
+          type="button"
+          class="btn btn-sm rounded-pill"
+          :class="hasRole(idea) ? 'bg-primary-subtle border border-primary text-primary-emphasis fw-semibold' : 'bg-white border'"
+          :disabled="!hasRole(idea) && rolesFull"
+          :aria-pressed="hasRole(idea)"
+          @click="toggleRoleIdea(idea)"
+        >
+          <i class="bi" :class="hasRole(idea) ? 'bi-check-lg' : 'bi-plus'" aria-hidden="true"></i> {{ idea }}
+        </button>
+      </div>
+    </fieldset>
+
+    <!-- fewer open slots than roles: say which roles go, and let the lead keep one instead -->
+    <div v-if="droppedRoles.length > 0" class="dropped-roles rounded-3 p-3 mb-3" role="alert">
+      <p class="small fw-semibold mb-1">
+        <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+        {{ droppedRoles.length === 1 ? 'This role will be removed' : 'These roles will be removed' }} when you save
+      </p>
+      <p class="text-caption mb-2">
+        You now have {{ openSlots === 1 ? '1 open slot' : openSlots + ' open slots' }}, so there's only room for {{ openSlots === 1 ? '1 role' : openSlots + ' roles' }}.
+        <template v-if="openSlots > 0">Tap Keep to swap one in for the last role above.</template>
+      </p>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <span v-for="entry in droppedRoles" :key="entry.index" class="dropped-role d-inline-flex align-items-center gap-2 rounded-pill ps-3 pe-1 py-1 small">
+          <span class="text-decoration-line-through">{{ entry.role }}</span>
+          <button v-if="openSlots > 0" type="button" class="btn btn-sm btn-light rounded-pill py-0 px-2 fw-semibold" @click="keepRole(entry)">Keep</button>
+        </span>
+        <button v-if="canAddSlot" type="button" class="btn btn-sm btn-link fw-semibold text-decoration-none p-0" @click="openSlots++">
+          <i class="bi bi-plus" aria-hidden="true"></i> Add an open slot instead
+        </button>
+      </div>
+    </div>
+
     <div class="mb-3">
       <label class="small fw-semibold mb-1">Skills you're looking for</label>
       <SkillInput v-model="skills" :suggestions="suggestions" />
@@ -251,3 +359,25 @@ const showDelete = isEditing && props.team.status !== 'draft'
     </template>
   </TeamModal>
 </template>
+
+<style scoped>
+.dropped-roles {
+  color: var(--bs-warning-text-emphasis);
+  background-color: var(--bs-warning-bg-subtle);
+  border: 1px solid var(--bs-warning-border-subtle);
+}
+.dropped-role {
+  background-color: var(--tt-surface);
+  border: 1px solid var(--bs-warning-border-subtle);
+  color: var(--bs-body-color);
+}
+
+.role-number {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bs-primary);
+  background-color: var(--bs-primary-bg-subtle);
+}
+</style>

@@ -183,7 +183,8 @@ describe('PATCH /teams/requests/:id', () => {
     expect(refused.body.error).toBe('This team is already full');
     const team = await Team.findById(teamId);
     expect([team.members.length, team.status]).toEqual([2, 'closed']);
-    expect((await TeamRequest.findById(late._id)).status).toBe('pending');
+    // the late request doesn't wait forever: it's closed because the team is full
+    expect((await TeamRequest.findById(late._id)).toObject()).toMatchObject({ status: 'declined', closedReason: 'full' });
   });
 
   it('is only for the leader', async () => {

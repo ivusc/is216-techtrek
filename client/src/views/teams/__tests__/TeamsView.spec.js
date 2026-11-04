@@ -5,7 +5,7 @@ import MockAdapter from 'axios-mock-adapter';
 import serverAPI from '@/services/serverAPI';
 import { useUserStore } from '@/store/user';
 import TeamsView from '@/views/teams/TeamsView.vue';
-import { ME, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
+import { ME, LEADER, joinRequest, ledTeam, team } from '@/__tests__/fixtures/teams';
 import { HACKATHONS } from '@/__tests__/fixtures/opportunities';
 
 const route = await vi.hoisted(async () => (await import('vue')).reactive({ query: {} }));
@@ -46,7 +46,7 @@ function mockLists({
 }
 
 async function mountTeams() {
-  const wrapper = mount(TeamsView, { global: { stubs: { RouterLink: true } } });
+  const wrapper = mount(TeamsView, { global: { stubs: { RouterLink: true, teleport: true } } });
   await flushPromises();
   return wrapper;
 }
@@ -138,10 +138,10 @@ describe('TeamsView', () => {
     });
     const wrapper = await mountTeams();
 
-    expect(wrapper.findAll('nav .nav-link').map((tab) => tab.text())).toEqual([
-      'Browse teams 4',
-      'My teams 1',
-      'Requests 2',
+    expect(wrapper.findAll('[role="tab"]').map((tab) => tab.find('.tab-label').text() + ' ' + tab.find('.tab-count').text())).toEqual([
+      'Browse teams 4 recruiting',
+      'My teams 1 team',
+      'Requests 2 waiting',
     ]);
     expect(wrapper.find('.skills-label').text()).toBe('Skills: Any');
     expect(wrapper.text()).not.toContain('need your skills');
@@ -176,6 +176,7 @@ describe('TeamsView', () => {
     expect(requestsTo('/opportunity/all')).toHaveLength(0);
     expect(JSON.parse(mock.history.post[0].data)).toEqual({
       name: 'Pixel Pushers',
+      openRoles: [],
       teamSize: 5,
       openSlots: 1,
       pitch: 'Design-led team.',
@@ -298,6 +299,7 @@ describe('TeamsView', () => {
     expect(mock.history.patch[0].url).toBe('/teams/m1');
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({
       name: 'Night Owls 2',
+      openRoles: [],
       teamSize: 4,
       openSlots: 2,
       pitch: 'We ship a working demo every weekend.',
@@ -311,8 +313,38 @@ describe('TeamsView', () => {
     await dialogButton(wrapper, 'Delete post').trigger('click');
     await flushPromises();
 
+    // it asks first; Keep team goes back to the form and deletes nothing
+    expect(dialog(wrapper).find('h2').text()).toBe('Delete Night Owls?');
+    expect(dialog(wrapper).text()).toContain("It can't be undone.");
+    await dialogButton(wrapper, 'Keep team').trigger('click');
+    expect(mock.history.delete).toHaveLength(0);
+    expect(dialog(wrapper).find('h2').text()).toBe('Edit team post');
+
+    await dialogButton(wrapper, 'Delete post').trigger('click');
+    await dialogButton(wrapper, 'Delete team').trigger('click');
+    await flushPromises();
+
     expect(mock.history.delete[0].url).toBe('/teams/m1');
     expect(dialog(wrapper).exists()).toBe(false);
+    expect(wrapper.text()).toContain('You deleted Night Owls.');
+  });
+
+  it('says goodbye with the leaving animation after I leave a team', async () => {
+    const joined = team({ _id: 'j1', name: 'Byte Me', members: [{ user: LEADER, role: 'Team lead' }, { user: ME, role: 'Designer' }] });
+    mockLists({ mine: [joined] });
+    mock.onPost('/teams/j1/leave').reply(204);
+    const wrapper = await mountTeams();
+
+    await button(wrapper, 'My teams').trigger('click');
+    await button(wrapper, 'Leave team').trigger('click');
+    await dialogButton(wrapper, 'Leave team').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.post.at(-1).url).toBe('/teams/j1/leave');
+    const toast = wrapper.find('.left-toast');
+    expect(toast.text()).toContain('You left Byte Me.');
+    // the lead is shown staying behind, not me
+    expect(toast.findAll('.leave-teammate [title]').map((avatar) => avatar.attributes('title'))).toEqual(['Ivus Chua']);
   });
 
   it('edits a post while the event list is down without resending its close date', async () => {
@@ -353,6 +385,7 @@ describe('TeamsView', () => {
     expect(mock.history.patch[0].url).toBe('/teams/m1');
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({
       name: 'Night Owls',
+      openRoles: [],
       teamSize: 4,
       openSlots: 2,
       pitch: 'We ship a working demo every weekend.',
@@ -426,7 +459,8 @@ describe('TeamsView', () => {
     await flushPromises();
 
     expect(dialog(wrapper).text()).toContain('This team is not taking requests');
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    // shown in the window, not as a page alert
+    expect(wrapper.find('.alert').exists()).toBe(false);
   });
 
   it('saves skills from the banner and re-filters the browse list', async () => {

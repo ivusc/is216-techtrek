@@ -37,6 +37,8 @@ const teamSchema = new mongoose.Schema(
 
     pitch: { type: String, required: true, trim: true, maxlength: 300 },
     skills: { type: [String], default: [] },
+    // the roles the open spots are for, e.g. ['Frontend developer', 'Designer'] (never more than slotsOpen)
+    openRoles: { type: [{ type: String, trim: true, maxlength: 60 }], default: [] },
     autoAccept: { type: Boolean, default: false },
     status: { type: String, enum: STATUS_TYPES, required: true, default: 'open' },
   },
@@ -47,7 +49,22 @@ teamSchema.virtual('slotsOpen').get(function () {
   return Math.max(0, this.teamSize - this.members.length - this.externalMembers);
 });
 
+// someone joined (or was given) one of the open roles: that role is no longer needed.
+// Returns true when an open role was filled.
+teamSchema.methods.fillRole = function (role) {
+  const wanted = String(role ?? '').trim().toLowerCase();
+  if (wanted === '') return false;
+  const index = this.openRoles.findIndex((open) => open.toLowerCase() === wanted);
+  if (index === -1) return false;
+  this.openRoles.splice(index, 1);
+  return true;
+};
+
 teamSchema.methods.syncStatus = function () {
+  // fewer open spots than open roles (e.g. someone joined without one): drop the extra roles
+  if (this.openRoles.length > this.slotsOpen) {
+    this.openRoles = this.openRoles.slice(0, this.slotsOpen);
+  }
   if (this.status === 'open' && this.slotsOpen === 0) {
     this.status = 'closed';
   } else if (this.status === 'closed' && this.slotsOpen > 0) {
