@@ -624,6 +624,15 @@ async function createInvite(req, res) {
     if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can invite people' });
     if (team.slotsOpen === 0) return res.status(409).json({ error: 'Your team is already full' });
 
+    // a team with open roles invites people for one of those roles, the same as requests
+    let invitedAs = String(role ?? '').trim() || undefined;
+    if (team.openRoles.length > 0) {
+      invitedAs = matchOpenRole(team, invitedAs);
+      if (!invitedAs) {
+        return res.status(400).json({ error: 'Pick which open role you are inviting them for: ' + team.openRoles.join(', ') });
+      }
+    }
+
     const friend = await User.findOne({ userName: email }).select('_id displayName userName');
     if (!friend) {
       return res.status(404).json({ error: 'No TechTrek account uses that email yet. Send them your invite link instead!' });
@@ -648,11 +657,11 @@ async function createInvite(req, res) {
       teamId: team._id,
       userId: friend._id,
       kind: 'invite',
-      role,
+      role: invitedAs,
       message,
     });
 
-    await notificationService.notify({ userId: friend._id, type: 'invite-received', actorId: userId, team });
+    await notificationService.notify({ userId: friend._id, type: 'invite-received', actorId: userId, team, role: invitedAs });
 
     res.status(201).json({ _id: invite._id, status: invite.status, user: friend });
   } catch (err) {
@@ -737,6 +746,7 @@ async function respondToInvite(req, res) {
       type: status === 'accepted' ? 'invite-accepted' : 'invite-declined',
       actorId: userId,
       team,
+      role: status === 'accepted' ? answered.role : undefined,
     });
 
     res.json({ _id: answered._id, status: answered.status, team: { _id: team._id, name: team.name } });

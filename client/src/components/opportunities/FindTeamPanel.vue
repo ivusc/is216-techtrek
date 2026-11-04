@@ -83,7 +83,9 @@ async function submitCreate(post) {
 // after publishing: the celebration, then maybe the invite pop-up
 const celebrateTeam = ref(null)
 const inviteTeam = ref(null)
+const inviteRole = ref('') // the open role the invite is for, when it came from a role's open spot
 function inviteFromCelebration() {
+  inviteRole.value = ''
   inviteTeam.value = celebrateTeam.value
   celebrateTeam.value = null
 }
@@ -133,7 +135,7 @@ function inviteFromCelebration() {
           :key="team._id"
           :team="team"
           mode="mine"
-          @invite="inviteTeam = team"
+          @invite="(role) => { inviteRole = typeof role === 'string' ? role : ''; inviteTeam = team }"
           @updated="(updated) => (myTeams[myTeams.findIndex((mine) => mine._id === updated._id)] = updated)"
           @edit="$router.push('/teams')"
           @view-requests="$router.push('/teams')"
@@ -203,7 +205,7 @@ function inviteFromCelebration() {
     @close="celebrateTeam = null"
   />
 
-  <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" @close="inviteTeam = null" />
+  <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null" />
 
   <RequestSentToast
     v-if="sentToast"

@@ -33,7 +33,7 @@ describe('TeamPeople', () => {
     expect(wrapper.find('.share-panel').text()).toContain('Fill this spot');
 
     await wrapper.findAll('.share-panel button').find((button) => button.text() === 'Invite by SMU email').trigger('click');
-    expect(wrapper.emitted('invite')).toHaveLength(1);
+    expect(wrapper.emitted('invite')).toEqual([['']]);
   });
 
   it('names the open spots after the open roles', () => {
@@ -82,5 +82,14 @@ describe('TeamPeople', () => {
     // the open spot without a role keeps the plain team link
     await wrapper.find('[aria-label="Invite someone to this open spot"]').trigger('click');
     expect(wrapper.find('.share-panel input').element.value).toBe(base);
+  });
+
+  it("passes the open spot's role on to the invite form", async () => {
+    const wrapper = mountPeople({ isLeader: true, status: 'open', openRoles: ['Designer'] });
+
+    await wrapper.find('[aria-label="Invite someone to be the Designer"]').trigger('click');
+    await wrapper.findAll('.share-panel button').find((button) => button.text() === 'Invite by SMU email').trigger('click');
+
+    expect(wrapper.emitted('invite')).toEqual([['Designer']]);
   });
 });

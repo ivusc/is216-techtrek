@@ -131,6 +131,40 @@ describe('the lead answering a request for a role', () => {
   });
 });
 
+describe('inviting someone for an open role', () => {
+  it('needs one of the open roles, and joining with the invite fills that role', async () => {
+    const { leader, member, team } = await setUp();
+
+    const noRole = await leader.post(`/teams/${team._id}/invites`).send({ userName: 'member@smu.edu.sg' }).expect(400);
+    expect(noRole.body).toEqual({ error: 'Pick which open role you are inviting them for: Frontend developer, Designer' });
+
+    const invite = (await leader
+      .post(`/teams/${team._id}/invites`)
+      .send({ userName: 'member@smu.edu.sg', role: 'designer' })
+      .expect(201)).body;
+
+    const { body: invites } = await member.get('/teams/invites').expect(200);
+    expect(invites[0].role).toBe('Designer');
+    const { body: inbox } = await member.get('/notifications').expect(200);
+    expect(inbox.notifications[0]).toMatchObject({ type: 'invite-received', role: 'Designer' });
+
+    await member.patch(`/teams/invites/${invite._id}`).send({ status: 'accepted' }).expect(200);
+
+    const saved = await Team.findById(team._id);
+    expect(saved.members.map((m) => m.role)).toEqual(['Team lead', 'Designer']);
+    expect(saved.openRoles).toEqual(['Frontend developer']);
+    const { body: leadInbox } = await leader.get('/notifications').expect(200);
+    expect(leadInbox.notifications[0]).toMatchObject({ type: 'invite-accepted', role: 'Designer' });
+  });
+
+  it('still invites without a role when the team lists none', async () => {
+    const { leader, team } = await setUp({ ...TEAM, openRoles: [] });
+    await loginAs(app, { userName: 'friend@smu.edu.sg' });
+
+    await leader.post(`/teams/${team._id}/invites`).send({ userName: 'friend@smu.edu.sg' }).expect(201);
+  });
+});
+
 describe('PATCH /teams/:id/members/:userId', () => {
   it('lets the lead give a member a role, fills a matching open role and tells them', async () => {
     const { leader, member, team } = await setUp();

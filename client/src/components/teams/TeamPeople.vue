@@ -291,7 +291,7 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
           {{ copied ? 'Copied!' : 'Copy link' }}
         </button>
       </div>
-      <button v-if="canInvite" type="button" class="btn btn-outline-primary fw-semibold w-100 mt-2" @click="emit('invite')">
+      <button v-if="canInvite" type="button" class="btn btn-outline-primary fw-semibold w-100 mt-2" @click="emit('invite', sharingRole ?? '')">
         <i class="bi bi-envelope" aria-hidden="true"></i> Invite by SMU email
       </button>
     </div>

@@ -12,9 +12,9 @@ export function describeNotification(notification) {
     case 'request-declined':
       return { text: `${team} can't take you this time`, icon: 'bi-x-circle', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } } }
     case 'invite-received':
-      return { text: `${who} invited you to join ${team}`, icon: 'bi-envelope-heart', tone: 'primary', to: { path: '/teams', query: { tab: 'browse' } } }
+      return { text: `${who} invited you to join ${team}${asRole}`, icon: 'bi-envelope-heart', tone: 'primary', to: { path: '/teams', query: { tab: 'browse' } } }
     case 'invite-accepted':
-      return { text: `${who} accepted your invite to ${team}`, icon: 'bi-person-check-fill', tone: 'success', to: { path: '/teams', query: { tab: 'mine' } } }
+      return { text: `${who} accepted your invite to ${team}${asRole}`, icon: 'bi-person-check-fill', tone: 'success', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'invite-declined':
       return { text: `${who} declined your invite to ${team}`, icon: 'bi-person-dash', tone: 'muted', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'member-joined':

@@ -320,8 +320,15 @@ const openCreate = async (team = null, eventName = '') => {
 // after a new post is published: the "team is live" celebration, then maybe the invite pop-up
 const celebrateTeam = ref(null)
 const inviteTeam = ref(null)
+// the open role the invite is for, when it came from a role's open spot
+const inviteRole = ref('')
+function openInvite(team, role = '') {
+  inviteRole.value = typeof role === 'string' ? role : ''
+  inviteTeam.value = team
+}
 
 function inviteFromCelebration() {
+  inviteRole.value = ''
   inviteTeam.value = celebrateTeam.value
   celebrateTeam.value = null
 }
@@ -351,7 +358,7 @@ function showInviteAccepted(invite) {
   joinedToast.value = {
     key: invite._id,
     title: "You're in!",
-    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    message: 'You joined ' + invite.team.name + (invite.role ? ' as ' + invite.role : '') + '. Say hi to your new team.',
     left: me(),
     right: personFrom(invite.team.leader)
   }
@@ -612,7 +619,7 @@ onUnmounted(() => {
                 :undoing="undoingId === team.requestId"
                 @request="openJoin(team)"
                 @undo="undoRequest(team.requestId, team)"
-                @invite="inviteTeam = team"
+                @invite="(role) => openInvite(team, role)"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
                 @leave="askToLeave(team)"
@@ -636,7 +643,7 @@ onUnmounted(() => {
                 :matches="matchesByTeam[team._id]"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
-                @invite="inviteTeam = team"
+                @invite="(role) => openInvite(team, role)"
                 @leave="askToLeave(team)"
                 @updated="replaceTeam"
               />
@@ -719,7 +726,7 @@ onUnmounted(() => {
       @close="celebrateTeam = null"
     />
 
-    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" @close="inviteTeam = null" />
+    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null" />
 
     <DeleteTeamModal
       v-if="deletingTeam"

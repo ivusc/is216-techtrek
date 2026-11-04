@@ -21,4 +21,9 @@ describe('describeNotification', () => {
     expect(text('team-full', 'invite')).toBe('Byte Me filled up before you answered the invite');
     expect(text('team-closed', 'request')).toBe('Byte Me stopped taking new members, so your request was closed');
   });
+
+  it('names the role in invite notifications', () => {
+    expect(describeNotification({ type: 'invite-received', actorName: 'Ivus', teamName: 'Byte Me', role: 'Designer' }).text).toBe('Ivus invited you to join Byte Me as Designer');
+    expect(describeNotification({ type: 'invite-accepted', actorName: 'Kai', teamName: 'Byte Me', role: 'Designer' }).text).toBe('Kai accepted your invite to Byte Me as Designer');
+  });
 });

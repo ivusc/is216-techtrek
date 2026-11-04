@@ -71,7 +71,7 @@ function isMine(skill) {
       :saving-role="savingRole"
       :role-error="roleError"
       class="mb-4"
-      @invite="$emit('invite')"
+      @invite="$emit('invite', $event)"
       @assign-role="saveRole"
     />
 

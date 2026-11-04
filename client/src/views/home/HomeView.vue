@@ -245,7 +245,7 @@ function showInviteAccepted(invite) {
   joinedToast.value = {
     key: invite._id,
     title: "You're in!",
-    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    message: 'You joined ' + invite.team.name + (invite.role ? ' as ' + invite.role : '') + '. Say hi to your new team.',
     left: me(),
     right: personFrom(invite.team.leader)
   }
