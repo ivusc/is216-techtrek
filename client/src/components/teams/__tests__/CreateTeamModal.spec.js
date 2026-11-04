@@ -393,7 +393,38 @@ describe('CreateTeamModal', () => {
 
     await idea('Frontend developer').trigger('click');
     expect(boxes()).toEqual(['', 'Data / ML']);
+    // fewer slots: the filled role moves up instead of being thrown away
     await wrapper.find('#post-slots').setValue(1);
-    expect(boxes()).toEqual(['']);
+    expect(boxes()).toEqual(['Data / ML']);
+    expect(wrapper.find('.dropped-roles').exists()).toBe(false);
+  });
+
+  it('says which roles will be removed when the open slots go down, and lets you keep one', async () => {
+    const wrapper = mountModal();
+    const boxes = () => wrapper.findAll('[aria-label^="Role for open spot"]').map((box) => box.element.value);
+    const idea = (text) => wrapper.findAll('[aria-pressed]').find((chip) => chip.text() === text);
+
+    await fill(wrapper);
+    await wrapper.find('#post-slots').setValue(2);
+    await idea('Frontend developer').trigger('click');
+    await idea('Backend developer').trigger('click');
+    await wrapper.find('#post-slots').setValue(1);
+
+    const warning = wrapper.find('.dropped-roles');
+    expect(warning.text()).toContain('This role will be removed when you save');
+    expect(warning.find('.dropped-role').text()).toContain('Backend developer');
+    expect(boxes()).toEqual(['Frontend developer']);
+
+    await warning.findAll('button').find((b) => b.text() === 'Keep').trigger('click');
+    expect(boxes()).toEqual(['Backend developer']);
+    expect(wrapper.find('.dropped-role').text()).toContain('Frontend developer');
+
+    await button(wrapper, 'Publish post').trigger('click');
+    expect(wrapper.emitted('submit')[0][0].openRoles).toEqual(['Backend developer']);
+
+    // putting the slot back brings the role back too
+    await wrapper.findAll('.dropped-roles button').find((b) => b.text().includes('Add an open slot')).trigger('click');
+    expect(boxes()).toEqual(['Backend developer', 'Frontend developer']);
+    expect(wrapper.find('.dropped-roles').exists()).toBe(false);
   });
 });

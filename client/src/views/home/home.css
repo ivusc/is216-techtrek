@@ -86,3 +86,25 @@
     flex-shrink: 0;
   }
 }
+
+/* the name and team share the row with the avatar and buttons (they never wrap below them) */
+.request-text {
+  flex: 1 1 0;
+}
+
+/* Team requests card: the "as [role]" picker gets its own line under each request, lined up with the name */
+.request-role {
+  flex-basis: 100%;
+  padding-left: calc(36px + 0.5rem);
+  margin-top: -0.25rem;
+}
+.role-select {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  padding-right: 1.75rem;
+  background-position: right 0.4rem center;
+}

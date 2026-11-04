@@ -12,6 +12,7 @@ import {
 import UserAvatar from '@/components/UserAvatar.vue'
 import SuggestedTeammates from './SuggestedTeammates.vue'
 import TeamDetailsModal from './TeamDetailsModal.vue'
+import { useUserStore } from '@/store/user'
 
 const props = defineProps({
   team: { type: Object, required: true },
@@ -51,6 +52,16 @@ function fromDetails(action, payload) {
   showDetails.value = false
   emit(action, payload)
 }
+
+// on My teams: my own role in this team, e.g. "Member · Backend developer"
+const auth = useUserStore()
+const myRole = computed(() => {
+  const me = props.team.members.find((member) => String(member.user?._id ?? member.user) === String(auth._id))
+  const role = me?.role ?? ''
+  // the lead's default role is just "Team lead", which the Leader badge already says
+  return role.toLowerCase() === 'team lead' ? '' : role
+})
+const myBadge = computed(() => (props.team.isLeader ? 'Leader' : 'Member') + (myRole.value ? ' · ' + myRole.value : ''))
 
 function isMatch(skill) {
   return props.mySkills.some((mine) => sameSkill(mine, skill))
@@ -112,7 +123,9 @@ function isUrgent() {
     </div>
 
     <div v-if="mode === 'mine'" class="d-flex flex-wrap gap-1 mb-3">
-      <span class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis">{{ team.isLeader ? 'Leader' : 'Member' }}</span>
+      <span class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis">
+        <i class="bi me-1" :class="team.isLeader ? 'bi-star-fill' : 'bi-person-badge'" aria-hidden="true"></i>{{ myBadge }}
+      </span>
       <span v-if="team.status === 'draft'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Draft</span>
       <span v-else-if="team.status === 'closed'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Team full</span>
     </div>

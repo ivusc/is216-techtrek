@@ -1,9 +1,10 @@
 import process from 'node:process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { createPinia } from 'pinia';
+import { createPinia, setActivePinia } from 'pinia';
+import { useUserStore } from '@/store/user';
 import TeamCard from '@/components/teams/TeamCard.vue';
-import { ledTeam, team } from '@/__tests__/fixtures/teams';
+import { ledTeam, team, ME, LEADER } from '@/__tests__/fixtures/teams';
 
 process.env.TZ = 'Asia/Singapore';
 
@@ -143,5 +144,18 @@ describe('TeamCard', () => {
   it('shows how many slots are open', () => {
     expect(mountCard().text()).toContain('2 slots open');
     expect(mountCard({ team: team({ slotsOpen: 1 }) }).text()).toContain('1 slot open');
+  });
+
+  it('shows my own role in the team on My teams', () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    useUserStore().user = { ...ME };
+    const joined = team({ members: [{ user: LEADER, role: 'Team lead' }, { user: ME, role: 'Backend developer' }] });
+    const wrapper = mount(TeamCard, { props: { team: joined, mode: 'mine' }, global: { plugins: [pinia], stubs: { teleport: true } } });
+
+    expect(wrapper.find('.badge.bg-primary-subtle').text()).toBe('Member · Backend developer');
+
+    const led = mount(TeamCard, { props: { team: ledTeam(), mode: 'mine' }, global: { plugins: [pinia], stubs: { teleport: true } } });
+    expect(led.find('.badge.bg-primary-subtle').text()).toBe('Leader');
   });
 });
