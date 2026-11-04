@@ -52,3 +52,4 @@ pnpm-debug.log*
 Thumbs.db
 
 .pnpm-store
+.env.production

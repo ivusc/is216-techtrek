@@ -29,7 +29,7 @@ defineProps({
 
 <style scoped>
 .question-card {
-  background: white;
+  background: var(--tt-surface);
   border: 1px solid var(--bs-border-color);
   border-radius: 14px;
   padding: 24px;
@@ -56,7 +56,7 @@ defineProps({
 
 .type-tag {
   background: var(--bs-info-bg-subtle);
-  color: #12577a;
+  color: var(--bs-info-text-emphasis);
 }
 
 .difficulty-tag {

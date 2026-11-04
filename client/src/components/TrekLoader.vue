@@ -73,7 +73,7 @@ onUnmounted(() => clearInterval(timer))
   position: relative;
   width: 80px;
   height: 80px;
-  border: 5px solid #fff;
+  border: 5px solid var(--tt-surface);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 .trek-needle {
@@ -89,7 +89,7 @@ onUnmounted(() => clearInterval(timer))
   position: absolute;
   width: 10px;
   height: 10px;
-  background-color: #fff;
+  background-color: var(--tt-surface);
 }
 
 /* the shadow shrinks while the compass is in the air */

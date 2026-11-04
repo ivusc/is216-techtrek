@@ -23,6 +23,7 @@ function copyProfile() {
   const user = auth.user ?? {};
   return {
     displayName: user.displayName ?? '',
+    faculty: user.faculty ?? '',
     year: user.year ?? '',
     course: user.course ?? '',
     about: user.about ?? '',
@@ -91,6 +92,7 @@ async function save() {
       <div class="col-12 col-lg-5 col-xl-4 d-flex flex-column gap-4">
         <IdentityCard
           v-model:display-name="draft.displayName"
+          v-model:faculty="draft.faculty"
           v-model:year="draft.year"
           v-model:course="draft.course"
           :email="auth.username ?? ''"

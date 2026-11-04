@@ -61,10 +61,20 @@ describe('LoginView', () => {
 
   it('opens sign up from the link on the log in panel', async () => {
     await wrapper
-      .findAll('a')
-      .find((link) => link.text() === 'New to TechTrek? Create an account')
+      .findAll('button')
+      .find((link) => link.text() === 'Create an account')
       .trigger('click');
 
     expect(panels()).toEqual(SIGN_UP_SHOWN);
+  });
+
+  it('opens log in from the link on the sign up panel', async () => {
+    await tab('Sign up').trigger('click');
+    await wrapper
+      .findAll('.form-switch-line button')
+      .find((link) => link.text() === 'Log in')
+      .trigger('click');
+
+    expect(panels()).toEqual(LOG_IN_SHOWN);
   });
 });

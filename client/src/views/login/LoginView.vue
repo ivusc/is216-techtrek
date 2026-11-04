@@ -83,7 +83,7 @@ function switchToSignUp() {
 <style lang="scss" scoped>
 /* no card: the form sits straight on the white right half */
 #loginPanel {
-  background-color: white;
+  background-color: var(--tt-surface);
 }
 
 #panel {
@@ -139,7 +139,7 @@ function switchToSignUp() {
   left: 4px;
   width: calc(50% - 6px);
   border-radius: 8px;
-  background-color: white;
+  background-color: var(--tt-surface);
   box-shadow:
     0 2px 3px rgba(28, 26, 61, 0.06),
     0 1px 1px rgba(28, 26, 61, 0.06);

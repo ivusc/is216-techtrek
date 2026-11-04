@@ -11,6 +11,7 @@
 
 .interview-empty {
   max-width: 640px;
+  min-height: 60vh;
 }
 
 .interview-question {
