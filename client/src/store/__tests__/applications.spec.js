@@ -262,4 +262,28 @@ describe('useApplicationsStore offer celebration', () => {
     expect(store.applications[2].review).toBeUndefined();
     expect(store.isSaving).toBe(false);
   });
+
+  it('submitReview saves changes with PUT when the tips were already shared', async () => {
+    const store = seededStore();
+    store.applications[2] = shared({ ...store.applications[2], status: 'offer' });
+    const edited = { ...REVIEW, tips: 'Know the product and the team.' };
+    mock.onPut('/application/a3/review').reply(200, shared({ ...store.applications[2], review: undefined }));
+
+    const result = await store.submitReview('a3', edited);
+
+    expect(JSON.parse(mock.history.put[0].data)).toEqual(edited);
+    expect(mock.history.post).toHaveLength(0);
+    expect(result._id).toBe('a3');
+  });
+
+  it('deleteReview takes the tips down and keeps the updated copy', async () => {
+    const store = seededStore();
+    store.applications[2] = shared({ ...store.applications[2], status: 'offer' });
+    mock.onDelete('/application/a3/review').reply(200, { ...applications()[2], status: 'offer' });
+
+    await store.deleteReview('a3');
+
+    expect(store.applications[2].review).toBeUndefined();
+    expect(store.status).toBeNull();
+  });
 });

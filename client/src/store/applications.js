@@ -1,9 +1,11 @@
 import {
   addApplicationService,
   addReviewService,
+  deleteReviewService,
   deleteApplicationService,
   fetchAllApplications,
   updateApplicationService,
+  updateReviewService,
 } from '@/services/trackerService';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -113,18 +115,43 @@ export const useApplicationsStore = defineStore('applications', () => {
     }
   }
 
+  // shares new tips, or saves changes when this application already has them.
+  // Returns the updated application, or null when it failed.
   async function submitReview(id, review) {
+    isSaving.value = true;
+    status.value = null;
+    const index = applications.value.findIndex((item) => item._id === id);
+    const editing = Boolean(applications.value[index]?.review);
+
+    try {
+      const reviewed = editing ? await updateReviewService(id, review) : await addReviewService(id, review);
+      applications.value[index] = reviewed;
+      dismissCelebration();
+      return reviewed;
+    } catch (error) {
+      console.error(error);
+      const action = editing ? 'Could not save your tips: ' : 'Could not share your tips: ';
+      status.value = action + (error.response?.data?.error ?? error.message);
+      return null;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  // takes my tips down; returns the updated application, or null when it failed
+  async function deleteReview(id) {
     isSaving.value = true;
     status.value = null;
 
     try {
-      const reviewed = await addReviewService(id, review);
+      const updated = await deleteReviewService(id);
       const index = applications.value.findIndex((item) => item._id === id);
-      applications.value[index] = reviewed;
-      dismissCelebration();
+      applications.value[index] = updated;
+      return updated;
     } catch (error) {
       console.error(error);
-      status.value = 'Could not share your tips: ' + (error.response?.data?.error ?? error.message);
+      status.value = 'Could not remove your tips: ' + (error.response?.data?.error ?? error.message);
+      return null;
     } finally {
       isSaving.value = false;
     }
@@ -159,5 +186,6 @@ export const useApplicationsStore = defineStore('applications', () => {
     celebrate,
     dismissCelebration,
     submitReview,
+    deleteReview,
   };
 });

@@ -16,7 +16,14 @@ const MAX_TIPS = 1000;
 
 const opportunity = computed(() => props.application.opportunityId);
 
-const form = reactive({ difficulty: 3, rounds: '', tips: '' });
+// editing: start from the tips already shared
+const existing = props.application.review;
+const editing = Boolean(existing);
+const form = reactive({
+  difficulty: existing?.difficulty ?? 3,
+  rounds: existing?.rounds ?? '',
+  tips: existing?.tips ?? '',
+});
 
 const difficultyLabel = computed(
   () => reviewDifficulties.find((option) => option.value === form.difficulty).label,
@@ -68,7 +75,9 @@ onMounted(() => dialog.value.focus());
               {{
                 step === 'congrats'
                   ? `Congratulations on your offer from ${opportunity.organisation}!`
-                  : 'Share your interview tips'
+                  : editing
+                    ? 'Edit your interview tips'
+                    : 'Share your interview tips'
               }}
             </h2>
             <span class="small text-body-secondary">
@@ -208,7 +217,8 @@ onMounted(() => dialog.value.focus());
             type="submit"
             :disabled="busy || form.tips.trim() === ''"
           >
-            {{ busy ? 'Sharing…' : 'Share tips' }}
+            <template v-if="editing">{{ busy ? 'Saving…' : 'Save changes' }}</template>
+            <template v-else>{{ busy ? 'Sharing…' : 'Share tips' }}</template>
           </button>
         </div>
       </form>

@@ -104,3 +104,61 @@ describe('POST /application/:id/review', () => {
     expect(body.review).toMatchObject(REVIEW);
   });
 });
+
+describe('PUT /application/:id/review', () => {
+  it('lets me change my tips, keeping when they were first shared', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const application = await trackGrab(agent);
+    const created = await agent.post(`/application/${application._id}/review`).send(REVIEW).expect(201);
+
+    const changed = { difficulty: 2, rounds: 'Just one interview', tips: 'Be yourself and ask questions.' };
+    const { body } = await agent.put(`/application/${application._id}/review`).send(changed).expect(200);
+
+    expect(body.review).toEqual({
+      ...changed,
+      createdAt: created.body.review.createdAt,
+      updatedAt: expect.any(String),
+    });
+    expect((await Application.findById(application._id)).review.tips).toBe(changed.tips);
+  });
+
+  it('checks the new tips like new ones and keeps the old ones on a bad edit', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const application = await trackGrab(agent);
+    await agent.post(`/application/${application._id}/review`).send(REVIEW).expect(201);
+
+    await agent.put(`/application/${application._id}/review`).send({ difficulty: 3, tips: '  ' }).expect(400);
+
+    expect((await Application.findById(application._id)).review.tips).toBe(REVIEW.tips);
+  });
+
+  it('answers 404 when there are no tips yet, or the application is someone else\'s', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const application = await trackGrab(agent);
+
+    const none = await agent.put(`/application/${application._id}/review`).send(REVIEW).expect(404);
+    expect(none.body).toEqual({ error: 'You have not shared tips for this application yet.' });
+
+    await agent.post(`/application/${application._id}/review`).send(REVIEW).expect(201);
+    const other = await loginAs(app, { userName: OTHER });
+    await other.put(`/application/${application._id}/review`).send({ ...REVIEW, tips: 'Not mine.' }).expect(404);
+    expect((await Application.findById(application._id)).review.tips).toBe(REVIEW.tips);
+  });
+});
+
+describe('DELETE /application/:id/review', () => {
+  it('takes my tips down so they can be shared again', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const application = await trackGrab(agent);
+    await agent.post(`/application/${application._id}/review`).send(REVIEW).expect(201);
+
+    const other = await loginAs(app, { userName: OTHER });
+    await other.delete(`/application/${application._id}/review`).expect(404);
+
+    const { body } = await agent.delete(`/application/${application._id}/review`).expect(200);
+    expect(body.review).toBeUndefined();
+    expect((await Application.findById(application._id)).review).toBeUndefined();
+
+    await agent.post(`/application/${application._id}/review`).send(REVIEW).expect(201);
+  });
+});

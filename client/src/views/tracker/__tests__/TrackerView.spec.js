@@ -210,8 +210,59 @@ describe('TrackerView', () => {
       tips: 'Know the product.',
     });
     expect(offerModal(wrapper).exists()).toBe(false);
+    expect(wrapper.find('.thanks-toast').text()).toContain('Thank you for sharing!');
     await column(wrapper, 'Offer').find('.kanban-card').trigger('click');
-    expect(detailModal(wrapper).text()).toContain('You shared your tips on 3 Nov');
+    expect(detailModal(wrapper).find('.tips-card').text()).toContain('Know the product.');
+  });
+
+  it('lets me edit my tips from the job and shows the new ones straight after', async () => {
+    const wrapper = await mountTracker();
+    await moveDataAnalystToOffer(wrapper);
+    await button(offerModal(wrapper), 'Share your interview tips').trigger('click');
+    await offerModal(wrapper).find('#offer-tips').setValue('Know the product.');
+    await offerModal(wrapper).find('form').trigger('submit');
+    await flushPromises();
+    mock.onPut('/application/a3/review').reply((config) => [
+      200,
+      {
+        ...applications()[2],
+        status: 'offer',
+        review: { ...JSON.parse(config.data), createdAt: NOW, updatedAt: NOW },
+      },
+    ]);
+
+    await column(wrapper, 'Offer').find('.kanban-card').trigger('click');
+    await button(detailModal(wrapper), 'Edit tips').trigger('click');
+    expect(offerModal(wrapper).find('h2').text()).toBe('Edit your interview tips');
+    expect(offerModal(wrapper).find('#offer-tips').element.value).toBe('Know the product.');
+    await offerModal(wrapper).find('#offer-tips').setValue('Know the product and the team.');
+    await offerModal(wrapper).find('form').trigger('submit');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.put[0].data)).toMatchObject({ tips: 'Know the product and the team.' });
+    expect(offerModal(wrapper).exists()).toBe(false);
+    expect(detailModal(wrapper).find('.tips-card').text()).toContain('Know the product and the team.');
+    expect(detailModal(wrapper).find('.tips-card').text()).toContain('Tips saved');
+    expect(wrapper.find('.thanks-toast').text()).toContain('Tips updated, thank you!');
+  });
+
+  it('takes my tips down from the job after I confirm', async () => {
+    const wrapper = await mountTracker();
+    await moveDataAnalystToOffer(wrapper);
+    await button(offerModal(wrapper), 'Share your interview tips').trigger('click');
+    await offerModal(wrapper).find('#offer-tips').setValue('Know the product.');
+    await offerModal(wrapper).find('form').trigger('submit');
+    await flushPromises();
+    mock.onDelete('/application/a3/review').reply(200, { ...applications()[2], status: 'offer' });
+
+    await column(wrapper, 'Offer').find('.kanban-card').trigger('click');
+    await button(detailModal(wrapper), 'Delete').trigger('click');
+    await button(detailModal(wrapper), 'Delete tips').trigger('click');
+    await flushPromises();
+
+    expect(mock.history.delete[0].url).toBe('/application/a3/review');
+    expect(detailModal(wrapper).find('.tips-card').exists()).toBe(false);
+    expect(button(detailModal(wrapper), 'Share your interview tips')).toBeDefined();
   });
 
   it('leaves a way to share tips in the detail modal after Maybe later', async () => {

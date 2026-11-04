@@ -91,6 +91,17 @@ async function addReview(application, review) {
   return application.save();
 }
 
+// the author edits their tips: keep when they were first shared, note when they changed
+async function updateReview(application, review) {
+  application.review = { ...review, createdAt: application.review.createdAt, updatedAt: new Date() };
+  return application.save();
+}
+
+async function removeReview(application) {
+  application.review = undefined;
+  return application.save();
+}
+
 async function deleteApplication(id, userId) {
   const deletedApplication = await Application.findOneAndDelete({ _id: id, userId: userId });
   return deletedApplication;
@@ -104,4 +115,6 @@ module.exports = {
   deleteApplication,
   markTeamFormed,
   addReview,
+  updateReview,
+  removeReview,
 };

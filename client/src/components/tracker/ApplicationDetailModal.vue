@@ -1,17 +1,33 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { formatDate, toDateTimeInputValue } from '@/utils/date'
-import { typeBadge, hackathonResults } from '@/constants'
+import { typeBadge, hackathonResults, reviewDifficulties } from '@/constants'
 import { getApplicationDeadline, stagesFor } from '@/utils/application'
 
 const props = defineProps({
-  application: { type: Object, required: true } // one item from GET /application (opportunityId is populated)
+  application: { type: Object, required: true }, // one item from GET /application (opportunityId is populated)
+  tipsJustSaved: { type: Boolean, default: false } // reopened after sharing or editing tips: scroll to them
 })
 
 // close = X, Cancel, Esc or clicking outside; save = (changes); delete = Delete button
-const emit = defineEmits(['close', 'save', 'delete', 'share-tips'])
+const emit = defineEmits(['close', 'save', 'delete', 'share-tips', 'delete-tips'])
 
 const opportunity = computed(() => props.application.opportunityId)
+
+// my interview tips for this offer, shown so I can check, edit or take them down
+const review = computed(() => props.application.review ?? null)
+const reviewDifficulty = computed(() =>
+  review.value ? reviewDifficulties.find((option) => option.value === review.value.difficulty)?.label ?? '' : ''
+)
+const confirmingTipsDelete = ref(false)
+const tipsCard = ref(null)
+onMounted(() => {
+  if (props.tipsJustSaved) tipsCard.value?.scrollIntoView?.({ block: 'center' })
+})
+function deleteTips() {
+  confirmingTipsDelete.value = false
+  emit('delete-tips')
+}
 
 // a job's steps or a hackathon's steps, never both
 const stageOptions = computed(() => stagesFor(opportunity.value.type))
@@ -268,13 +284,50 @@ onMounted(() => dialog.value.focus())
             </RouterLink>
           </div>
 
-          <div v-if="application.status === 'offer'" class="d-flex flex-wrap align-items-center gap-2 rounded-3 bg-warning-subtle px-3 py-2 small">
+          <!-- tips I shared: shown in full, with Edit and Delete -->
+          <section v-if="review" ref="tipsCard" class="tips-card rounded-3 p-3" aria-labelledby="my-tips-title">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <i class="bi bi-chat-quote-fill text-primary" aria-hidden="true"></i>
+              <h3 id="my-tips-title" class="h6 fw-semibold mb-0">Your interview tips</h3>
+              <span v-if="tipsJustSaved" class="tips-saved small fw-semibold text-success" role="status">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Tips saved
+              </span>
+              <span class="badge rounded-pill bg-white border text-body-secondary fw-medium ms-auto">
+                <i class="bi bi-incognito" aria-hidden="true"></i> Posted anonymously
+              </span>
+            </div>
+
+            <span class="badge rounded-pill bg-info-subtle text-primary fw-medium mb-2">
+              Difficulty {{ review.difficulty }}/5 · {{ reviewDifficulty }}
+            </span>
+            <p v-if="review.rounds" class="small text-body-secondary mb-1">
+              <span class="fw-semibold">Rounds:</span> {{ review.rounds }}
+            </p>
+            <p class="tips-text mb-2">{{ review.tips }}</p>
+            <p class="text-caption text-body-tertiary mb-3">
+              Shared on {{ formatDate(review.createdAt) }}<template v-if="review.updatedAt"> · Edited {{ formatDate(review.updatedAt) }}</template>
+              · Students preparing for this role see it in Interview Prep
+            </p>
+
+            <div v-if="confirmingTipsDelete" class="d-flex flex-wrap align-items-center gap-2 rounded-3 bg-white border px-3 py-2" role="alert">
+              <span class="small flex-grow-1">Take your tips down? Other students won't see them anymore.</span>
+              <button class="btn btn-sm btn-light fw-semibold" type="button" @click="confirmingTipsDelete = false">Keep them</button>
+              <button class="btn btn-sm btn-danger fw-semibold" type="button" @click="deleteTips">Delete tips</button>
+            </div>
+            <div v-else class="d-flex flex-wrap gap-2">
+              <button class="btn btn-sm btn-primary fw-semibold" type="button" @click="$emit('share-tips')">
+                <i class="bi bi-pencil" aria-hidden="true"></i> Edit tips
+              </button>
+              <button class="btn btn-sm btn-outline-danger fw-semibold" type="button" @click="confirmingTipsDelete = true">
+                <i class="bi bi-trash" aria-hidden="true"></i> Delete
+              </button>
+            </div>
+          </section>
+
+          <div v-else-if="application.status === 'offer'" class="d-flex flex-wrap align-items-center gap-2 rounded-3 bg-warning-subtle px-3 py-2 small">
             <i class="bi bi-chat-left-text text-body-secondary" aria-hidden="true"></i>
-            <span v-if="application.review" class="text-body-secondary">You shared your tips on {{ formatDate(application.review.createdAt) }}</span>
-            <template v-else>
-              <span class="text-body-secondary flex-grow-1">Got the offer? Help the next SMU student.</span>
-              <button class="btn btn-sm btn-primary fw-semibold" type="button" @click="$emit('share-tips')">Share your interview tips</button>
-            </template>
+            <span class="text-body-secondary flex-grow-1">Got the offer? Help the next SMU student.</span>
+            <button class="btn btn-sm btn-primary fw-semibold" type="button" @click="$emit('share-tips')">Share your interview tips</button>
           </div>
 
           <div>
@@ -303,3 +356,23 @@ onMounted(() => dialog.value.focus())
     </div>
   </div>
 </template>
+
+<style scoped>
+.tips-card {
+  background-color: var(--bs-primary-bg-subtle);
+  border: 1px solid var(--bs-primary-border-subtle);
+}
+.tips-saved {
+  animation: saved-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes saved-pop {
+  from { opacity: 0; transform: scale(0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tips-saved { animation: none; }
+}
+.tips-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+</style>

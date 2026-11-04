@@ -84,4 +84,25 @@ describe('OfferCelebrationModal', () => {
     expect(wrapper.emitted('close')).toHaveLength(2);
     wrapper.unmount();
   });
+
+  it('starts from my shared tips when editing them', async () => {
+    const wrapper = mountModal({
+      step: 'form',
+      application: {
+        ...applications()[2],
+        status: 'offer',
+        review: { difficulty: 5, rounds: 'Two rounds', tips: 'Know the product.', createdAt: '2026-11-03T02:00:00.000Z' },
+      },
+    });
+
+    expect(wrapper.find('h2').text()).toBe('Edit your interview tips');
+    expect(wrapper.find('#offer-rounds').element.value).toBe('Two rounds');
+    expect(wrapper.find('#offer-tips').element.value).toBe('Know the product.');
+    expect(wrapper.find('#offer-difficulty-5').element.checked).toBe(true);
+    expect(shareButton(wrapper).text()).toBe('Save changes');
+
+    await wrapper.find('form').trigger('submit');
+    expect(wrapper.emitted('submit')[0]).toEqual([{ difficulty: 5, rounds: 'Two rounds', tips: 'Know the product.' }]);
+    wrapper.unmount();
+  });
 });

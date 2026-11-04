@@ -8,6 +8,7 @@ import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
 import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
 import AddApplicationModal from '@/components/tracker/AddApplicationModal.vue';
 import OfferCelebrationModal from '@/components/tracker/OfferCelebrationModal.vue';
+import TipsThanksToast from '@/components/tracker/TipsThanksToast.vue';
 import { trackerStages, hackathonStages } from '@/constants';
 import { isDueThisWeek, isOverdue, isEventType } from '@/utils/application';
 import { storeToRefs } from 'pinia';
@@ -26,6 +27,7 @@ const {
   celebrate,
   dismissCelebration,
   submitReview,
+  deleteReview,
 } = applicationStore;
 
 const search = ref('');
@@ -150,7 +152,11 @@ function exportCalendar() {
 // the application shown in the detail modal (null = modal is closed)
 const selectedApplication = ref(null);
 
+// true when the modal reopens right after tips were shared or edited
+const tipsJustSaved = ref(false);
+
 function openDetails(application) {
+  tipsJustSaved.value = false;
   selectedApplication.value = application;
 }
 
@@ -170,11 +176,43 @@ async function deleteSelected() {
   if (!status.value) closeDetails();
 }
 
+// share or edit tips from the detail modal; once saved, the modal opens again showing them
+let tipsFromDetails = false;
 function shareTips() {
   const application = selectedApplication.value;
   closeDetails();
   status.value = null;
+  tipsFromDetails = true;
   celebrate(application, 'form');
+}
+
+// the thank-you pop-up after tips are saved (null = hidden)
+const thanks = ref(null);
+
+async function saveTips(review) {
+  const edited = Boolean(celebration.value.application.review);
+  const saved = await submitReview(celebration.value.application._id, review);
+  if (saved) thanks.value = { key: Date.now(), edited, organisation: saved.opportunityId?.organisation ?? '' };
+  if (saved && tipsFromDetails) {
+    tipsJustSaved.value = true;
+    selectedApplication.value = saved;
+  }
+  if (saved) tipsFromDetails = false;
+}
+
+function closeTips() {
+  const application = celebration.value?.application;
+  dismissCelebration();
+  status.value = null;
+  // Cancel on an edit goes back to the job, so the tips are still on screen
+  if (tipsFromDetails && application) selectedApplication.value = application;
+  tipsFromDetails = false;
+}
+
+async function deleteTips() {
+  tipsJustSaved.value = false;
+  const updated = await deleteReview(selectedApplication.value._id);
+  if (updated) selectedApplication.value = updated;
 }
 </script>
 
@@ -210,13 +248,16 @@ function shareTips() {
 
       <!-- Details Modal -->
       <ApplicationDetailModal v-if="selectedApplication" :key="selectedApplication._id"
-        :application="selectedApplication" @close="closeDetails" @save="saveDetails" @delete="deleteSelected"
-        @share-tips="shareTips" />
+        :application="selectedApplication" :tips-just-saved="tipsJustSaved" @close="closeDetails" @save="saveDetails" @delete="deleteSelected"
+        @share-tips="shareTips" @delete-tips="deleteTips" />
 
       <OfferCelebrationModal v-if="celebration" :key="celebration.step" :application="celebration.application"
-        :step="celebration.step" :busy="isSaving" :error="status ?? ''" @close="dismissCelebration"
+        :step="celebration.step" :busy="isSaving" :error="status ?? ''" @close="closeTips"
         @next="celebrate(celebration.application, 'form')"
-        @submit="(review) => submitReview(celebration.application._id, review)" />
+        @submit="saveTips" />
+
+      <TipsThanksToast v-if="thanks" :key="thanks.key" :edited="thanks.edited" :organisation="thanks.organisation"
+        @close="thanks = null" />
     </div>
   </div>
 </template>
