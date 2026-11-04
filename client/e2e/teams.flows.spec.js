@@ -74,7 +74,7 @@ async function openTeams(page, size) {
 }
 
 function tab(page, name) {
-  return page.locator('main nav.nav-underline').getByRole('button', { name });
+  return page.locator('main .tab-cards').getByRole('tab', { name });
 }
 
 function teamCard(page, name) {

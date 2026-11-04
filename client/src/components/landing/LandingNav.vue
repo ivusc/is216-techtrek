@@ -30,9 +30,7 @@ function go(id) {
   <header class="landing-nav" :class="{ 'is-scrolled': scrolled }">
     <div class="landing-container d-flex align-items-center gap-3">
       <button type="button" class="brand d-flex align-items-center gap-2 border-0 bg-transparent p-0" @click="go('top')">
-        <span class="logo-tile">
-          <img src="@/assets/logo.svg" alt="" width="22" height="22" />
-        </span>
+        <img src="/favicon.svg" alt="" width="36" height="36" class="flex-shrink-0" />
         <span class="h3 mb-0">TechTrek</span>
       </button>
 
@@ -116,17 +114,6 @@ function go(id) {
 .brand {
   color: var(--bs-heading-color);
 }
-.logo-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--bs-border-radius);
-  background-color: var(--tt-surface);
-  border: 1px solid var(--bs-border-color);
-}
-
 /* the section links: a bar slides in under the one you are on */
 .nav-link-btn {
   position: relative;

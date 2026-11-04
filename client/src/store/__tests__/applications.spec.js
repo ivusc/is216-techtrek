@@ -36,7 +36,7 @@ describe('useApplicationsStore', () => {
   });
 
   it.each([
-    ['a server error', 500, undefined, 'There was an error: Request failed with status code 500'],
+    ['a server error', 500, undefined, 'Applications could not be loaded right now. Try again in a moment.'],
     ['an empty answer', 200, null, 'Applications could not be loaded right now.'],
   ])('fetchApplications reports %s', async (label, code, body, message) => {
     mock.onGet('/application').reply(code, body);

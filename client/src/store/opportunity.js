@@ -4,7 +4,7 @@ import {
   deleteApplicationService,
   fetchAllApplications,
 } from '@/services/trackerService';
-import { fetchTeams } from '@/services/teamService';
+import { fetchTeams, getErrorMessage } from '@/services/teamService';
 import { getKey } from '@/utils/opportunity';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -70,7 +70,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
       fetchTeamCounts();
     } catch (error) {
       console.error(error);
-      status.value = 'There was an error: ' + error.message;
+      status.value = 'Opportunities could not be loaded right now. Try again in a moment.';
     } finally {
       isLoading.value = false;
     }
@@ -164,7 +164,7 @@ export const useOpportunityStore = defineStore('opportunity', () => {
       }
     } catch (error) {
       console.error(error);
-      status.value = 'Could not update "' + item.title + '": ' + error.message;
+      status.value = 'Could not update "' + item.title + '": ' + getErrorMessage(error);
     } finally {
       isSaving.value = false;
     }

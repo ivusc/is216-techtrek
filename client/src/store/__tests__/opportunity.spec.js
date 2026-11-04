@@ -66,7 +66,7 @@ describe('useOpportunityStore', () => {
 
     await store.fetchOpportunities();
 
-    expect(store.status).toBe('There was an error: Request failed with status code 500');
+    expect(store.status).toBe('Opportunities could not be loaded right now. Try again in a moment.');
     expect(store.isLoading).toBe(false);
   });
 

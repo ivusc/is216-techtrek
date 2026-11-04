@@ -25,18 +25,20 @@ const router = useRouter()
 const auth = useUserStore()
 const applicationStore = useApplicationsStore()
 const opportunityStore = useOpportunityStore()
-const { applications, isLoading } = storeToRefs(applicationStore)
+const { applications } = storeToRefs(applicationStore)
 
 const search = ref('')
 const skills = computed(() => auth.skills)
 const incoming = ref([]) // people asking to join my teams
 const invites = ref([]) // teams inviting me
 const busyRequestId = ref('')
+// the loader is for the first load only; later refreshes (e.g. after tracking a pick) keep the dashboard on screen
+const firstLoadDone = ref(false)
 const requestError = ref('')
 
 onMounted(() => {
   // each part loads on its own, so one failing does not blank the whole dashboard
-  applicationStore.fetchApplications()
+  applicationStore.fetchApplications().finally(() => (firstLoadDone.value = true))
   opportunityStore.fetchOpportunities()
   loadRequests()
 })
@@ -246,7 +248,7 @@ async function respond(request, status, role) {
 
     <!-- only the first time: after that the old numbers stay on screen while they refresh -->
     <TrekLoader
-      v-if="isLoading && applications.length === 0"
+      v-if="!firstLoadDone"
       title="Setting up your dashboard"
       :captions="['Counting your deadlines…', 'Picking opportunities for your skills…', 'Checking your team requests…']"
     />

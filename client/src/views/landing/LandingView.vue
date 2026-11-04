@@ -317,7 +317,7 @@ onUnmounted(() => {
     <footer class="landing-footer">
       <div class="landing-container d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 py-4">
         <span class="d-flex align-items-center gap-2">
-          <img src="@/assets/logo.svg" alt="" width="20" height="20" />
+          <img src="/favicon.svg" alt="" width="20" height="20" />
           <span class="fw-semibold">TechTrek</span>
           <span class="text-body-secondary small">Every tech opportunity at SMU, in one place.</span>
         </span>
