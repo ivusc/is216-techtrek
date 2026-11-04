@@ -4,10 +4,12 @@ import { useUserStore } from '@/store/user';
 import { getErrorMessage } from '@/services/teamService';
 import { toAvatarBlob } from '@/utils/image';
 import UserAvatar from '@/components/UserAvatar.vue';
+import { faculties } from '@/constants';
 
 const displayName = defineModel('displayName', { type: String, required: true });
 const year = defineModel('year', { type: [Number, String], default: '' });
 const course = defineModel('course', { type: String, default: '' });
+const faculty = defineModel('faculty', { type: String, default: '' });
 
 defineProps({
   email: { type: String, default: '' },
@@ -18,7 +20,9 @@ defineProps({
 defineEmits(['edit']);
 
 const schoolLine = computed(() =>
-  [year.value ? `Year ${year.value}` : '', course.value, 'SMU'].filter(Boolean).join(' · '),
+  [year.value ? `Year ${year.value}` : '', course.value, faculty.value || 'SMU']
+    .filter(Boolean)
+    .join(' · '),
 );
 
 const auth = useUserStore();
@@ -121,6 +125,15 @@ function removePhoto() {
             autocomplete="name"
             required
           />
+        </div>
+        <div>
+          <label for="profile-faculty" class="form-label small fw-semibold">School</label>
+          <select id="profile-faculty" v-model="faculty" class="form-select">
+            <option v-if="!faculty" value="" disabled>Pick your SMU school</option>
+            <option v-for="option in faculties" :key="option.code" :value="option.code">
+              {{ option.code }} · {{ option.name }}
+            </option>
+          </select>
         </div>
         <div class="row g-2">
           <div class="col-5">

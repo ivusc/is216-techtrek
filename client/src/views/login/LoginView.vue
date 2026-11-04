@@ -47,13 +47,13 @@ function switchToSignUp() {
       class="col-12 col-md-6 d-flex flex-column justify-content-center align-items-center px-3 py-4 py-sm-5"
     >
       <div id="brandHeader" class="d-flex d-md-none align-items-center gap-2 mb-4">
-        <span class="logo-tile bg-white shadow-sm">
+        <span class="logo-tile">
           <img src="@/assets/logo.svg" alt="" width="22" height="22" />
         </span>
         <span class="h3 mb-0">TechTrek</span>
       </div>
-      <div id="panel" class="shadow">
-        <div id="slider">
+      <div id="panel">
+        <div id="slider" :class="{ 'on-signup': !isLogin }">
           <button
             type="button"
             class="slider-button btn"
@@ -81,17 +81,17 @@ function switchToSignUp() {
 </template>
 
 <style lang="scss" scoped>
-/* the card grows with its form, so the buttons never spill out of it */
+/* no card: the form sits straight on the white right half */
+#loginPanel {
+  background-color: var(--tt-surface);
+}
+
 #panel {
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 440px;
-  background-color: white;
-  padding: 1.5rem;
-  gap: 1.25rem;
-  border-radius: 20px;
+  max-width: 400px;
+  gap: 1.5rem;
 }
 
 /* logo on phones, where the banner is hidden */
@@ -103,9 +103,11 @@ function switchToSignUp() {
   width: 36px;
   height: 36px;
   border-radius: var(--bs-border-radius);
+  background-color: var(--tt-lavender);
 }
 
 #slider {
+  position: relative;
   display: flex;
   gap: 4px;
   padding: 4px;
@@ -123,19 +125,37 @@ function switchToSignUp() {
   color: var(--bs-secondary-color);
 }
 
-.selected,
-.selected:hover {
+.slider-button.selected,
+.slider-button.selected:hover {
   color: var(--bs-body-color);
-  background-color: white;
+}
+
+/* the white thumb slides under whichever tab is picked */
+#slider::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  border-radius: 8px;
+  background-color: var(--tt-surface);
   box-shadow:
     0 2px 3px rgba(28, 26, 61, 0.06),
     0 1px 1px rgba(28, 26, 61, 0.06);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#slider.on-signup::before {
+  transform: translateX(calc(100% + 4px));
+}
+.slider-button {
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s ease;
 }
 
-@media (min-width: 576px) and (max-width: 767.98px), (min-width: 992px) {
-  #panel {
-    padding: 2.5rem;
-  }
+@media (prefers-reduced-motion: reduce) {
+  #slider::before { transition: none; }
 }
 
 @media (min-width: 1400px) {

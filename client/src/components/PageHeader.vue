@@ -1,11 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import UserAvatar from '@/components/UserAvatar.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
 
 const auth = useUserStore()
 const name = computed(() => auth.displayName ?? auth.username ?? '')
+
+const theme = ref(document.documentElement.dataset.bsTheme === 'dark' ? 'dark' : 'light')
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  document.documentElement.dataset.bsTheme = theme.value
+  try { localStorage.setItem('theme', theme.value) } catch { /* private mode: theme just won't persist */ }
+}
 
 const search = defineModel({ type: String, default: '' })
 
@@ -36,6 +43,15 @@ defineProps({
     </div>
     <!-- bell and avatar stay together so the avatar never drops onto a line by itself -->
     <div class="d-flex align-items-center gap-2 flex-shrink-0">
+      <button
+        type="button"
+        class="btn bg-white border rounded-circle p-0 d-flex align-items-center justify-content-center theme-toggle"
+        :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+        :title="theme === 'dark' ? 'Light mode' : 'Dark mode'"
+        @click="toggleTheme"
+      >
+        <i :class="theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon'" aria-hidden="true"></i>
+      </button>
       <NotificationBell :size="36" />
       <RouterLink to="/profile" class="flex-shrink-0 text-decoration-none" aria-label="Your profile">
         <UserAvatar
@@ -51,6 +67,10 @@ defineProps({
 </template>
 
 <style scoped>
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+}
 /* the title takes the space that is left (and wraps its own text), so the bell and avatar
    always stay on the same row as the title; the search box moves to its own row when there is no room */
 .page-title {

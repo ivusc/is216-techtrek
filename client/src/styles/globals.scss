@@ -100,19 +100,41 @@ $box-shadow-lg: 0 24px 48px rgba(28, 26, 61, .18);                              
 // Spacing: design uses Bootstrap's default $spacers (4/8/16/24/48px); no override needed.
 
 // Components
-$card-bg:            #ffffff;
+$card-bg:            var(--tt-surface);
 $card-border-color:  $border-color;
 $card-border-radius: $border-radius-lg;
-$modal-content-bg:   #ffffff;
+$modal-content-bg:   var(--tt-surface);
 $modal-content-border-radius: $border-radius-lg;
-$dropdown-bg:        #ffffff;
-$input-bg:           #ffffff;
+$dropdown-bg:        var(--tt-surface);
+$input-bg:           var(--tt-surface);
 $input-border-color: $border-color-translucent;
 $input-focus-border-color: $tt-primary;
 $input-focus-box-shadow:   0 0 0 1px $tt-primary; // with the 1px border = "2px primary border" focus, no layout shift
 $form-select-focus-box-shadow: $input-focus-box-shadow;
 $form-check-input-focus-box-shadow: 0 0 0 .2rem rgba($tt-primary, .25);
 $nav-underline-link-active-color: $tt-primary;
+
+// Dark mode (Bootstrap colour modes: <html data-bs-theme="dark">). Same hues, deep navy surfaces.
+$body-bg-dark:                 #121120;
+$body-color-dark:              #e8e7f2;
+$body-secondary-color-dark:    #b8b6cc;
+$body-tertiary-color-dark:     #9a98b0;
+$body-secondary-bg-dark:       #2e2c47;
+$body-tertiary-bg-dark:        #232139;
+$border-color-dark:            #302e48;
+$border-color-translucent-dark:#45435e;
+$headings-color-dark:          #f3f2fa;
+$tt-primary-dark-mode:         #7b63f6; // white text 4.2:1 (fine for the bold button labels)
+$tt-primary-dark-mode-hover:   #8c77ff;
+$link-color-dark:              #a594ff;
+$link-hover-color-dark:        #c2b7ff;
+$primary-bg-subtle-dark:       #2a2452;
+$info-bg-subtle-dark:          #12334a;
+$warning-bg-subtle-dark:       #3a2c12;
+$danger-bg-subtle-dark:        #40202b;
+$primary-text-emphasis-dark:   #c2b7ff;
+$info-text-emphasis-dark:      #8fd4f3;
+$danger-text-emphasis-dark:    #ff9fb3;
 
 @import 'bootstrap/scss/bootstrap';
 
@@ -127,6 +149,8 @@ $nav-underline-link-active-color: $tt-primary;
   --tt-sky-subtle:  #{$info-bg-subtle};
   --tt-lavender:    #{$primary-bg-subtle};
   --tt-surface-subtle: #{$body-secondary-bg};
+  --tt-surface:     #ffffff;     // cards, modals, inputs, white panels
+  --tt-card-header: #f8f7fc;
 
   // Tracker status (column dots, badges, calendar events)
   --tt-status-saved:     #{$tt-text-muted};
@@ -139,6 +163,57 @@ $nav-underline-link-active-color: $tt-primary;
   --tt-status-team:       #c58bd6;
   --tt-status-submitted:  #f0a24a;
   --tt-status-results:    #{$tt-secondary};
+}
+
+[data-bs-theme="dark"] {
+  --tt-surface:        #{$body-tertiary-bg-dark};
+  --tt-card-header:    #2a2842;
+  --tt-cream:          #{$body-bg-dark};
+  --tt-peach:          #{$info-bg-subtle-dark};
+  --tt-sky-subtle:     #{$info-bg-subtle-dark};
+  --tt-lavender:       #{$primary-bg-subtle-dark};
+  --tt-surface-subtle: #{$body-secondary-bg-dark};
+  --tt-accent-text:    #{$danger-text-emphasis-dark};
+  color-scheme: dark;
+
+  // .bg-white is used as "surface" all over the templates
+  .bg-white { background-color: var(--tt-surface) !important; }
+  .btn-light {
+    --bs-btn-bg: var(--bs-primary-bg-subtle);
+    --bs-btn-border-color: var(--bs-primary-bg-subtle);
+    --bs-btn-color: var(--bs-primary-text-emphasis);
+    --bs-btn-hover-bg: #342d63;
+    --bs-btn-hover-border-color: #342d63;
+    --bs-btn-hover-color: var(--bs-primary-text-emphasis);
+    --bs-btn-active-bg: #342d63;
+    --bs-btn-active-color: var(--bs-primary-text-emphasis);
+  }
+  .btn-outline-primary { --bs-btn-color: #{$link-color-dark}; }
+  .text-primary { color: #{$link-color-dark} !important; }
+  // no borders on dark cards: the lighter surface does the separating
+  .card { border-color: transparent; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); }
+  .card-header { border-bottom-color: transparent; }
+
+  // brand purple, lifted so it doesn't sink into the navy background
+  --bs-primary:     #{$tt-primary-dark-mode};
+  --bs-primary-rgb: #{to-rgb($tt-primary-dark-mode)};
+  --bs-primary-hover: #{$tt-primary-dark-mode-hover};
+  .btn-primary {
+    --bs-btn-bg: #{$tt-primary-dark-mode};
+    --bs-btn-border-color: #{$tt-primary-dark-mode};
+    --bs-btn-hover-bg: #{$tt-primary-dark-mode-hover};
+    --bs-btn-hover-border-color: #{$tt-primary-dark-mode-hover};
+    --bs-btn-active-bg: #{$tt-primary-dark-mode-hover};
+    --bs-btn-active-border-color: #{$tt-primary-dark-mode-hover};
+    --bs-btn-disabled-bg: #{$tt-primary-dark-mode};
+    --bs-btn-disabled-border-color: #{$tt-primary-dark-mode};
+  }
+  .btn-outline-primary {
+    --bs-btn-border-color: #{$tt-primary-dark-mode};
+    --bs-btn-hover-bg: #{$tt-primary-dark-mode};
+    --bs-btn-hover-border-color: #{$tt-primary-dark-mode};
+    --bs-btn-active-bg: #{$tt-primary-dark-mode};
+  }
 }
 
 // ─── 4. Component rules the Sass variables can't express ─────────────────
@@ -240,15 +315,15 @@ h4, .h4 { line-height: 22px; font-weight: 600; }
 // ─── 5. Dashboard look (soft page, white bordered cards, light card headers) ───
 .card { border: 1px solid $border-color; }
 .card-header {
-  background-color: #f8f7fc;
+  background-color: var(--tt-card-header);
   border-bottom-color: $border-color;
 }
 // headings inside cards read as headings, not body text
-.card .card-title { color: $tt-text; font-weight: 600; }
+.card .card-title { color: var(--bs-heading-color); font-weight: 600; }
 
 // browser surfaces in the theme colours
-::selection { background-color: rgba($tt-primary, .2); color: $tt-text; }
+::selection { background-color: rgba($tt-primary, .2); color: var(--bs-body-color); }
 :focus-visible { outline-color: $tt-primary; }
-html { accent-color: $tt-primary; scrollbar-color: #c9c7da transparent; }
+html { accent-color: $tt-primary; scrollbar-color: var(--bs-border-color-translucent) transparent; }
 a { text-underline-offset: .18em; }
 .text-stat, .tabular { font-variant-numeric: tabular-nums; }

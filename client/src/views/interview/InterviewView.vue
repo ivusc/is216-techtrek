@@ -17,8 +17,8 @@ const highestScore = ref(0);
 const applicationCards = ref([]);
 const titles = ref([]);
 const questions = ref([]);
-const questionScores = ref({});
 const seniorTips = ref([]);
+const activeTab = ref('bank');
 const isLoading = ref(true);
 const errorMessage = ref('');
 
@@ -30,7 +30,6 @@ const loadData = async () => {
     applicationCards.value = response.data.applicationCards;
     titles.value = response.data.titles;
     questions.value = response.data.allQuestions;
-    questionScores.value = response.data.questionScores;
     averageScore.value = response.data.averageScore;
     highestScore.value = response.data.highestScore;
     seniorTips.value = response.data.seniorTips;
@@ -67,6 +66,11 @@ const visibleTips = computed(() => {
         )),
   );
 });
+
+const tabs = computed(() => [
+  { id: 'bank', label: 'Question bank', count: filteredQuestions.value.length },
+  { id: 'tips', label: 'Senior tips', count: visibleTips.value.length },
+]);
 
 const isEmpty = computed(() => applicationCards.value.length === 0 && questions.value.length === 0);
 
@@ -121,10 +125,6 @@ function shortDate(value) {
     month: 'short',
   });
 }
-
-function bestScore(question) {
-  return questionScores.value[question.questionId]?.highScore ?? 0;
-}
 </script>
 
 <template>
@@ -160,11 +160,11 @@ function bestScore(question) {
     />
     <section
       v-else-if="!errorMessage && isEmpty"
-      class="card interview-card interview-empty p-4 p-md-5"
+      class="interview-empty mx-auto text-center d-flex flex-column justify-content-center p-4"
       aria-labelledby="interview-empty-title"
     >
       <span
-        class="interview-icon rounded-3 bg-tt-peach text-tt-accent d-flex align-items-center justify-content-center mb-3"
+        class="interview-icon rounded-3 bg-tt-peach text-tt-accent d-flex align-items-center justify-content-center mx-auto mb-3"
       >
         <i class="bi bi-chat-left-text" aria-hidden="true"></i>
       </span>
@@ -173,7 +173,7 @@ function bestScore(question) {
         Practice sessions are written for the jobs and internships you have applied to. Move one to
         Applied or Interview in the tracker and it shows up here, ready for a 5-question session.
       </p>
-      <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
+      <ul class="list-unstyled d-flex flex-column align-self-center text-start gap-2 mb-4">
         <li class="d-flex gap-2">
           <i class="bi bi-stars text-primary" aria-hidden="true"></i>
           Gemini writes questions for that role and company.
@@ -187,7 +187,7 @@ function bestScore(question) {
           Answered questions stay in your question bank with your best score.
         </li>
       </ul>
-      <div class="d-flex flex-wrap gap-2">
+      <div class="d-flex flex-wrap justify-content-center gap-2">
         <RouterLink to="/tracker" class="btn btn-primary fw-semibold">Open tracker</RouterLink>
         <RouterLink to="/opportunities" class="btn btn-outline-primary fw-semibold">
           Browse opportunities
@@ -318,60 +318,105 @@ function bestScore(question) {
           </div>
         </div>
 
-        <SeniorTips
-          v-if="applicationCards.length"
-          :tips="visibleTips"
-          :filtered="seniorTips.length > 0"
-        />
-
-        <section aria-labelledby="interview-bank-title">
-          <h2 id="interview-bank-title" class="h3 mb-1">Question bank</h2>
-          <p class="small text-body-secondary mb-3">{{ bankCaption }}</p>
-          <div class="card interview-card">
-            <p v-if="questions.length === 0" class="text-body-secondary mb-0 p-4">
-              No questions yet. Start a session and every question you answer is saved here with
-              your best score.
-            </p>
-            <p v-else-if="filteredQuestions.length === 0" class="text-body-secondary mb-0 p-4">
-              No questions match these filters.
-            </p>
-            <ul v-else class="list-group list-group-flush">
-              <li
-                v-for="question in filteredQuestions"
-                :key="question.questionId"
-                class="list-group-item bg-transparent d-flex flex-wrap align-items-center column-gap-3 row-gap-2 px-3 px-md-4 py-3"
+        <div>
+          <nav
+            v-if="applicationCards.length"
+            class="nav nav-underline column-gap-4 border-bottom mb-3"
+            role="tablist"
+          >
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              type="button"
+              role="tab"
+              class="nav-link d-flex align-items-center gap-2 fw-semibold py-3"
+              :class="{ active: activeTab === tab.id }"
+              :aria-selected="activeTab === tab.id"
+              @click="activeTab = tab.id"
+            >
+              {{ tab.label }}
+              <span
+                class="badge rounded-pill fw-medium"
+                :class="
+                  activeTab === tab.id
+                    ? 'bg-primary-subtle text-primary-emphasis'
+                    : 'bg-body-secondary text-body-secondary'
+                "
               >
-                <div class="interview-question">
-                  <p class="fw-medium mb-1">{{ question.question }}</p>
-                  <div class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary">
-                    <span class="badge rounded-pill bg-info-subtle text-primary fw-medium">
-                      {{ question.type }}
-                    </span>
-                    <span>{{ question.title }} · {{ question.difficulty }}</span>
+                {{ tab.count }}
+              </span>
+            </button>
+          </nav>
+
+          <SeniorTips
+            v-if="applicationCards.length"
+            v-show="activeTab === 'tips'"
+            role="tabpanel"
+            :tips="visibleTips"
+            :filtered="seniorTips.length > 0"
+          />
+
+          <section
+            v-show="activeTab === 'bank'"
+            :role="applicationCards.length ? 'tabpanel' : undefined"
+            aria-labelledby="interview-bank-title"
+          >
+            <h2
+              id="interview-bank-title"
+              class="h3 mb-1"
+              :class="{ 'visually-hidden': applicationCards.length }"
+            >
+              Question bank
+            </h2>
+            <p class="small text-body-secondary mb-3">{{ bankCaption }}</p>
+            <div class="card interview-card">
+              <p v-if="questions.length === 0" class="text-body-secondary mb-0 p-4">
+                No questions yet. Start a session and every question you answer is saved here with
+                your best score.
+              </p>
+              <p v-else-if="filteredQuestions.length === 0" class="text-body-secondary mb-0 p-4">
+                No questions match these filters.
+              </p>
+              <ul v-else class="list-group list-group-flush">
+                <li
+                  v-for="question in filteredQuestions"
+                  :key="question.questionId"
+                  class="list-group-item bg-transparent d-flex flex-wrap align-items-center column-gap-3 row-gap-2 px-3 px-md-4 py-3"
+                >
+                  <div class="interview-question">
+                    <p class="fw-medium mb-1">{{ question.question }}</p>
+                    <div
+                      class="d-flex flex-wrap align-items-center gap-2 small text-body-secondary"
+                    >
+                      <span class="badge rounded-pill bg-info-subtle text-primary fw-medium">
+                        {{ question.type }}
+                      </span>
+                      <span>{{ question.title }} · {{ question.difficulty }}</span>
+                    </div>
                   </div>
-                </div>
-                <div class="d-flex align-items-center gap-2 ms-auto">
-                  <span
-                    class="badge rounded-pill fw-medium"
-                    :class="
-                      bestScore(question) < 5
-                        ? 'bg-danger-subtle text-tt-accent'
-                        : 'bg-info-subtle text-primary'
-                    "
-                  >
-                    {{ bestScore(question) }} / 10
-                  </span>
-                  <RouterLink
-                    class="btn btn-light btn-sm fw-semibold"
-                    :to="`/practice/question/${question.applicationId}/${question.questionId}`"
-                  >
-                    Retry
-                  </RouterLink>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </section>
+                  <div class="d-flex align-items-center gap-2 ms-auto">
+                    <span
+                      class="badge rounded-pill fw-medium"
+                      :class="
+                        question.bestScore < 5
+                          ? 'bg-danger-subtle text-tt-accent'
+                          : 'bg-info-subtle text-primary'
+                      "
+                    >
+                      {{ question.bestScore }} / 10
+                    </span>
+                    <RouterLink
+                      class="btn btn-light btn-sm fw-semibold"
+                      :to="`/practice/question/${question.applicationId}/${question.questionId}`"
+                    >
+                      Retry
+                    </RouterLink>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   </div>

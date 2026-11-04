@@ -4,95 +4,76 @@ const Application = require('../models/Application');
 const Opportunity = require('../models/Opportunity');
 
 const ai = require('../ai/gemini-config');
-const prompt = require('../ai/prompt');
+const { questionPrompt, feedbackPrompt } = require('../ai/prompt');
 
 const matchKey = (opportunity) => opportunity.organisation.toLowerCase() + '|' + opportunity.title.toLowerCase()
 
+function summariseQuestions(attempts, titleByApplication) {
+  const byId = new Map();
+  for (const attempt of attempts) {
+    for (const asked of attempt.questions) {
+      const seen = byId.get(asked.questionId);
+      if (seen) {
+        seen.bestScore = Math.max(seen.bestScore, asked.score);
+      } else {
+        byId.set(asked.questionId, {
+          questionId: asked.questionId,
+          question: asked.question,
+          type: asked.type,
+          difficulty: asked.difficulty,
+          applicationId: attempt.applicationId,
+          title: titleByApplication.get(String(attempt.applicationId)),
+          bestScore: asked.score,
+        });
+      }
+    }
+  }
+  return [...byId.values()];
+}
+
 async function getInterviewDashboard(req, res) {
   try {
-    const userId = req.session.user._id
-    const applications = await Application.find({ userId: userId })
-    const applicationCards = []
-    const titles = []
-    const wanted = []
-
-    for (const application of applications) {
-      const opportunity = await Opportunity.findById(
-        application.opportunityId
-      )
-      const preparing = opportunity && (opportunity.type === "internship" || opportunity.type === "job") && (application.status === "applied" || application.status === "interview")
-      if (preparing) {
-        wanted.push(matchKey(opportunity))
-      }
-      
-    if (preparing && !titles.includes(opportunity.title)) {
-        titles.push(opportunity.title)
-
-        applicationCards.push({
-          applicationId: application._id,
-          title: opportunity.title,
-          company: opportunity.organisation,
-          createdAt: application.createdAt,
-          interviewAt:application.interviewAt,
-          status: application.status
-        })
-      }
+    const userId = req.session.user._id;
+    const applications = await Application.find({ userId, status: { $in: ['applied', 'interview'] } });
+    const opportunities = await Opportunity.find({
+      _id: { $in: applications.map((application) => application.opportunityId) },
+      type: { $in: ['job', 'internship'] },
+    });
+    const opportunityById = new Map(
+      opportunities.map((opportunity) => [String(opportunity._id), opportunity]),
+    );
+    const opportunityOf = (application) => opportunityById.get(String(application.opportunityId));
+    const preparing = applications.filter((application) => opportunityOf(application));
+    const wanted = preparing.map((application) => matchKey(opportunityOf(application)));
+    const titleByApplication = new Map(
+      preparing.map((application) => [String(application._id), opportunityOf(application).title]),
+    );
+    const applicationCards = [];
+    for (const application of preparing) {
+      const opportunity = opportunityOf(application);
+      if (applicationCards.some((card) => card.title === opportunity.title)) continue;
+      applicationCards.push({
+        applicationId: application._id,
+        title: opportunity.title,
+        company: opportunity.organisation,
+        createdAt: application.createdAt,
+        interviewAt: application.interviewAt,
+        status: application.status,
+      });
     }
+    const titles = applicationCards.map((card) => card.title);
 
-    const interviewAttempts = await InterviewAttempt.find({ userId: userId })
-
-    const allQuestions = []
-    let highestScore = 0
-    let averageScore =0
-    const questionScores = {}
-    for (const attempt of interviewAttempts) {
-      for (const q of attempt.questions) {
-        const application = await Application.findById(attempt.applicationId)
-
-        if (!application || (application.status !== 'applied' && application.status !== 'interview')) {
-          continue
-        }
-        let found = false
-        for (const existingQuestion of allQuestions) {
-          if (existingQuestion.question === q.question) {
-            found = true
-            break
-          }
-        }
-        if (!found) {
-          const data = await getOpportunityFromApplication(attempt.applicationId, userId)
-          // skip questions whose application was deleted
-          if (!data) continue
-          allQuestions.push({
-            questionId: q.questionId,
-            question: q.question,
-            type: q.type,
-            difficulty: q.difficulty,
-            score: q.score,
-            applicationId: attempt.applicationId,
-            title:data.opportunity.title,
-          })
-        }
-        if (!questionScores[q.questionId]) {
-          questionScores[q.questionId] = {
-            highScore: q.score
-          }
-          if (q.score > highestScore) {
-            highestScore = q.score
-          }
-        } else if (q.score > questionScores[q.questionId].highScore) {
-          questionScores[q.questionId].highScore = q.score
-          if (q.score > highestScore) {
-            highestScore = q.score
-          }
-        }
-        let totalHighScore = 0
-        for (const questionId in questionScores) {
-          totalHighScore += questionScores[questionId].highScore
-        }
-        averageScore =Object.keys(questionScores).length > 0? (totalHighScore / Object.keys(questionScores).length).toFixed(1): 0
-      }
-    }
+    const attempts = await InterviewAttempt.find({
+      userId,
+      applicationId: { $in: preparing.map((application) => application._id) },
+    }).sort({ completedAt: 1, _id: 1 });
+    const allQuestions = summariseQuestions(attempts, titleByApplication);
+    const highestScore = Math.max(0, ...allQuestions.map((question) => question.bestScore));
+    const averageScore = allQuestions.length
+      ? (
+          allQuestions.reduce((sum, question) => sum + question.bestScore, 0) / allQuestions.length
+        ).toFixed(1)
+      : 0;
 
     const shared = await Application.find({ userId: { $ne: userId }, review: { $exists: true } })
       .populate('opportunityId')
@@ -110,10 +91,8 @@ async function getInterviewDashboard(req, res) {
 
     res.json({
       applicationCards,
-      interviewAttempts,
       titles,
       allQuestions,
-      questionScores,
       highestScore,
       averageScore,
       seniorTips,
@@ -171,8 +150,10 @@ async function getQuestion(req, res) {
         error: 'Question not found'
       })
     }
-    const question = interviewAttempt.questions.find((q) => q.questionId === questionId);
-    res.json(question)
+    const { question, type, difficulty } = interviewAttempt.questions.find(
+      (asked) => asked.questionId === questionId,
+    );
+    res.json({ questionId, question, type, difficulty });
   } catch (error) {
     console.log(error)
 
@@ -219,7 +200,7 @@ async function generateQuestions(req, res) {
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
 
-      contents: prompt(opportunity,existingQuestions),
+      contents: questionPrompt(opportunity, existingQuestions),
       config: {
         responseMimeType: 'application/json'
       }
@@ -229,7 +210,7 @@ async function generateQuestions(req, res) {
 
     try {
       questions = JSON.parse(response.text)
-      console.log(questions);
+      // console.log(questions);
     } catch {
       return res.status(500).json({
         error: 'Invalid AI response'
@@ -305,61 +286,7 @@ async function generateFeedback(req, res) {
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
 
-      contents: `
-You are evaluating a candidate's interview answer.
-
-Organisation: ${opportunity.organisation}
-Role: ${opportunity.title}
-Type: ${opportunity.type}
-
-Description:
-${opportunity.description || 'No description provided'}
-
-Interview Question:
-${question}
-
-Candidate Answer:
-${answer}
-
-Evaluate the candidate's answer based on:
-
-1. Structure
-- Is the answer organised and easy to follow?
-
-2. Clarity
-- Is the answer clear and understandable?
-
-3. Relevance
-- Does the answer address the question?
-
-4. Impact
-- Are outcomes, results and achievements demonstrated?
-
-Give each category a score from 0 to 10.
-
-Also provide:
-- An overall score from 0 to 10
-- A short summary
-- A short overall evaluation
-- Exactly 2 strengths
-- Exactly 2 specific improvements
-- A stronger version of the answer
-
-Return JSON in this format:
-
-{
-  "score": 0,
-  "summary": "",
-  "overallFeedback": "",
-  "structure": 0,
-  "clarity": 0,
-  "relevance": 0,
-  "impact": 0,
-  "strengths": [],
-  "improvements": [],
-  "sampleAnswer": ""
-}
-`,
+      contents: feedbackPrompt(opportunity, question, answer),
       config: {
         responseMimeType: 'application/json'
       }

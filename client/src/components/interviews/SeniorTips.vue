@@ -17,7 +17,7 @@ function sharedIn(date) {
 
 <template>
   <section aria-labelledby="senior-tips-title">
-    <h2 id="senior-tips-title" class="h3 mb-1">Senior tips</h2>
+    <h2 id="senior-tips-title" class="visually-hidden">Senior tips</h2>
     <p class="small text-body-secondary mb-3">
       From SMU students who got an offer for a role you applied to · posted anonymously
     </p>
