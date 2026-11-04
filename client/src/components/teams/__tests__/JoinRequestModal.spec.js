@@ -1,10 +1,17 @@
 import process from 'node:process';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
+import { useUserStore } from '@/store/user';
 import { mount } from '@vue/test-utils';
 import JoinRequestModal from '@/components/teams/JoinRequestModal.vue';
-import { team } from '@/__tests__/fixtures/teams';
+import { team, ME } from '@/__tests__/fixtures/teams';
 
 process.env.TZ = 'Asia/Singapore';
+
+beforeEach(() => {
+  setActivePinia(createPinia());
+  useUserStore().user = { ...ME };
+});
 
 function mountModal(props = {}) {
   return mount(JoinRequestModal, { props: { team: team(), ...props } });
@@ -72,5 +79,17 @@ describe('JoinRequestModal', () => {
 
     expect(wrapper.text()).toContain('You are already in this team');
     expect(button(wrapper, 'Sending...').attributes('disabled')).toBeDefined();
+  });
+
+  it('shows the team as circles with me in the first open spot, taking the role I pick', async () => {
+    const wrapper = mountModal();
+    const you = () => wrapper.find('.is-you');
+
+    expect(you().find('.person-name').text()).toBe('You');
+    expect(you().find('.person-role').text()).toBe('Your spot');
+    await button(wrapper, 'Figma').trigger('click');
+    expect(you().find('.person-role').text()).toBe('Figma');
+    // 2 slots open: one is me, one is still free
+    expect(wrapper.findAll('[aria-label="Invite someone to this open spot"]')).toHaveLength(1);
   });
 });

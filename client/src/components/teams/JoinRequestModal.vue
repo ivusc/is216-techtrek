@@ -1,9 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { formatDate } from '@/utils/date'
 import { getDisplayName, sameSkill } from '@/utils/team'
 import TeamModal from './TeamModal.vue'
-import UserAvatar from '@/components/UserAvatar.vue'
+import TeamPeople from './TeamPeople.vue'
+import { useUserStore } from '@/store/user'
 
 const props = defineProps({
   team: { type: Object, required: true },
@@ -20,6 +21,10 @@ const role = ref(props.team.skills.find((skill) => props.mySkills.some((mine) =>
 const message = ref('')
 const shareProfile = ref(true)
 
+// I'm shown in the first open spot, with the role I pick
+const auth = useUserStore()
+const you = computed(() => ({ id: auth._id, name: auth.displayName ?? '', avatarUpdatedAt: auth.avatarUpdatedAt, role: role.value }))
+
 function send() {
   emit('submit', { role: role.value, message: message.value, shareProfile: shareProfile.value })
 }
@@ -28,22 +33,15 @@ function send() {
 <template>
   <TeamModal
     :title="'Request to join ' + team.name"
+    width="600px"
     :subtitle="team.event.name + ' · ' + team.slotsOpen + ' of ' + team.teamSize + ' slots open' + (team.closesAt ? ' · Closes ' + formatDate(team.closesAt) : '')"
     @close="$emit('close')"
   >
 
-    <div class="d-flex align-items-center gap-3 bg-body-secondary rounded-3 p-3 mb-3">
-      <div class="avatar-stack d-flex">
-        <UserAvatar v-for="member in team.members.slice(0, 4)" :key="member.user._id" :user-id="member.user._id" :name="getDisplayName(member.user)" :avatar-updated-at="member.user.avatar?.updatedAt" :size="32" />
-      </div>
-      <div class="min-w-0">
-        <p class="text-caption text-body-tertiary mb-1">Looking for</p>
-        <div class="d-flex flex-wrap gap-1">
-          <span v-for="skill in team.skills" :key="skill" class="badge rounded-pill fw-normal border bg-white text-body">{{ skill }}</span>
-          <span v-if="team.skills.length === 0" class="small text-body-secondary">Anyone keen to join</span>
-        </div>
-      </div>
-    </div>
+    <p class="small fw-semibold mb-2">Who's in the team</p>
+    <TeamPeople :team="team" :you="you" class="mb-4" />
+
+    <p v-if="team.skills.length === 0" class="small text-body-secondary mb-3">Anyone keen to join can ask. No particular skills needed.</p>
 
     <div v-if="team.skills.length > 0" class="mb-3">
       <p class="small fw-semibold mb-2">Which role would you take?</p>

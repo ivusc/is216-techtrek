@@ -33,9 +33,10 @@ function onCardClick(event) {
   showDetails.value = true
 }
 
-function requestFromDetails() {
+// the details window hands its buttons to the page: close it, then open the request or invite window
+function fromDetails(action) {
   showDetails.value = false
-  emit('request')
+  emit(action)
 }
 
 function isMatch(skill) {
@@ -152,7 +153,8 @@ function isUrgent() {
         :team="team"
         :can-request="canRequest"
         @close="showDetails = false"
-        @request="requestFromDetails"
+        @request="fromDetails('request')"
+        @invite="fromDetails('invite')"
       />
     </Teleport>
   </div>
