@@ -45,9 +45,6 @@ pnpm-debug.log*
 *.sln
 *.sw?
 
-# Local design-tool config (impeccable)
-.impeccable/
-
 # OS cruft
 .DS_Store
 .DS_Store?
