@@ -1,6 +1,6 @@
 <script setup>
 import '@/views/login/LoginView.css';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import PasswordInput from '@/components/PasswordInput.vue';
@@ -13,10 +13,24 @@ const email = ref('');
 const password = ref('');
 const reEnteredPassword = ref('');
 const errorMessage = ref('');
+const busy = ref(false);
+
+// the same rules the server checks, ticked off live under the password box
+const rules = computed(() => [
+  { label: '8+ characters', met: password.value.length >= 8 },
+  { label: 'A number', met: /\d/.test(password.value) },
+  { label: 'An uppercase letter', met: /[A-Z]/.test(password.value) },
+  { label: 'A symbol', met: /[^a-zA-Z0-9 ]/.test(password.value) },
+]);
+const passwordsMatch = computed(
+  () => reEnteredPassword.value !== '' && reEnteredPassword.value === password.value,
+);
 
 async function submitForm() {
+  if (busy.value) return;
   errorMessage.value = '';
-  if (email.value.includes('@') == false || email.value.split('@')[1] != 'smu.edu.sg') {
+  const cleanEmail = email.value.trim().toLowerCase();
+  if (cleanEmail.split('@')[1] != 'smu.edu.sg') {
     errorMessage.value = 'Please enter a valid SMU email.';
     return;
   }
@@ -44,7 +58,7 @@ async function submitForm() {
     errorMessage.value = 'Your password should be at least 1 uppercase letter.';
     return;
   }
-  const cleanEmail = email.value.trim().toLowerCase();
+  busy.value = true;
   try {
     // the server logs the new account in straight away
     await userStore.register(cleanEmail, password.value);
@@ -67,6 +81,8 @@ async function submitForm() {
         break;
     }
     console.error(err.response?.data?.error);
+  } finally {
+    busy.value = false;
   }
 }
 </script>
@@ -95,8 +111,10 @@ async function submitForm() {
             autocomplete="username"
             inputmode="email"
             placeholder="you@smu.edu.sg"
+            aria-describedby="signup-email-hint"
           />
         </div>
+        <div id="signup-email-hint" class="form-text">Sign-up is limited to @smu.edu.sg emails.</div>
       </div>
       <div>
         <label for="signup-password" class="form-label small fw-semibold">Password</label>
@@ -108,9 +126,12 @@ async function submitForm() {
           placeholder="••••••••••"
           aria-describedby="signup-password-hint"
         />
-        <div id="signup-password-hint" class="form-text">
-          At least 8 characters with a number, an uppercase letter and a symbol.
-        </div>
+        <ul id="signup-password-hint" class="password-rules" aria-label="Password needs">
+          <li v-for="rule in rules" :key="rule.label" :class="{ met: rule.met }">
+            <i :class="rule.met ? 'bi bi-check-circle-fill' : 'bi bi-circle'" aria-hidden="true"></i>
+            {{ rule.label }}<span class="visually-hidden">{{ rule.met ? ' (done)' : '' }}</span>
+          </li>
+        </ul>
       </div>
       <div>
         <label for="signup-confirm" class="form-label small fw-semibold">Re-enter password</label>
@@ -120,18 +141,34 @@ async function submitForm() {
           lock-icon
           autocomplete="new-password"
           placeholder="••••••••••"
+          aria-describedby="signup-confirm-hint"
         />
+        <div
+          v-if="reEnteredPassword"
+          id="signup-confirm-hint"
+          class="form-text match-hint"
+          :class="{ met: passwordsMatch }"
+        >
+          <template v-if="passwordsMatch">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Passwords match
+          </template>
+          <template v-else>Doesn't match yet</template>
+        </div>
       </div>
-      <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
-      <button type="submit" class="btn btn-primary fw-semibold">Create account</button>
-      <p
-        class="d-flex align-items-center gap-2 bg-primary-subtle text-primary rounded-2 small fw-medium px-3 py-2 mb-0"
-      >
-        <i class="bi bi-lock" aria-hidden="true"></i>
-        Sign-up is limited to @smu.edu.sg emails.
+      <div class="d-flex flex-column gap-3">
+        <div v-if="errorMessage" class="form-error">
+          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+          <span role="alert">{{ errorMessage }}</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-auth" :disabled="busy">
+          <span v-if="busy" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          {{ busy ? 'Creating account…' : 'Create account' }}
+        </button>
+      </div>
+      <p class="form-switch-line">
+        Already have an account?
+        <button type="button" class="btn btn-link" @click="$emit('switch-to-login')">Log in</button>
       </p>
     </div>
   </form>
 </template>
-
-<style lang="scss" scoped></style>
