@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import './teams.css'
-import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest}
+import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTeam,deleteTeam,fetchIncomingRequests,fetchSentRequests,answerRequest,withdrawRequest,leaveTeam}
 from '@/services/teamService'
 import { fetchHackathons } from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
@@ -21,6 +21,7 @@ import RequestSentToast from '@/components/teams/RequestSentToast.vue'
 import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue'
 import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue'
+import LeaveTeamModal from '@/components/teams/LeaveTeamModal.vue'
 import InvitesBanner from '@/components/teams/InvitesBanner.vue'
 import { fetchMyInvites, answerInvite } from '@/services/teamService'
 import { isClosed } from '@/utils/opportunity'
@@ -54,6 +55,13 @@ watch(
     eventFilter.value = typeof value === 'string' ? value : ''
   },
   { immediate: true }
+)
+// a notification can link to another tab while this page is already open
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (TAB_NAMES.includes(tab)) activeTab.value = tab
+  }
 )
 const skillFilter = ref([])
 const sizeFilter = ref('')
@@ -411,6 +419,33 @@ const answer = async (request, newStatus) => {
   busyRequestId.value = ''
 }
 
+// leaving a team I'm a member of (not the lead)
+const leavingTeam = ref(null)
+const leaveBusy = ref(false)
+const leaveError = ref('')
+const leftMessage = ref('')
+
+function askToLeave(team) {
+  leavingTeam.value = team
+  leaveError.value = ''
+}
+
+async function confirmLeave() {
+  leaveBusy.value = true
+  leaveError.value = ''
+  try {
+    await leaveTeam(leavingTeam.value._id)
+    leftMessage.value = 'You left ' + leavingTeam.value.name + '.'
+    setTimeout(() => (leftMessage.value = ''), 5000)
+    leavingTeam.value = null
+    await loadAll(false)
+  } catch (error) {
+    console.error(error)
+    leaveError.value = getErrorMessage(error)
+  }
+  leaveBusy.value = false
+}
+
 const withdraw = async (request) => {
   busyRequestId.value = request._id
   try {
@@ -448,7 +483,7 @@ function openSkills() {
 // keep requests, invites and new teams up to date while the page is open: when the Requests or Browse tab
 // is opened, when the browser tab comes back into view, and every 20 seconds (skipped while a form is open)
 function refreshInBackground() {
-  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value
+  const formOpen = joinTarget.value || showCreate.value || inviteTeam.value || showSkills.value || leavingTeam.value
   if (document.visibilityState === 'visible' && !formOpen && !isLoading.value) {
     loadAll(false)
   }
@@ -477,6 +512,10 @@ onUnmounted(() => {
       <TeamsHeader v-model="search" />
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />
+
+      <div v-if="leftMessage" class="alert alert-secondary d-flex align-items-center gap-2 py-2" role="status">
+        <i class="bi bi-box-arrow-left" aria-hidden="true"></i>{{ leftMessage }}
+      </div>
 
       <InvitesBanner v-if="myInvites.length > 0" :invites="myInvites" :busy-id="inviteBusyId" @answer="answerMyInvite" />
       <div v-if="undoError" class="alert alert-danger py-2" role="alert">{{ undoError }}</div>
@@ -538,6 +577,7 @@ onUnmounted(() => {
                 @invite="inviteTeam = team"
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
+                @leave="askToLeave(team)"
               />
             </div>
           </div>
@@ -558,6 +598,7 @@ onUnmounted(() => {
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
                 @invite="inviteTeam = team"
+                @leave="askToLeave(team)"
               />
             </div>
           </div>
@@ -629,6 +670,15 @@ onUnmounted(() => {
     />
 
     <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" @close="inviteTeam = null" />
+
+    <LeaveTeamModal
+      v-if="leavingTeam"
+      :team="leavingTeam"
+      :busy="leaveBusy"
+      :error="leaveError"
+      @close="leavingTeam = null"
+      @confirm="confirmLeave"
+    />
 
     <EditSkillsModal
       v-if="showSkills"

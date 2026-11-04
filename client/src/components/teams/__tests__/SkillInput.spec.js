@@ -49,19 +49,31 @@ describe('SkillInput', () => {
     expect(wrapper.props('modelValue')).toEqual(['Vue.js']);
   });
 
-  it('shows up to five suggestions not yet chosen and adds one on click', async () => {
-    const wrapper = mountInput({
-      suggestions: ['vue.js', 'Figma', 'SQL', 'Python', 'Go', 'Rust', 'Swift'],
-    });
-    const suggestions = () =>
-      wrapper.findAll('.text-caption button').map((suggestion) => suggestion.text());
+  it('shows popular skills and the suggestions as buttons, each spelt once', () => {
+    const wrapper = mountInput({ suggestions: ['vue.js', 'nodejs', 'Rust'] });
+    const chips = wrapper.findAll('[aria-pressed]').map((chip) => chip.text());
 
-    expect(suggestions()).toEqual(['Figma', 'SQL', 'Python', 'Go', 'Rust']);
+    expect(chips).toContain('Vue.js');
+    expect(chips).toContain('Figma');
+    expect(chips).toContain('Rust');
+    expect(chips.filter((chip) => chip === 'Node.js')).toHaveLength(1);
+    expect(chips.filter((chip) => chip === 'Vue.js')).toHaveLength(1);
+  });
 
-    await wrapper.findAll('.text-caption button')[1].trigger('click');
+  it('adds a skill when its button is tapped and removes it when tapped again', async () => {
+    const wrapper = mountInput({ suggestions: [] });
+    const chip = (name) => wrapper.findAll('[aria-pressed]').find((candidate) => candidate.text() === name);
 
-    expect(wrapper.props('modelValue')).toEqual(['Vue.js', 'SQL']);
-    expect(suggestions()).toEqual(['Figma', 'Python', 'Go', 'Rust', 'Swift']);
+    expect(chip('Vue.js').attributes('aria-pressed')).toBe('true');
+    await chip('Figma').trigger('click');
+    expect(wrapper.props('modelValue')).toEqual(['Vue.js', 'Figma']);
+
+    await chip('Vue.js').trigger('click');
+    expect(wrapper.props('modelValue')).toEqual(['Figma']);
+  });
+
+  it('shows no buttons when no suggestions are passed', () => {
+    expect(mountInput().findAll('[aria-pressed]')).toHaveLength(0);
   });
 
   it('removes a chip', async () => {

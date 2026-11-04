@@ -90,11 +90,13 @@ describe('TeamCard', () => {
     expect(wrapper.findAll('button').map((candidate) => candidate.text())).toEqual(actions);
   });
 
-  it('shows a member badge and no actions on a team I joined', () => {
+  it('shows a member badge and only Leave team on a team I joined', async () => {
     const wrapper = mountCard({ team: team(), mode: 'mine' });
 
     expect(wrapper.text()).toContain('Member');
-    expect(wrapper.findAll('button')).toHaveLength(0);
+    expect(wrapper.findAll('button').map((candidate) => candidate.text())).toEqual(['Leave team']);
+    await button(wrapper, 'Leave team').trigger('click');
+    expect(wrapper.emitted('leave')).toHaveLength(1);
   });
 
   it('highlights the skills I have whatever their case', () => {

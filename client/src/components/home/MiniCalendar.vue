@@ -137,7 +137,7 @@ function dayLabel(day) {
         <p class="small mb-0">
           <span class="fw-semibold">{{ selectedLabel }}</span>
           <!-- an empty day says so on the same line, to keep the card short -->
-          <span v-if="selectedEvents.length === 0" class="text-body-tertiary"> · nothing on</span>
+          <span v-if="selectedEvents.length === 0" class="text-body-tertiary text-nowrap"> · nothing on</span>
         </p>
         <!-- what the dots mean -->
         <span class="d-flex gap-2 text-caption text-body-secondary">

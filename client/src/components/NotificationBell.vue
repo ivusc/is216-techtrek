@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useNotificationStore } from '@/store/notifications'
 import { describeNotification } from '@/utils/notification'
@@ -11,17 +10,15 @@ defineProps({
   size: { type: Number, default: 36 }
 })
 
-const router = useRouter()
 const store = useNotificationStore()
 const { notifications, unreadCount, isLoading } = storeToRefs(store)
 
 const items = computed(() => notifications.value.map((notification) => ({ ...notification, ...describeNotification(notification) })))
 const badgeText = computed(() => (unreadCount.value > 9 ? '9+' : String(unreadCount.value)))
 
-function open(item) {
+function markRead(item) {
   const original = notifications.value.find((notification) => notification._id === item._id)
   if (original) store.markRead(original)
-  router.push(item.to)
 }
 </script>
 
@@ -32,7 +29,6 @@ function open(item) {
       class="bell-button btn bg-white border p-0 position-relative"
       :style="{ width: size + 'px', height: size + 'px' }"
       data-bs-toggle="dropdown"
-      data-bs-auto-close="outside"
       aria-expanded="false"
       :aria-label="unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'"
       @click="store.refresh()"
@@ -43,7 +39,7 @@ function open(item) {
 
     <div class="dropdown-menu dropdown-menu-end notification-menu p-0">
       <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-        <h2 class="h6 fw-semibold mb-0">Notifications</h2>
+        <p class="fw-semibold mb-0">Notifications</p>
         <button
           v-if="unreadCount > 0"
           type="button"
@@ -63,13 +59,14 @@ function open(item) {
           </p>
         </div>
 
-        <button
+        <!-- clicking one marks it read and goes to the page it is about -->
+        <RouterLink
           v-for="item in items"
           :key="item._id"
-          type="button"
-          class="notification-item d-flex align-items-start gap-2 w-100 text-start border-0 px-3 py-2"
+          :to="item.to"
+          class="notification-item d-flex align-items-start gap-2 w-100 text-start text-decoration-none px-3 py-2"
           :class="{ 'is-unread': !item.read }"
-          @click="open(item)"
+          @click="markRead(item)"
         >
           <span class="notification-icon rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :class="'tone-' + item.tone">
             <i class="bi" :class="item.icon" aria-hidden="true"></i>
@@ -79,7 +76,7 @@ function open(item) {
             <span class="d-block text-caption text-body-secondary">{{ timeAgo(item.createdAt) }}</span>
           </span>
           <span v-if="!item.read" class="unread-dot rounded-circle bg-primary flex-shrink-0 mt-2" aria-label="Unread"></span>
-        </button>
+        </RouterLink>
       </div>
     </div>
   </div>
@@ -120,7 +117,7 @@ function open(item) {
   transition: background-color 0.15s ease;
 }
 .notification-item + .notification-item {
-  border-top: 1px solid var(--bs-border-color) !important;
+  border-top: 1px solid var(--bs-border-color);
 }
 .notification-item:hover,
 .notification-item:focus-visible {

@@ -20,7 +20,7 @@ const props = defineProps({
   undoing: { type: Boolean, default: false } // true while this team's request is being withdrawn
 })
 
-const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite'])
+const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite', 'leave'])
 
 // on Browse, a team I can still join opens "Request to join" when the card itself is clicked
 const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
@@ -131,6 +131,11 @@ function isUrgent() {
         <button v-if="team.status !== 'draft'" class="btn btn-sm btn-light fw-semibold" @click="$emit('view-requests')">Requests</button>
         <button class="btn btn-sm btn-primary fw-semibold" @click="$emit('edit')">Edit post</button>
       </div>
+
+      <!-- members (not the lead) can leave -->
+      <button v-else-if="mode === 'mine'" class="btn btn-sm btn-outline-danger fw-semibold" @click="$emit('leave')">
+        <i class="bi bi-box-arrow-left" aria-hidden="true"></i> Leave team
+      </button>
     </div>
   </div>
 </template>

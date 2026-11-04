@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
-const push = vi.fn();
-vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 vi.mock('@/services/notificationService', () => ({
   fetchNotifications: vi.fn(async () => ({ notifications: [], unreadCount: 0 })),
   markNotificationRead: vi.fn(async () => ({})),
@@ -23,16 +21,26 @@ const REQUEST = {
   createdAt: new Date().toISOString(),
 };
 
+// RouterLink stub that keeps the link target and the click
+const RouterLink = {
+  props: ['to'],
+  emits: ['click'],
+  template: '<a :data-to="JSON.stringify(to)" @click="$emit(\'click\')"><slot /></a>',
+};
+
+function mountWithLinks() {
+  return mount(NotificationBell, { global: { stubs: { RouterLink } } });
+}
+
 beforeEach(() => {
   setActivePinia(createPinia());
-  push.mockClear();
 });
 
 function mountBell() {
   const store = useNotificationStore();
   store.notifications = [{ ...REQUEST }, { ...REQUEST, _id: 'n2', type: 'member-left', read: true }];
   store.unreadCount = 1;
-  return { wrapper: mount(NotificationBell), store };
+  return { wrapper: mountWithLinks(), store };
 }
 
 describe('NotificationBell', () => {
@@ -52,7 +60,10 @@ describe('NotificationBell', () => {
 
     expect(notificationService.markNotificationRead).toHaveBeenCalledWith('n1');
     expect(store.unreadCount).toBe(0);
-    expect(push).toHaveBeenCalledWith({ path: '/teams', query: { tab: 'requests' } });
+    expect(JSON.parse(wrapper.findAll('.notification-item')[0].attributes('data-to'))).toEqual({
+      path: '/teams',
+      query: { tab: 'requests' },
+    });
   });
 
   it('marks everything read', async () => {
@@ -67,6 +78,6 @@ describe('NotificationBell', () => {
 
   it('says so when there is nothing yet', () => {
     useNotificationStore().notifications = [];
-    expect(mount(NotificationBell).text()).toContain('Nothing yet');
+    expect(mountWithLinks().text()).toContain('Nothing yet');
   });
 });
