@@ -18,6 +18,7 @@ import EditSkillsModal from '@/components/teams/EditSkillsModal.vue'
 import { getDisplayName, sameSkill, getMatchingSkills } from '@/utils/team'
 import TrekLoader from '@/components/TrekLoader.vue'
 import RequestSentToast from '@/components/teams/RequestSentToast.vue'
+import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import TeamCreatedCelebration from '@/components/teams/TeamCreatedCelebration.vue'
 import InviteFriendsModal from '@/components/teams/InviteFriendsModal.vue'
 import InvitesBanner from '@/components/teams/InvitesBanner.vue'
@@ -308,7 +309,33 @@ function inviteFromCelebration() {
 // invites sent to me
 const myInvites = ref([])
 const inviteBusyId = ref('')
-const joinedMessage = ref('')
+
+// the "someone joined" toast: two avatars meet with a heart
+const joinedToast = ref(null)
+function personFrom(user) {
+  return { id: user?._id ?? '', name: getDisplayName(user), avatarUpdatedAt: user?.avatar?.updatedAt ?? '' }
+}
+function me() {
+  return { id: auth._id ?? '', name: auth.displayName ?? auth.username ?? 'You', avatarUpdatedAt: auth.avatarUpdatedAt ?? '' }
+}
+function showRequestAccepted(request) {
+  joinedToast.value = {
+    key: request._id,
+    title: 'Welcome aboard!',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    left: personFrom(request.user),
+    right: me()
+  }
+}
+function showInviteAccepted(invite) {
+  joinedToast.value = {
+    key: invite._id,
+    title: "You're in!",
+    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    left: me(),
+    right: personFrom(invite.team.leader)
+  }
+}
 
 async function answerMyInvite(invite, answer) {
   inviteBusyId.value = invite._id
@@ -316,9 +343,8 @@ async function answerMyInvite(invite, answer) {
   try {
     await answerInvite(invite._id, answer)
     if (answer === 'accepted') {
-      joinedMessage.value = 'You joined ' + invite.team.name + '!'
+      showInviteAccepted(invite)
       activeTab.value = 'mine'
-      setTimeout(() => (joinedMessage.value = ''), 5000)
     }
     await loadAll(false)
   } catch (error) {
@@ -374,6 +400,9 @@ const answer = async (request, newStatus) => {
   busyRequestId.value = request._id
   try {
     await answerRequest(request._id, newStatus)
+    if (newStatus === 'accepted') {
+      showRequestAccepted(request)
+    }
     await loadAll(false)
   } catch (error) {
     console.error(error)
@@ -445,14 +474,11 @@ onUnmounted(() => {
   <div class="p-2">
 
     <template v-if="auth._id">
-      <TeamsHeader v-model="search" :has-new-requests="pendingIncoming > 0" @bell="activeTab = 'requests'" />
+      <TeamsHeader v-model="search" />
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />
 
       <InvitesBanner v-if="myInvites.length > 0" :invites="myInvites" :busy-id="inviteBusyId" @answer="answerMyInvite" />
-      <div v-if="joinedMessage" class="alert alert-success d-flex align-items-center gap-2 py-2" role="status">
-        <i class="bi bi-people-fill"></i>{{ joinedMessage }}
-      </div>
       <div v-if="undoError" class="alert alert-danger py-2" role="alert">{{ undoError }}</div>
       <div v-if="status !== ''" class="alert alert-danger d-flex justify-content-between align-items-center py-2" role="alert">
         {{ status }}
@@ -567,6 +593,16 @@ onUnmounted(() => {
       :busy="undoingId === sentToast.requestId"
       @undo="undoRequest(sentToast.requestId, sentToast.team)"
       @close="sentToast = null"
+    />
+
+    <TeamJoinedToast
+      v-if="joinedToast"
+      :key="joinedToast.key"
+      :title="joinedToast.title"
+      :message="joinedToast.message"
+      :left="joinedToast.left"
+      :right="joinedToast.right"
+      @close="joinedToast = null"
     />
 
     <CreateTeamModal

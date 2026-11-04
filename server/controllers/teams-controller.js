@@ -3,9 +3,10 @@ const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
 const User = require('../models/User');
 const Opportunity = require('../models/Opportunity');
-const { cleanSkills } = require('../service/skills');
+const { cleanSkills, sameSkill } = require('../service/skills');
 const opportunityService = require('../service/opportunity-service');
 const applicationService = require('../service/application-service');
+const notificationService = require('../service/notification-service');
 
 const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
@@ -14,8 +15,8 @@ const MAX_MATCHES = 20;
 
 // --- Helper Functions ---
 function matchedTeamSkills(userSkills = [], teamSkills = []) {
-  const mine = userSkills.map((skill) => skill.toLowerCase());
-  return teamSkills.filter((skill) => mine.includes(skill.toLowerCase()));
+  // "nodejs" on a profile matches "Node.js" on a team
+  return teamSkills.filter((wanted) => userSkills.some((mine) => sameSkill(mine, wanted)));
 }
 
 function handleError(res, err, fallback) {
@@ -297,6 +298,10 @@ async function deleteTeam(req, res) {
 
     await TeamRequest.deleteMany({ teamId });
     await Team.findByIdAndDelete(teamId);
+    // everyone else in the team finds out it is gone
+    for (const member of team.members) {
+      await notificationService.notify({ userId: member.userId, type: 'team-deleted', actorId: userId, team });
+    }
     res.status(204).end();
   } catch (err) {
     handleError(res, err, 'Failed to delete team');
@@ -334,6 +339,10 @@ async function createRequest(req, res) {
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
       request.status = 'accepted';
       await request.save();
+      await notificationService.notify({ userId: team.leaderId._id, type: 'member-joined', actor: user, team });
+      await notificationService.notify({ userId, type: 'request-accepted', actorId: team.leaderId._id, team });
+    } else {
+      await notificationService.notify({ userId: team.leaderId._id, type: 'request-received', actor: user, team });
     }
 
     res.status(201).json({ _id: request._id, status: request.status });
@@ -373,6 +382,12 @@ async function respondToRequest(req, res) {
       await team.save();
       await applicationService.markTeamFormed(answered.userId, team.event?.opportunityId);
     }
+    await notificationService.notify({
+      userId: answered.userId,
+      type: status === 'accepted' ? 'request-accepted' : 'request-declined',
+      actorId: userId,
+      team,
+    });
 
     res.json({ _id: answered._id, status: answered.status });
   } catch (err) {
@@ -393,6 +408,7 @@ async function withdrawRequest(req, res) {
     }
 
     await TeamRequest.findByIdAndDelete(requestId);
+    await notificationService.remove({ type: 'request-received', teamId: request.teamId, actorId: userId });
     res.status(204).end();
   } catch (err) {
     handleError(res, err, 'Failed to withdraw request');
@@ -533,6 +549,8 @@ async function createInvite(req, res) {
       message,
     });
 
+    await notificationService.notify({ userId: friend._id, type: 'invite-received', actorId: userId, team });
+
     res.status(201).json({ _id: invite._id, status: invite.status, user: friend });
   } catch (err) {
     handleError(res, err, 'Failed to send invite');
@@ -608,9 +626,41 @@ async function respondToInvite(req, res) {
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
     }
 
+    await notificationService.notify({
+      userId: team.leaderId,
+      type: status === 'accepted' ? 'invite-accepted' : 'invite-declined',
+      actorId: userId,
+      team,
+    });
+
     res.json({ _id: answered._id, status: answered.status, team: { _id: team._id, name: team.name } });
   } catch (err) {
     handleError(res, err, 'Failed to answer invite');
+  }
+}
+
+// POST /teams/:id/leave - a member (not the leader) leaves the team and their slot opens up again
+async function leaveTeam(req, res) {
+  const { id: teamId } = req.params;
+  const userId = req.session.user._id;
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (isLeader(team, userId)) {
+      return res.status(409).json({ error: 'Team leads cannot leave their own team. Delete the team post instead.' });
+    }
+    if (!isMember(team, userId)) return res.status(409).json({ error: 'You are not in this team' });
+
+    team.members = team.members.filter((member) => String(member.userId) !== String(userId));
+    team.syncStatus();
+    await team.save();
+    // the old accepted request would stop them asking to join again later
+    await TeamRequest.deleteMany({ teamId, userId });
+    await notificationService.notify({ userId: team.leaderId, type: 'member-left', actorId: userId, team });
+
+    res.status(204).end();
+  } catch (err) {
+    handleError(res, err, 'Failed to leave team');
   }
 }
 
@@ -625,6 +675,7 @@ async function cancelInvite(req, res) {
     if (!team || !isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can cancel invites' });
 
     await TeamRequest.deleteOne({ _id: inviteId });
+    await notificationService.remove({ type: 'invite-received', teamId: team._id, userId: invite.userId });
     res.status(204).end();
   } catch (err) {
     handleError(res, err, 'Failed to cancel invite');
@@ -632,6 +683,7 @@ async function cancelInvite(req, res) {
 }
 
 module.exports = {
+  leaveTeam,
   getTeams,
   getMyTeams,
   createTeam,

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { sameSkill } from '@/utils/team'
+import { canonicalSkill } from '@/utils/skills'
 
 const skills = defineModel({ type: Array, required: true })
 
@@ -12,7 +13,8 @@ const props = defineProps({
 const text = ref('')
 
 function addSkill(value) {
-  const skill = value.trim()
+  // typed skills get the standard spelling, so "nodejs" is saved as "Node.js" and matches teams
+  const skill = canonicalSkill(value)
   if (skill === '') {
     return
   }

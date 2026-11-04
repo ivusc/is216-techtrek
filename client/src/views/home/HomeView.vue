@@ -7,6 +7,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue'
 import MiniCalendar from '@/components/home/MiniCalendar.vue'
 import TrekLoader from '@/components/TrekLoader.vue'
+import TeamJoinedToast from '@/components/teams/TeamJoinedToast.vue'
 import { useUserStore } from '@/store/user'
 import { useApplicationsStore } from '@/store/applications'
 import { useOpportunityStore } from '@/store/opportunity'
@@ -29,7 +30,6 @@ const search = ref('')
 const skills = computed(() => auth.skills)
 const incoming = ref([]) // people asking to join my teams
 const invites = ref([]) // teams inviting me
-const joinedMessage = ref('')
 const practiceScore = ref(null)
 const busyRequestId = ref('')
 const requestError = ref('')
@@ -224,6 +224,33 @@ const recommended = computed(() => {
 
 // --- team requests ---
 
+// the "someone joined" toast: two avatars meet with a heart
+const joinedToast = ref(null)
+function personFrom(user) {
+  return { id: user?._id ?? '', name: getDisplayName(user), avatarUpdatedAt: user?.avatar?.updatedAt ?? '' }
+}
+function me() {
+  return { id: auth._id ?? '', name: auth.displayName ?? auth.username ?? 'You', avatarUpdatedAt: auth.avatarUpdatedAt ?? '' }
+}
+function showRequestAccepted(request) {
+  joinedToast.value = {
+    key: request._id,
+    title: 'Welcome aboard!',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    left: personFrom(request.user),
+    right: me()
+  }
+}
+function showInviteAccepted(invite) {
+  joinedToast.value = {
+    key: invite._id,
+    title: "You're in!",
+    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    left: me(),
+    right: personFrom(invite.team.leader)
+  }
+}
+
 // an invite from a team lead: join the team or say no
 async function respondToInvite(invite, status) {
   busyRequestId.value = invite._id
@@ -231,8 +258,7 @@ async function respondToInvite(invite, status) {
   try {
     await answerInvite(invite._id, status)
     if (status === 'accepted') {
-      joinedMessage.value = 'You joined ' + invite.team.name + '!'
-      setTimeout(() => (joinedMessage.value = ''), 5000)
+      showInviteAccepted(invite)
     }
     await loadRequests()
   } catch (error) {
@@ -246,6 +272,9 @@ async function respond(request, status) {
   requestError.value = ''
   try {
     await answerRequest(request._id, status)
+    if (status === 'accepted') {
+      showRequestAccepted(request)
+    }
     await loadRequests()
   } catch (error) {
     requestError.value = 'Could not answer the request: ' + getErrorMessage(error)
@@ -369,21 +398,18 @@ async function respond(request, status) {
       <div class="col-12 col-lg-4 d-flex flex-column gap-3 dashboard-col">
         <MiniCalendar class="flex-shrink-0" :events="calendarEvents" />
 
-        <div class="card p-3 d-flex flex-column fill-card">
+        <div class="card p-3 d-flex flex-column fill-card requests-card">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h2 class="h6 fw-semibold mb-0">Team requests</h2>
             <RouterLink to="/teams" class="small fw-semibold text-decoration-none">View all</RouterLink>
           </div>
           <p v-if="requestError" class="small text-tt-accent mb-2">{{ requestError }}</p>
-          <p v-if="joinedMessage" class="small text-success fw-semibold mb-2" role="status">
-            <i class="bi bi-people-fill me-1"></i>{{ joinedMessage }}
-          </p>
           <p v-if="incoming.length === 0 && invites.length === 0" class="small text-body-secondary mb-0">
             No new requests or invites. People who ask to join your teams, and teams that invite you, show up here.
           </p>
           <div class="scroll-list">
           <!-- invites to me come first: a team lead asked me to join -->
-          <div v-for="invite in invites" :key="invite._id" class="d-flex align-items-center gap-2 py-2">
+          <div v-for="invite in invites" :key="invite._id" class="d-flex align-items-center gap-2 py-1">
             <span class="request-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 bg-info-subtle text-primary">
               <i class="bi bi-envelope-heart" aria-hidden="true"></i>
             </span>
@@ -415,7 +441,7 @@ async function respond(request, status) {
               <i class="bi bi-x-lg"></i>
             </button>
           </div>
-          <div v-for="request in incoming" :key="request._id" class="d-flex align-items-center gap-2 py-2">
+          <div v-for="request in incoming" :key="request._id" class="d-flex align-items-center gap-2 py-1">
             <span
               class="request-avatar rounded-circle d-flex align-items-center justify-content-center small fw-semibold flex-shrink-0"
               :style="getAvatarStyle(getDisplayName(request.user))"
@@ -449,12 +475,13 @@ async function respond(request, status) {
           </div>
         </div>
 
-        <div class="card practice-card border-0 p-3 flex-shrink-0 d-flex flex-row align-items-center gap-3">
+        <!-- kept to one short row so the Team requests card above has room for a whole request -->
+        <div class="card practice-card border-0 px-3 py-2 flex-shrink-0 d-flex flex-row align-items-center gap-3">
           <div class="flex-grow-1 min-w-0">
-            <h2 class="h6 fw-semibold mb-1"><i class="bi bi-stars me-1"></i>Daily practice</h2>
-            <p class="small mb-0">
-              Practise interview questions for the internships you are tracking.
-              <template v-if="practiceScore > 0">Your average score: {{ practiceScore }}/10.</template>
+            <h2 class="h6 fw-semibold mb-0"><i class="bi bi-stars me-1"></i>Daily practice</h2>
+            <p class="text-caption mb-0 text-truncate" :title="'Practise interview questions for the internships you are tracking.'">
+              <template v-if="practiceScore > 0">Average score {{ practiceScore }}/10</template>
+              <template v-else>Questions for the roles you track</template>
             </p>
           </div>
           <RouterLink to="/interview" class="btn btn-sm btn-primary fw-semibold text-nowrap flex-shrink-0">Start practice</RouterLink>
@@ -462,5 +489,14 @@ async function respond(request, status) {
       </div>
     </div>
     </template>
+    <TeamJoinedToast
+      v-if="joinedToast"
+      :key="joinedToast.key"
+      :title="joinedToast.title"
+      :message="joinedToast.message"
+      :left="joinedToast.left"
+      :right="joinedToast.right"
+      @close="joinedToast = null"
+    />
   </div>
 </template>

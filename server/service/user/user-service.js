@@ -4,6 +4,7 @@ const Application = require('../../models/Application');
 const InterviewAttempt = require('../../models/interviewAttempt');
 const Team = require('../../models/Team');
 const TeamRequest = require('../../models/TeamRequest');
+const Notification = require('../../models/Notification');
 const bycrpt = require('bcryptjs');
 const { MAX_SKILLS, cleanSkills } = require('../skills');
 
@@ -227,6 +228,7 @@ async function deleteUserById(userId, password) {
     // remove the user's own data too, so nothing is left pointing at a deleted user
     await Application.deleteMany({ userId: userId });
     await InterviewAttempt.deleteMany({ userId: userId });
+    await Notification.deleteMany({ userId: userId });
     await User.findByIdAndDelete(userId);
   } catch (err) {
     throw new DatabaseError('Database could not delete user.');

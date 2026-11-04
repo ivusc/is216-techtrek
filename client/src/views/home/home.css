@@ -75,3 +75,14 @@
     min-height: 0;
   }
 }
+
+/* Team requests card: always tall enough to show one whole request or invite
+   (names, event and note) before its list starts scrolling */
+@media (min-width: 992px) and (min-height: 800px) {
+  .requests-card {
+    min-height: 164px; /* title + one whole request or invite + padding */
+  }
+  .requests-card .scroll-list > * {
+    flex-shrink: 0;
+  }
+}

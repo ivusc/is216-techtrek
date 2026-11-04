@@ -7,6 +7,7 @@ const applicationRouter = require('./routes/application');
 const userRouter = require('./routes/user');
 const interviewRouter = require('./routes/interview');
 const teamRouter = require('./routes/teams');
+const notificationRouter = require('./routes/notifications');
 const { requireLogin } = require('./middleware/auth');
 
 const app = express();
@@ -42,5 +43,6 @@ app.use('/opportunity', opportunityRouter);
 app.use('/application', requireLogin, applicationRouter);
 app.use('/interview', requireLogin, interviewRouter);
 app.use('/teams', requireLogin, teamRouter);
+app.use('/notifications', requireLogin, notificationRouter);
 
 module.exports = app;

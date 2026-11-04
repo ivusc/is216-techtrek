@@ -1,3 +1,5 @@
+import { sameSkill } from './skills'
+
 
 export function getDisplayName(user) {
   return user?.displayName || user?.userName || 'Unknown'
@@ -69,9 +71,8 @@ export function timeAgo(dateString) {
   return days + ' days ago'
 }
 
-export function sameSkill(a, b) {
-  return a.toLowerCase() === b.toLowerCase()
-}
+// skills match even when spelt differently ("nodejs" and "Node.js"); see utils/skills.js
+export { sameSkill }
 
 export function getMatchingSkills(mySkills, teamSkills) {
   return mySkills.filter((mine) => teamSkills.some((wanted) => sameSkill(mine, wanted)))

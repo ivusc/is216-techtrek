@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { useUserStore } from '@/store/user';
+import { useNotificationStore } from '@/store/notifications';
 import TeamsHeader from '@/components/teams/TeamsHeader.vue';
 import { ME } from '@/__tests__/fixtures/teams';
 
@@ -23,21 +24,13 @@ function mountHeader(props = {}) {
 }
 
 describe('TeamsHeader', () => {
-  it('shows the dot only when there are new requests', () => {
-    expect(mountHeader().find('[aria-label="Requests"] .rounded-circle').exists()).toBe(false);
-    expect(
-      mountHeader({ hasNewRequests: true })
-        .find('[aria-label="Requests"] .rounded-circle')
-        .exists(),
-    ).toBe(true);
-  });
+  it('shows the notification bell with my unread count', () => {
+    useNotificationStore().unreadCount = 3;
 
-  it('emits bell', async () => {
-    const wrapper = mountHeader();
+    const bell = mountHeader().find('[aria-label="Notifications, 3 unread"]');
 
-    await wrapper.find('[aria-label="Requests"]').trigger('click');
-
-    expect(wrapper.emitted('bell')).toHaveLength(1);
+    expect(bell.exists()).toBe(true);
+    expect(bell.text()).toBe('3');
   });
 
   it('binds the search and shows my initials', async () => {
