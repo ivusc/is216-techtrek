@@ -43,7 +43,7 @@ defineEmits(['bell'])
           :name="auth.displayName ?? ''"
           :avatar-updated-at="auth.avatarUpdatedAt"
           :size="40"
-          class="bg-tt-peach text-body"
+          class="bg-primary text-white"
         />
       </RouterLink>
     </div>

@@ -10,7 +10,7 @@ import TrekLoader from '@/components/TrekLoader.vue'
 import { useUserStore } from '@/store/user'
 import { useApplicationsStore } from '@/store/applications'
 import { useOpportunityStore } from '@/store/opportunity'
-import { fetchIncomingRequests, answerRequest, getErrorMessage } from '@/services/teamService'
+import { fetchIncomingRequests, answerRequest, fetchMyInvites, answerInvite, getErrorMessage } from '@/services/teamService'
 import serverAPI from '@/services/serverAPI'
 import { typeBadge } from '@/constants'
 import { getApplicationDeadline, isDueThisWeek, getStageLabel } from '@/utils/application'
@@ -27,7 +27,9 @@ const { jobs, hackathons } = storeToRefs(opportunityStore)
 
 const search = ref('')
 const skills = computed(() => auth.skills)
-const incoming = ref([])
+const incoming = ref([]) // people asking to join my teams
+const invites = ref([]) // teams inviting me
+const joinedMessage = ref('')
 const practiceScore = ref(null)
 const busyRequestId = ref('')
 const requestError = ref('')
@@ -49,11 +51,17 @@ onMounted(async () => {
 
 async function loadRequests() {
   try {
-    const requests = await fetchIncomingRequests(auth._id)
+    const requests = await fetchIncomingRequests()
     incoming.value = requests.filter((request) => request.status === 'pending')
   } catch (error) {
     console.error(error)
     incoming.value = []
+  }
+  try {
+    invites.value = await fetchMyInvites()
+  } catch (error) {
+    console.error(error)
+    invites.value = []
   }
 }
 
@@ -126,8 +134,13 @@ const stats = computed(() => {
     {
       label: 'Team requests',
       to: { path: '/teams', query: { tab: 'requests' } },
-      value: incoming.value.length,
-      note: incoming.value.length > 0 ? 'Waiting for you' : 'All caught up',
+      value: incoming.value.length + invites.value.length,
+      note:
+        invites.value.length > 0
+          ? invites.value.length + (invites.value.length === 1 ? ' invite for you' : ' invites for you')
+          : incoming.value.length > 0
+            ? 'Waiting for you'
+            : 'All caught up',
       icon: 'bi-person-plus',
       tile: 'bg-danger-subtle text-tt-accent',
     },
@@ -211,11 +224,28 @@ const recommended = computed(() => {
 
 // --- team requests ---
 
+// an invite from a team lead: join the team or say no
+async function respondToInvite(invite, status) {
+  busyRequestId.value = invite._id
+  requestError.value = ''
+  try {
+    await answerInvite(invite._id, status)
+    if (status === 'accepted') {
+      joinedMessage.value = 'You joined ' + invite.team.name + '!'
+      setTimeout(() => (joinedMessage.value = ''), 5000)
+    }
+    await loadRequests()
+  } catch (error) {
+    requestError.value = 'Could not answer the invite: ' + getErrorMessage(error)
+  }
+  busyRequestId.value = ''
+}
+
 async function respond(request, status) {
   busyRequestId.value = request._id
   requestError.value = ''
   try {
-    await answerRequest(auth._id, request._id, status)
+    await answerRequest(request._id, status)
     await loadRequests()
   } catch (error) {
     requestError.value = 'Could not answer the request: ' + getErrorMessage(error)
@@ -310,7 +340,6 @@ async function respond(request, status) {
         <div class="flex-shrink-0">
           <div class="d-flex justify-content-between align-items-end mb-2">
             <div>
-              <p class="text-overline text-body-tertiary mb-1">RECOMMENDED FOR YOU</p>
               <h2 class="h5 fw-semibold mb-0">
                 <template v-if="skills.length > 0">Based on your skills: {{ skills.slice(0, 3).join(', ') }}</template>
                 <template v-else>Fresh picks for you</template>
@@ -346,10 +375,46 @@ async function respond(request, status) {
             <RouterLink to="/teams" class="small fw-semibold text-decoration-none">View all</RouterLink>
           </div>
           <p v-if="requestError" class="small text-tt-accent mb-2">{{ requestError }}</p>
-          <p v-if="incoming.length === 0" class="small text-body-secondary mb-0">
-            No new requests. People who ask to join your teams show up here.
+          <p v-if="joinedMessage" class="small text-success fw-semibold mb-2" role="status">
+            <i class="bi bi-people-fill me-1"></i>{{ joinedMessage }}
+          </p>
+          <p v-if="incoming.length === 0 && invites.length === 0" class="small text-body-secondary mb-0">
+            No new requests or invites. People who ask to join your teams, and teams that invite you, show up here.
           </p>
           <div class="scroll-list">
+          <!-- invites to me come first: a team lead asked me to join -->
+          <div v-for="invite in invites" :key="invite._id" class="d-flex align-items-center gap-2 py-2">
+            <span class="request-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 bg-info-subtle text-primary">
+              <i class="bi bi-envelope-heart" aria-hidden="true"></i>
+            </span>
+            <div class="flex-grow-1 min-w-0 small lh-sm">
+              <p class="mb-1">
+                <span class="fw-semibold">{{ getDisplayName(invite.team.leader).split('@')[0] }}</span>
+                invited you to join <span class="fw-semibold">{{ invite.team.name }}</span>
+              </p>
+              <span class="text-caption text-body-tertiary d-block text-truncate">
+                {{ invite.team.event?.name }}<template v-if="invite.message"> · "{{ invite.message }}"</template>
+              </span>
+            </div>
+            <button
+              class="btn btn-sm btn-primary"
+              :disabled="busyRequestId === invite._id"
+              :aria-label="'Join ' + invite.team.name"
+              title="Join team"
+              @click="respondToInvite(invite, 'accepted')"
+            >
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button
+              class="btn btn-sm btn-outline-primary"
+              :disabled="busyRequestId === invite._id"
+              :aria-label="'Decline invite to ' + invite.team.name"
+              title="Decline"
+              @click="respondToInvite(invite, 'declined')"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
           <div v-for="request in incoming" :key="request._id" class="d-flex align-items-center gap-2 py-2">
             <span
               class="request-avatar rounded-circle d-flex align-items-center justify-content-center small fw-semibold flex-shrink-0"

@@ -30,7 +30,7 @@ defineProps({
 <style scoped>
 .question-card {
   background: white;
-  border: 1px solid #ded8c3;
+  border: 1px solid var(--bs-border-color);
   border-radius: 14px;
   padding: 24px;
 }
@@ -50,25 +50,25 @@ defineProps({
 .tag {
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .type-tag {
-  background: #dff4f4;
-  color: #214b54;
+  background: var(--bs-info-bg-subtle);
+  color: #12577a;
 }
 
 .difficulty-tag {
-  background: #f5f1d9;
-  color: #786a38;
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary);
 }
 
 .question-heading {
   font-size: 20px;
   line-height: 1.35;
   font-weight: 700;
-  color: #17394a;
+  color: var(--bs-body-color);
   margin: 0;
 }
 </style>

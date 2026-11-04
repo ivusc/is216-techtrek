@@ -1,5 +1,5 @@
 .practice-info {
-  color: #60707d;
+  color: var(--bs-secondary-color);
   margin-bottom: 25px;
   font-size: 16px;
 }
@@ -22,12 +22,12 @@
   min-height: 250px;
   padding: 24px;
   margin-top:20px;
-  border: 2px solid #0585b5;
+  border: 2px solid var(--bs-primary);
   border-radius: 18px;
 
   font-size: 18px;
   line-height: 1.8;
-  color: #17394a;
+  color: var(--bs-body-color);
 
   resize: vertical;
   box-sizing: border-box;
@@ -36,7 +36,7 @@
 
 .answer-box:focus {
   outline: none;
-  border-color: #0094c6;
+  border-color: var(--bs-primary);
 }
 .submit {
   display: flex;
@@ -47,7 +47,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0088aa;
+  background: var(--bs-primary);
   color: white;
   border: none;
   border-radius: 10px;
@@ -61,10 +61,10 @@
 }
 
 .submit-btn:hover {
-  background: #007493;
+  background: var(--bs-primary-hover);
 }
 .submit-btn:disabled {
-  background: #9caeb5;
+  background: var(--bs-tertiary-color);
   cursor: not-allowed;
 }
 
@@ -80,7 +80,7 @@
 .progress-bar-container .progress-bar {
     height: 15px;
     width: 0%;
-    background-color: #0081A7;
+    background-color: var(--bs-primary);
     border-radius: 5px;
     transition: width 0.4s ease-in-out;
     display: flex;

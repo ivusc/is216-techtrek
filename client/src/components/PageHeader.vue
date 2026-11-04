@@ -19,11 +19,11 @@ defineProps({
 <template>
   <!-- on phones the search box wraps onto its own full-width row under the title -->
   <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
-    <div class="me-auto">
+    <div class="page-title me-auto">
       <h1 class="mb-1">{{ title }}</h1>
       <p class="text-body-secondary mb-0 d-none d-md-block">{{ subtitle }}</p>
     </div>
-    <div v-if="showSearch" class="search position-relative order-last order-md-0">
+    <div v-if="showSearch" class="search position-relative order-last order-xl-0">
       <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary"></i>
       <input
         v-model="search"
@@ -33,15 +33,27 @@ defineProps({
         :aria-label="`Search ${type}`"
       >
     </div>
-    <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
-    <RouterLink to="/profile" class="flex-shrink-0 text-decoration-none" aria-label="Your profile">
-      <UserAvatar
-        :user-id="auth._id ?? ''"
-        :name="name"
-        :avatar-updated-at="auth.avatarUpdatedAt"
-        :size="36"
-        class="bg-tt-peach text-body"
-      />
-    </RouterLink>
+    <!-- bell and avatar stay together so the avatar never drops onto a line by itself -->
+    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+      <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
+      <RouterLink to="/profile" class="flex-shrink-0 text-decoration-none" aria-label="Your profile">
+        <UserAvatar
+          :user-id="auth._id ?? ''"
+          :name="name"
+          :avatar-updated-at="auth.avatarUpdatedAt"
+          :size="36"
+          class="bg-primary text-white"
+        />
+      </RouterLink>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* the title takes the space that is left (and wraps its own text), so the bell and avatar
+   always stay on the same row as the title; the search box moves to its own row when there is no room */
+.page-title {
+  flex: 1 1 0;
+  min-width: 0;
+}
+</style>

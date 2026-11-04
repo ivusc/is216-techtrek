@@ -69,3 +69,14 @@
     animation: none;
   }
 }
+
+/* the name + avatar at the bottom of the sidebar sits in a soft bordered box */
+.profile-toggle {
+  padding: .5rem !important;
+  border: 1px solid var(--bs-border-color) !important;
+  border-radius: 12px;
+}
+
+.profile-toggle:hover {
+  background-color: var(--bs-secondary-bg);
+}

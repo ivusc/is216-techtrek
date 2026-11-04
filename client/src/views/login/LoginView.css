@@ -51,7 +51,7 @@
 }
 
 .errors {
-  color: #b8433a;
+  color: var(--tt-accent-text);
   font-size: 14px;
   margin-bottom: 0;
 }
