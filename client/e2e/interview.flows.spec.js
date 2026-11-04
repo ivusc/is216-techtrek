@@ -130,7 +130,7 @@ test('leaves the Bootstrap progress bar on the Teams page at its own height', as
   expect(created.status()).toBe(201);
   await page.setViewportSize(DESKTOP);
   await page.goto('/teams');
-  await page.locator('main nav.nav-underline').getByRole('button', { name: 'Requests' }).click();
+  await page.locator('main .tab-cards').getByRole('tab', { name: 'Requests' }).click();
 
   const track = page.getByRole('progressbar');
   await expect(track).toBeVisible();

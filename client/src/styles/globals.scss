@@ -228,6 +228,11 @@ $danger-text-emphasis-dark:    #ff9fb3;
   }
 }
 
+// unticked checkboxes and radios: the dark border colour is almost the same as the card behind them
+[data-bs-theme="dark"] .form-check-input:not(:checked) {
+  border-color: $body-tertiary-color-dark;
+}
+
 // ─── 4. Component rules the Sass variables can't express ─────────────────
 // Buttons. Primary text is forced white so it never flips to navy.
 .btn-primary {

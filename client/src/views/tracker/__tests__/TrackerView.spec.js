@@ -129,7 +129,7 @@ describe('TrackerView', () => {
     const wrapper = await mountTracker();
 
     expect(wrapper.find('[role="alert"]').text()).toBe(
-      'There was an error: Request failed with status code 500',
+      'Applications could not be loaded right now. Try again in a moment.',
     );
   });
 

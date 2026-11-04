@@ -105,7 +105,7 @@ test.describe('sharing interview tips after an offer', () => {
 
       await stage(page, 'Offer').locator('.kanban-card', { hasText: ROLE.title }).click();
       await expect(page.getByRole('dialog', { name: ROLE.title })).toContainText(
-        'You shared your tips on',
+        'Shared on',
       );
     });
   });
@@ -135,6 +135,7 @@ test.describe('sharing interview tips after an offer', () => {
 
     await junior.page.setViewportSize(PHONE);
     await junior.page.goto('/interview');
+    await junior.page.getByRole('tab', { name: /Senior tips/ }).click();
     const section = junior.page.getByRole('region', { name: 'Senior tips' });
     const tip = section.getByRole('listitem').filter({ hasText: tips });
     await expect(tip).toContainText('Grab · Software Engineer Intern');
@@ -206,6 +207,7 @@ test.describe('senior tips on interview prep', () => {
       await track(account, { ...role, organisation: 'Sea' }, 'interview');
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/interview');
+      await page.getByRole('tab', { name: /Senior tips/ }).click();
 
       const section = page.getByRole('region', { name: 'Senior tips' });
       const tip = section.getByRole('listitem').filter({ hasText: longTips }).first();

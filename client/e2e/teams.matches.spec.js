@@ -43,7 +43,7 @@ test.describe('suggested teammates', () => {
 
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/teams');
-      await page.getByRole('button', { name: /My teams/ }).click();
+      await page.getByRole('tab', { name: /My teams/ }).click();
 
       const card = page.locator('.card', { hasText: TEAM_NAME });
       await card.getByRole('button', { name: /match(es)? your team/ }).click();

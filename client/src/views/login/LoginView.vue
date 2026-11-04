@@ -50,9 +50,7 @@ function switchToSignUp() {
       class="col-12 col-md-6 d-flex flex-column justify-content-center align-items-center px-3 py-4 py-sm-5"
     >
       <div id="brandHeader" class="d-flex d-md-none align-items-center gap-2 mb-4">
-        <span class="logo-tile">
-          <img src="@/assets/logo.svg" alt="" width="22" height="22" />
-        </span>
+        <img src="/favicon.svg" alt="" width="36" height="36" class="flex-shrink-0" />
         <span class="h3 mb-0">TechTrek</span>
       </div>
       <div id="panel">
@@ -95,18 +93,6 @@ function switchToSignUp() {
   width: 100%;
   max-width: 400px;
   gap: 1.5rem;
-}
-
-/* logo on phones, where the banner is hidden */
-.logo-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--bs-border-radius);
-  background-color: var(--tt-lavender);
 }
 
 #slider {

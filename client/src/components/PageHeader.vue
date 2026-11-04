@@ -67,6 +67,16 @@ defineProps({
 </template>
 
 <style scoped>
+.search {
+  width: 260px;
+  min-width: 0; /* lets the search box shrink on small screens */
+}
+/* phones: the search box takes its own full-width row */
+@media (max-width: 767.98px) {
+  .search {
+    width: 100%;
+  }
+}
 .theme-toggle {
   width: 36px;
   height: 36px;

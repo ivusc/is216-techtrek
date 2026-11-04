@@ -133,7 +133,7 @@ function dayLabel(day) {
 
     <!-- what's on the clicked day -->
     <div class="mini-agenda border-top mt-1 pt-2" aria-live="polite">
-      <div class="d-flex justify-content-between align-items-center" :class="{ 'mb-1': selectedEvents.length > 0 }">
+      <div class="d-flex flex-wrap justify-content-between align-items-center column-gap-2" :class="{ 'mb-1': selectedEvents.length > 0 }">
         <p class="small mb-0">
           <span class="fw-semibold">{{ selectedLabel }}</span>
           <!-- an empty day says so on the same line, to keep the card short -->
