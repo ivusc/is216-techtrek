@@ -71,6 +71,15 @@ const statusClass = {
 }
 
 const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Declined' }
+
+// requests TechTrek closed (not the lead): say why instead of "Declined"
+const closedLabel = { full: 'Team filled up', closed: 'Team closed' }
+function badgeText(request) {
+  return request.closedReason ? closedLabel[request.closedReason] : statusLabel[request.status]
+}
+function badgeClass(request) {
+  return request.closedReason ? 'bg-body-secondary text-body-secondary' : statusClass[request.status]
+}
 </script>
 
 <template>
@@ -140,7 +149,7 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
                 <i class="bi bi-check2"></i> {{ roleFor(request) ? 'Accept as ' + roleFor(request) : 'Accept' }}
               </button>
             </template>
-            <span v-else class="badge rounded-pill fw-medium" :class="statusClass[request.status]">{{ statusLabel[request.status] }}</span>
+            <span v-else class="badge rounded-pill fw-medium" :class="badgeClass(request)">{{ badgeText(request) }}</span>
           </div>
         </div>
 
@@ -173,7 +182,7 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
               <template v-if="request.role">Requested as {{ request.role }} · </template>{{ timeAgo(request.createdAt) }}
             </p>
           </div>
-          <span class="badge rounded-pill fw-medium" :class="statusClass[request.status]">{{ statusLabel[request.status] }}</span>
+          <span class="badge rounded-pill fw-medium" :class="badgeClass(request)">{{ badgeText(request) }}</span>
           <button
             v-if="request.status === 'pending'"
             class="btn btn-sm btn-link fw-semibold text-decoration-none"

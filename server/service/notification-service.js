@@ -7,7 +7,7 @@ function nameOf(user) {
 
 // adds a notification. A failed notification must never break the team action that caused it,
 // so errors are logged and swallowed.
-async function notify({ userId, type, actor, actorId, team, role }) {
+async function notify({ userId, type, actor, actorId, team, role, about }) {
   try {
     if (!userId) return;
     // nobody gets told about something they did themselves
@@ -25,6 +25,7 @@ async function notify({ userId, type, actor, actorId, team, role }) {
       teamId: team?._id,
       teamName: team?.name,
       role,
+      about,
     });
   } catch (err) {
     console.error('Could not save notification', err);

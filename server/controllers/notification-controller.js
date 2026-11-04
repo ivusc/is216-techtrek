@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const teamRequestService = require('../service/team-request-service');
 
 const MAX_NOTIFICATIONS = 30;
 
@@ -10,6 +11,7 @@ function formatNotification(notification) {
     teamId: notification.teamId ?? null,
     teamName: notification.teamName ?? null,
     role: notification.role ?? null,
+    about: notification.about ?? null,
     read: notification.read,
     createdAt: notification.createdAt,
   };
@@ -19,6 +21,8 @@ function formatNotification(notification) {
 async function getNotifications(req, res) {
   const userId = req.session.user._id;
   try {
+    // close requests to teams whose closing date has passed, so their notifications are in this list
+    await teamRequestService.closeExpired();
     const [notifications, unreadCount] = await Promise.all([
       Notification.find({ userId }).sort('-createdAt').limit(MAX_NOTIFICATIONS),
       Notification.countDocuments({ userId, read: false }),

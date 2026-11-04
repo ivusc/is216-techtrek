@@ -7,6 +7,7 @@ const { cleanSkills, sameSkill } = require('../service/skills');
 const opportunityService = require('../service/opportunity-service');
 const applicationService = require('../service/application-service');
 const notificationService = require('../service/notification-service');
+const teamRequestService = require('../service/team-request-service');
 
 const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
 const ANSWER_STATUSES = ['accepted', 'declined'];
@@ -149,6 +150,7 @@ function formatRequest(request) {
     role: request.role,
     message: request.message,
     shareProfile: request.shareProfile,
+    closedReason: request.closedReason ?? null,
     createdAt: request.createdAt,
     user: shown,
     team: request.teamId,
@@ -178,8 +180,10 @@ async function getTeams(req, res) {
     const result = teams
       .filter((t) => t.leaderId)
       .map((t) => {
+        // a request TechTrek closed (the team was full) means I can ask again
         const request = requestByTeam[String(t._id)];
-        return { ...formatTeam(t, userId, request?.status), requestId: request?._id ?? null };
+        const live = request && !request.closedReason ? request : null;
+        return { ...formatTeam(t, userId, live?.status ?? null), requestId: live?._id ?? null };
       });
 
     res.json(result);
@@ -309,6 +313,8 @@ async function updateTeam(req, res) {
     if (publishing) {
       await applicationService.markTeamFormed(userId, team.event.opportunityId);
     }
+    // the lead made the team smaller: no spots left closes the requests still waiting
+    await teamRequestService.closeIfFull(team);
 
     const updated = await populateTeam(Team.findById(team._id));
     res.json(formatTeam(updated, userId));
@@ -401,6 +407,9 @@ async function createRequest(req, res) {
       }
     }
 
+    // a request TechTrek closed earlier (team was full) doesn't stop me asking again now there's room
+    await TeamRequest.deleteOne({ teamId: team._id, userId, closedReason: { $exists: true } });
+
     const request = await TeamRequest.create({
       teamId: team._id,
       userId,
@@ -417,6 +426,7 @@ async function createRequest(req, res) {
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
       request.status = 'accepted';
       await request.save();
+      await teamRequestService.closeIfFull(team);
       await notificationService.notify({ userId: team.leaderId._id, type: 'member-joined', actor: user, team, role: askedRole });
       await notificationService.notify({ userId, type: 'request-accepted', actorId: team.leaderId._id, team, role: askedRole });
     } else {
@@ -469,6 +479,8 @@ async function respondToRequest(req, res) {
       team.syncStatus();
       await team.save();
       await applicationService.markTeamFormed(answered.userId, team.event?.opportunityId);
+      // that was the last spot: everyone else still waiting is told the team is full
+      await teamRequestService.closeIfFull(team);
     }
     await notificationService.notify({
       userId: answered.userId,
@@ -543,6 +555,7 @@ async function getMatches(req, res) {
 async function getIncomingRequests(req, res) {
   const userId = req.session.user._id;
   try {
+    await teamRequestService.closeExpired();
     const teamIds = await Team.find({ leaderId: userId }).distinct('_id');
     const requests = await TeamRequest.find({ teamId: { $in: teamIds }, kind: { $ne: 'invite' } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
@@ -558,6 +571,7 @@ async function getIncomingRequests(req, res) {
 async function getSentRequests(req, res) {
   const userId = req.session.user._id;
   try {
+    await teamRequestService.closeExpired();
     const requests = await TeamRequest.find({ userId, kind: { $ne: 'invite' } })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
       .populate({ path: 'teamId', select: 'name event openRoles', options: { lean: true } })
@@ -668,6 +682,7 @@ async function getTeamInvites(req, res) {
 async function getMyInvites(req, res) {
   const userId = req.session.user._id;
   try {
+    await teamRequestService.closeExpired();
     const invites = await TeamRequest.find({ userId, kind: 'invite', status: 'pending' })
       .populate({
         path: 'teamId',
@@ -714,6 +729,7 @@ async function respondToInvite(req, res) {
       team.syncStatus();
       await team.save();
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
+      await teamRequestService.closeIfFull(team);
     }
 
     await notificationService.notify({

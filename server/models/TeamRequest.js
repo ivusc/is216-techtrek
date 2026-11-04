@@ -13,6 +13,8 @@ const teamRequestSchema = new mongoose.Schema(
     shareProfile: { type: Boolean, default: true },
     status: { type: String, enum: STATUS_TYPES, required: true, default: 'pending' },
     kind: { type: String, enum: KIND_TYPES, required: true, default: 'request' },
+    // set when TechTrek closed it, not the people involved: the team filled up, or its closing date passed
+    closedReason: { type: String, enum: ['full', 'closed'] },
   },
   { timestamps: true },
 );

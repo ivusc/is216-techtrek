@@ -25,6 +25,20 @@ export function describeNotification(notification) {
       return { text: `${team} was deleted by its team lead`, icon: 'bi-trash3', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } } }
     case 'role-assigned':
       return { text: `${who} made you ${notification.role || 'a new role'} in ${team}`, icon: 'bi-person-badge', tone: 'primary', to: { path: '/teams', query: { tab: 'mine' } } }
+    case 'team-full':
+      return {
+        text: notification.about === 'invite'
+          ? `${team} filled up before you answered the invite`
+          : `${team} filled up, so your request was closed`,
+        icon: 'bi-people', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } }
+      }
+    case 'team-closed':
+      return {
+        text: notification.about === 'invite'
+          ? `${team} stopped taking new members, so your invite was closed`
+          : `${team} stopped taking new members, so your request was closed`,
+        icon: 'bi-calendar-x', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } }
+      }
     default:
       return { text: 'Something happened in one of your teams', icon: 'bi-bell', tone: 'muted', to: { path: '/teams' } }
   }

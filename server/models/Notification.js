@@ -12,6 +12,8 @@ const NOTIFICATION_TYPES = [
   'member-left', // someone left my team
   'team-deleted', // the leader deleted a team I was in
   'role-assigned', // the leader gave me a role in their team
+  'team-full', // my pending request or invite was closed because the team filled up
+  'team-closed', // my pending request or invite was closed because the team's closing date passed
 ];
 
 const notificationSchema = new mongoose.Schema(
@@ -23,6 +25,7 @@ const notificationSchema = new mongoose.Schema(
     teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
     teamName: { type: String, trim: true, maxlength: 100 }, // kept so it still reads well after a team is deleted
     role: { type: String, trim: true, maxlength: 100 }, // for role-assigned
+    about: { type: String, enum: ['request', 'invite'] }, // for team-full / team-closed: what was closed
     read: { type: Boolean, default: false },
   },
   { timestamps: true },

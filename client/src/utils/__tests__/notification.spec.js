@@ -13,4 +13,12 @@ describe('describeNotification', () => {
     expect(describeNotification({ type: 'request-accepted', actorName: 'Ivus', teamName: 'Byte Me', role: 'Designer' }).text).toBe("You're in! Ivus accepted you into Byte Me as Designer");
     expect(describeNotification({ type: 'request-received', actorName: 'Kai', teamName: 'Byte Me' }).text).toBe('Kai asked to join Byte Me');
   });
+
+  it('explains why a request or invite was closed', () => {
+    const text = (type, about) => describeNotification({ type, teamName: 'Byte Me', about }).text;
+
+    expect(text('team-full', 'request')).toBe('Byte Me filled up, so your request was closed');
+    expect(text('team-full', 'invite')).toBe('Byte Me filled up before you answered the invite');
+    expect(text('team-closed', 'request')).toBe('Byte Me stopped taking new members, so your request was closed');
+  });
 });

@@ -133,4 +133,13 @@ describe('RequestsPanel', () => {
     expect(wrapper.text()).toContain('Designer has been filled, so pick another open role for them.');
     expect(wrapper.findAll('button').some((b) => b.text() === 'Accept as Backend developer')).toBe(true);
   });
+
+  it('says a request was closed because the team filled up, not that the lead declined it', () => {
+    const closed = joinRequest({ _id: 's9', status: 'declined', closedReason: 'full' });
+    const declined = joinRequest({ _id: 's8', status: 'declined' });
+    const wrapper = mountPanel({ sent: [closed, declined] });
+
+    const badges = wrapper.findAll('.card .badge.rounded-pill').map((badge) => badge.text()).filter((text) => /Team|Declined/.test(text));
+    expect(badges).toEqual(['Team filled up', 'Declined']);
+  });
 });
