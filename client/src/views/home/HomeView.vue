@@ -24,7 +24,7 @@ const router = useRouter()
 const auth = useUserStore()
 const applicationStore = useApplicationsStore()
 const opportunityStore = useOpportunityStore()
-const { applications, isLoading } = storeToRefs(applicationStore)
+const { applications } = storeToRefs(applicationStore)
 const { jobs, hackathons } = storeToRefs(opportunityStore)
 
 const search = ref('')
@@ -33,11 +33,13 @@ const incoming = ref([]) // people asking to join my teams
 const invites = ref([]) // teams inviting me
 const practiceScore = ref(null)
 const busyRequestId = ref('')
+// the loader is for the first load only; later refreshes (e.g. after tracking a pick) keep the dashboard on screen
+const firstLoadDone = ref(false)
 const requestError = ref('')
 
 onMounted(async () => {
   // each part loads on its own, so one failing does not blank the whole dashboard
-  applicationStore.fetchApplications()
+  applicationStore.fetchApplications().finally(() => (firstLoadDone.value = true))
   opportunityStore.fetchOpportunities()
 
   loadRequests()
@@ -225,6 +227,12 @@ const recommended = computed(() => {
   return picks
 })
 
+// tracking a pick creates an application, so reload them to update the stat cards and deadlines
+async function trackFromHome(item) {
+  await opportunityStore.toggleSave(item)
+  applicationStore.fetchApplications()
+}
+
 // --- team requests ---
 
 // the "someone joined" toast: two avatars meet with a heart
@@ -321,7 +329,7 @@ async function respond(request, status) {
 
     <!-- only the first time: after that the old numbers stay on screen while they refresh -->
     <TrekLoader
-      v-if="isLoading && applications.length === 0"
+      v-if="!firstLoadDone"
       title="Setting up your dashboard"
       :captions="['Counting your deadlines…', 'Picking opportunities for your skills…', 'Checking your team requests…']"
     />
@@ -390,6 +398,9 @@ async function respond(request, status) {
           <p v-if="skills.length === 0" class="small text-body-secondary mb-2">
             Add your skills on the <RouterLink to="/teams">Teams</RouterLink> page to get better matches.
           </p>
+          <p v-if="!opportunityStore.isLoading && recommended.length === 0" class="small text-body-secondary mb-0">
+            No open picks right now. Browse everything on <RouterLink to="/opportunities">Opportunities</RouterLink>.
+          </p>
           <div class="row g-3">
             <div v-for="item in recommended" :key="item.source + '-' + item.externalId" class="col-12 col-md-6">
               <OpportunityCard
@@ -398,7 +409,7 @@ async function respond(request, status) {
                 :team-count="opportunityStore.teamCountFor(item)"
                 @find-team="router.push({ path: '/teams', query: { event: item.title } })"
                 @details="router.push('/opportunities')"
-                @toggle-save="opportunityStore.toggleSave(item)"
+                @toggle-save="trackFromHome(item)"
               />
             </div>
           </div>

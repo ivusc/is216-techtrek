@@ -8,6 +8,7 @@ import {
   updateReviewService,
 } from '@/services/trackerService';
 import { acceptHMRUpdate, defineStore } from 'pinia';
+import { getErrorMessage } from '@/services/teamService';
 import { ref } from 'vue';
 
 export const useApplicationsStore = defineStore('applications', () => {
@@ -41,7 +42,8 @@ export const useApplicationsStore = defineStore('applications', () => {
         status.value = 'Applications could not be loaded right now.';
       }
     } catch (error) {
-      status.value = 'There was an error: ' + error.message;
+      console.error(error);
+      status.value = 'Applications could not be loaded right now. Try again in a moment.';
     } finally {
       isLoading.value = false;
     }
@@ -114,7 +116,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       if (reachedOffer(previous, updatedApplication)) celebrate(updatedApplication);
     } catch (error) {
       console.error(error);
-      status.value = 'There was an error: ' + error.message;
+      status.value = 'Could not update the application: ' + getErrorMessage(error);
     } finally {
       isSaving.value = false;
     }
@@ -171,7 +173,7 @@ export const useApplicationsStore = defineStore('applications', () => {
       applications.value = applications.value.filter((a) => a._id !== id);
     } catch (error) {
       console.error(error);
-      status.value = 'There was an error: ' + error.message;
+      status.value = 'Could not delete the application: ' + getErrorMessage(error);
     } finally {
       isSaving.value = false;
     }

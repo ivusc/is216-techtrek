@@ -172,6 +172,32 @@ describe('HomeView', () => {
     expect(picks).toEqual(['Software Engineer 03', 'Campus Makers']);
   });
 
+  it('tracking a pick updates the stat cards without showing the loader again', async () => {
+    const wrapper = await mountView();
+    const savedBefore = stat(wrapper, 'Saved opportunities');
+    const pick = wrapper.findAllComponents(OpportunityCard)[0].props('item');
+    mock.onPost('/application').reply(201, { _id: 'a9' });
+    mock.onGet('/application').reply(200, [
+      ...applications(),
+      { _id: 'a9', userId: 'u1', status: 'saved', opportunityId: pick, createdAt: NOW },
+    ]);
+
+    await wrapper.findAllComponents(OpportunityCard)[0].vm.$emit('toggle-save');
+    await flushPromises();
+
+    expect(savedBefore).toContain('1 saved');
+    expect(stat(wrapper, 'Saved opportunities')).toContain('2 saved');
+    expect(wrapper.findComponent(TrekLoader).exists()).toBe(false);
+  });
+
+  it('says when there are no picks to recommend', async () => {
+    mock.onGet('/opportunity/all').reply(200, { jobs: null, hackathons: null });
+    const wrapper = await mountView();
+
+    expect(wrapper.findAllComponents(OpportunityCard)).toHaveLength(0);
+    expect(wrapper.text()).toContain('No open picks right now.');
+  });
+
   it('says fresh picks when the user has no skills yet', async () => {
     useUserStore().user = { _id: 'u1', displayName: 'Kellie', skills: [] };
     const wrapper = await mountView();

@@ -6,7 +6,7 @@ import {getErrorMessage,createTeam,fetchTeams,fetchMatches,fetchMyTeams,updateTe
 from '@/services/teamService'
 import { fetchHackathons } from '@/services/opportunityService'
 import { useUserStore } from '@/store/user';
-import TeamsHeader from '@/components/teams/TeamsHeader.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import TeamsTabs from '@/components/teams/TeamsTabs.vue'
 import TeamFilters from '@/components/teams/TeamFilters.vue'
 import SkillMatchBanner from '@/components/teams/SkillMatchBanner.vue'
@@ -554,7 +554,12 @@ onUnmounted(() => {
   <div class="p-2">
 
     <template v-if="auth._id">
-      <TeamsHeader v-model="search" />
+      <PageHeader
+        v-model="search"
+        title="Teammate finder"
+        subtitle="Find teammates for hackathons and competitions — or advertise your open slots."
+        type="teams"
+      />
 
       <TeamsTabs v-model:tab="activeTab" :counts="tabCounts" @create="openCreate()" />
 
