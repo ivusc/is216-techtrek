@@ -152,6 +152,13 @@ $danger-text-emphasis-dark:    #ff9fb3;
   --tt-surface:     #ffffff;     // cards, modals, inputs, white panels
   --tt-card-header: #f8f7fc;
 
+  // lavender chips (open roles, the role someone asks for, tab counts) and the pink "create" card
+  --tt-chip-bg:          #e2dcfc;
+  --tt-chip-text:        #3f28b8;
+  --tt-chip-border:      #cbc0f7;
+  --tt-create-bg:        #fff4f6;
+  --tt-create-bg-hover:  #ffe9ee;
+
   // Tracker status (column dots, badges, calendar events)
   --tt-status-saved:     #{$tt-text-muted};
   --tt-status-applied:   #{$tt-primary};
@@ -174,6 +181,11 @@ $danger-text-emphasis-dark:    #ff9fb3;
   --tt-lavender:       #{$primary-bg-subtle-dark};
   --tt-surface-subtle: #{$body-secondary-bg-dark};
   --tt-accent-text:    #{$danger-text-emphasis-dark};
+  --tt-chip-bg:          #362d6f;
+  --tt-chip-text:        #d6ceff;
+  --tt-chip-border:      #4c4096;
+  --tt-create-bg:        #3a1f2b;
+  --tt-create-bg-hover:  #472533;
   color-scheme: dark;
 
   // .bg-white is used as "surface" all over the templates

@@ -239,9 +239,9 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
 
 <style scoped>
 .asked-role {
-  color: #3f28b8;
-  background-color: #e2dcfc;
-  border: 1px solid #cbc0f7;
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
+  border: 1px solid var(--tt-chip-border);
 }
 .role-pick {
   background-color: var(--bs-primary-bg-subtle);

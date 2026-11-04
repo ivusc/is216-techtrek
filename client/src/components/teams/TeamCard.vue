@@ -173,8 +173,8 @@ function isUrgent() {
 <style scoped>
 /* open roles: a soft lavender, a step stronger than the matched-skill chips below */
 .open-role-chip {
-  color: #3f28b8;
-  background-color: #e2dcfc;
-  border: 1px solid #cbc0f7;
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
+  border: 1px solid var(--tt-chip-border);
 }
 </style>

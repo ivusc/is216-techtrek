@@ -74,7 +74,7 @@ function countText(item, count) {
   padding: 14px 16px;
   border: 1.5px solid var(--bs-border-color);
   border-radius: 16px;
-  background-color: var(--bs-white);
+  background-color: var(--tt-surface);
   color: var(--bs-body-color);
   box-shadow: 0 1px 2px rgba(28, 26, 61, 0.05);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
@@ -117,8 +117,8 @@ function countText(item, count) {
   padding: 2px 10px;
   font-size: 0.8125rem;
   border-radius: 999px;
-  color: #3f28b8;
-  background-color: #e2dcfc;
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
 }
 
 /* the section you're on: purple border, lavender card, solid icon */
@@ -161,7 +161,7 @@ function countText(item, count) {
 .create-card {
   border-style: dashed;
   border-color: var(--tt-accent);
-  background-color: #fff4f6;
+  background-color: var(--tt-create-bg);
 }
 .create-card .tab-icon {
   color: var(--bs-white);
@@ -169,7 +169,7 @@ function countText(item, count) {
 }
 .create-card:hover {
   border-color: var(--tt-accent);
-  background-color: #ffe9ee;
+  background-color: var(--tt-create-bg-hover);
 }
 
 /* the layout follows the room the cards have (the sidebar takes space too), not the screen width */

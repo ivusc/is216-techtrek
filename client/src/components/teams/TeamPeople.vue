@@ -387,7 +387,7 @@ button.person:hover .person-ring {
   font-size: 12px;
   color: #fff;
   background-color: var(--tt-status-interview);
-  border: 2px solid var(--bs-white);
+  border: 2px solid var(--tt-surface);
 }
 
 .spot {

@@ -96,7 +96,7 @@ function markRead(item) {
   padding: 3px 5px;
   font-size: 11px;
   line-height: 12px;
-  border: 2px solid var(--bs-white);
+  border: 2px solid var(--tt-surface);
   animation: badge-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.5);
 }
 
