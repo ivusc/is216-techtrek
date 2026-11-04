@@ -1,13 +1,22 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import SideBar from './components/SideBar.vue';
 import { useUserStore } from '@/store/user.js';
+import { useNotificationStore } from '@/store/notifications.js';
 
 const authStore = useUserStore();
 const route = useRoute();
 // no sidebar on full-screen pages (login, onboarding)
 const showSideBar = computed(() => authStore.isLoggedIn && !route.meta.bare);
+
+// notifications are checked in the background while someone is logged in
+const notificationStore = useNotificationStore();
+watch(
+  () => authStore.isLoggedIn,
+  (loggedIn) => (loggedIn ? notificationStore.start() : notificationStore.stop()),
+  { immediate: true },
+);
 </script>
 
 <template>

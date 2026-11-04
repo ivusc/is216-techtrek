@@ -26,6 +26,10 @@ export async function deleteTeam(teamId) {
   await serverAPI.delete(BASE_URL + '/' + teamId);
 }
 
+export async function leaveTeam(teamId) {
+  await serverAPI.post(BASE_URL + '/' + teamId + '/leave')
+}
+
 export async function sendRequest(teamId, request) {
   const response = await serverAPI.post(BASE_URL + '/' + teamId + '/requests', request);
   return response.data;

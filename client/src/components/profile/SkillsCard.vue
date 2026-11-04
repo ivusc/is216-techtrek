@@ -1,5 +1,5 @@
 <script setup>
-import SkillInput from '@/components/teams/SkillInput.vue';
+import SkillPicker from '@/components/SkillPicker.vue';
 
 const skills = defineModel({ type: Array, required: true });
 </script>
@@ -9,10 +9,10 @@ const skills = defineModel({ type: Array, required: true });
     <div>
       <h3 class="mb-1">Skills</h3>
       <p class="small text-body-tertiary mb-0">
-        Your strengths. Used to match you with teams, and to suggest you to team leaders when Show
-        me in Teammate Finder is on.
+        Your strengths. The Teams page uses these for "Match my skills", and team leaders can find
+        you by them when Show me in Teammate Finder is on. Press Save to update them.
       </p>
     </div>
-    <SkillInput v-model="skills" placeholder="Add a skill and press Enter" />
+    <SkillPicker v-model="skills" large />
   </div>
 </template>

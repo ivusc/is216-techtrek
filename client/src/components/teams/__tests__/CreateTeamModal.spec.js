@@ -299,7 +299,7 @@ describe('CreateTeamModal', () => {
     await fill(wrapper);
     await wrapper.find('#post-size').setValue(4);
     await wrapper.find('#post-slots').setValue(3);
-    await wrapper.find('.text-caption button').trigger('click');
+    await wrapper.findAll('[aria-pressed]').find((chip) => chip.text() === 'Figma').trigger('click');
     await wrapper.find('[aria-label="Accept requests automatically"]').setValue(true);
     await button(wrapper, 'Save draft').trigger('click');
     await button(wrapper, 'Publish post').trigger('click');

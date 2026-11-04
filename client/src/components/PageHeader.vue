@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import UserAvatar from '@/components/UserAvatar.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
 
 const auth = useUserStore()
 const name = computed(() => auth.displayName ?? auth.username ?? '')
@@ -35,7 +36,7 @@ defineProps({
     </div>
     <!-- bell and avatar stay together so the avatar never drops onto a line by itself -->
     <div class="d-flex align-items-center gap-2 flex-shrink-0">
-      <button class="btn bg-white border p-0 size-36 flex-shrink-0" aria-label="Notifications"><i class="bi bi-bell"></i></button>
+      <NotificationBell :size="36" />
       <RouterLink to="/profile" class="flex-shrink-0 text-decoration-none" aria-label="Your profile">
         <UserAvatar
           :user-id="auth._id ?? ''"

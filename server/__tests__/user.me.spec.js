@@ -42,7 +42,19 @@ describe('PATCH /me', () => {
       .expect(200);
 
     const stored = await User.findOne({ userName: 'kellie.jubela@smu.edu.sg' });
-    expect(stored.skills).toEqual(['vue']);
+    expect(stored.skills).toEqual(['Vue.js']);
+  });
+
+  it('saves common skills with one standard spelling so they match team skills', async () => {
+    const agent = await loginAs(app, { userName: 'kellie.jubela@smu.edu.sg' });
+
+    await agent
+      .patch('/me')
+      .send({ skills: ['nodejs', 'ui ux', 'python', 'Node.js', 'Rust'] })
+      .expect(200);
+
+    const stored = await User.findOne({ userName: 'kellie.jubela@smu.edu.sg' });
+    expect(stored.skills).toEqual(['Node.js', 'UI/UX', 'Python', 'Rust']);
   });
 });
 

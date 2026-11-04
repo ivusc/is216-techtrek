@@ -10,6 +10,7 @@ router.patch('/:id', teamsController.updateTeam);
 router.delete('/:id', teamsController.deleteTeam);
 
 router.post('/:id/requests', teamsController.createRequest);
+router.post('/:id/leave', teamsController.leaveTeam);
 
 // invites: the leader invites someone by SMU email; the invited person accepts or declines
 router.get('/invites', teamsController.getMyInvites);

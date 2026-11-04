@@ -104,7 +104,7 @@ function dayLabel(day) {
     </div>
 
     <div class="mini-grid text-center">
-      <span v-for="(weekday, index) in weekdays" :key="'w' + index" class="text-caption text-body-tertiary py-1">{{ weekday }}</span>
+      <span v-for="(weekday, index) in weekdays" :key="'w' + index" class="text-caption text-body-tertiary pb-1">{{ weekday }}</span>
       <button
         v-for="day in days"
         :key="day.date.toISOString()"
@@ -132,17 +132,20 @@ function dayLabel(day) {
     </div>
 
     <!-- what's on the clicked day -->
-    <div class="mini-agenda border-top mt-2 pt-2" aria-live="polite">
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <p class="small fw-semibold mb-0">{{ selectedLabel }}</p>
+    <div class="mini-agenda border-top mt-1 pt-2" aria-live="polite">
+      <div class="d-flex justify-content-between align-items-center" :class="{ 'mb-1': selectedEvents.length > 0 }">
+        <p class="small mb-0">
+          <span class="fw-semibold">{{ selectedLabel }}</span>
+          <!-- an empty day says so on the same line, to keep the card short -->
+          <span v-if="selectedEvents.length === 0" class="text-body-tertiary text-nowrap"> · nothing on</span>
+        </p>
         <!-- what the dots mean -->
         <span class="d-flex gap-2 text-caption text-body-secondary">
           <span class="d-flex align-items-center gap-1"><span class="mini-dot rounded-circle dot-deadline"></span>Deadline</span>
           <span class="d-flex align-items-center gap-1"><span class="mini-dot rounded-circle dot-interview"></span>Interview</span>
         </span>
       </div>
-      <p v-if="selectedEvents.length === 0" class="text-caption text-body-tertiary mb-0">Nothing on this day.</p>
-      <div v-else class="mini-agenda-list d-flex flex-column gap-1">
+      <div v-if="selectedEvents.length > 0" class="mini-agenda-list d-flex flex-column gap-1">
         <RouterLink
           v-for="(event, index) in selectedEvents"
           :key="index"
@@ -170,7 +173,7 @@ function dayLabel(day) {
   grid-template-columns: repeat(7, 1fr);
 }
 .mini-cell {
-  padding: 1px 0 !important;
+  padding: 0 !important;
 }
 .mini-cell:hover .mini-day:not(.bg-primary) {
   background-color: var(--bs-primary-bg-subtle);
@@ -182,8 +185,8 @@ function dayLabel(day) {
   box-shadow: 0 0 0 2px var(--bs-primary);
 }
 .mini-day {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   transition: background-color 0.15s ease;
 }
 /* the clicked day gets a ring; today keeps its filled circle and gets a ring around it */
@@ -196,7 +199,7 @@ function dayLabel(day) {
   box-shadow: 0 0 0 2px var(--bs-white), 0 0 0 4px var(--bs-primary);
 }
 .mini-dots {
-  height: 6px;
+  height: 5px;
 }
 .mini-dot {
   display: inline-block;
