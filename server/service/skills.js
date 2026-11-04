@@ -49,4 +49,4 @@ function cleanSkills(skills) {
   return cleaned.slice(0, MAX_SKILLS);
 }
 
-module.exports = { MAX_SKILLS, cleanSkills, canonicalSkill, sameSkill };
+module.exports = { MAX_SKILLS, SKILL_ALIASES, cleanSkills, canonicalSkill, sameSkill };

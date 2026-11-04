@@ -144,3 +144,42 @@ describe('team notifications', () => {
     await request(app).get('/notifications').expect(401);
   });
 });
+
+describe('DELETE /teams/invites/:id', () => {
+  async function invited() {
+    const { leader, member, team } = await setUp();
+    const invite = (await leader.post(`/teams/${team._id}/invites`).send({ userName: 'member@smu.edu.sg' }).expect(201)).body;
+    return { leader, member, team, invite };
+  }
+
+  it('lets the team lead cancel an invite and removes the invite notification', async () => {
+    const { leader, member, invite } = await invited();
+
+    await leader.delete(`/teams/invites/${invite._id}`).expect(204);
+
+    expect(await TeamRequest.findById(invite._id)).toBeNull();
+    expect((await member.get('/teams/invites').expect(200)).body).toEqual([]);
+    expect((await notificationsOf(member)).notifications).toEqual([]);
+  });
+
+  it('only lets the team lead cancel', async () => {
+    const { member, invite } = await invited();
+
+    const response = await member.delete(`/teams/invites/${invite._id}`).expect(403);
+
+    expect(response.body.error).toBe('Only the team lead can cancel invites');
+    expect(await TeamRequest.findById(invite._id)).not.toBeNull();
+  });
+
+  it('404s for an unknown invite or a join request id', async () => {
+    const { leader, member, team } = await setUp();
+    const joinRequest = await ask(member, team._id);
+
+    await leader.delete('/teams/invites/000000000000000000000000').expect(404);
+    await leader.delete(`/teams/invites/${joinRequest._id}`).expect(404);
+  });
+
+  it('needs a login', async () => {
+    await request(app).delete('/teams/invites/000000000000000000000000').expect(401);
+  });
+});
