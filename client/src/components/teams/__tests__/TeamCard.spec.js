@@ -1,6 +1,7 @@
 import process from 'node:process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { createPinia } from 'pinia';
 import TeamCard from '@/components/teams/TeamCard.vue';
 import { ledTeam, team } from '@/__tests__/fixtures/teams';
 
@@ -9,7 +10,8 @@ process.env.TZ = 'Asia/Singapore';
 afterEach(() => vi.useRealTimers());
 
 function mountCard(props) {
-  return mount(TeamCard, { props: { team: team(), ...props } });
+  // the details window is teleported to <body>; render it in place so the test can see it
+  return mount(TeamCard, { props: { team: team(), ...props }, global: { plugins: [createPinia()], stubs: { teleport: true } } });
 }
 
 function button(wrapper, text) {
@@ -34,24 +36,38 @@ describe('TeamCard', () => {
     },
   );
 
-  it('emits request when asked to join, from the button, the card and Enter', async () => {
+  it('emits request from the Request to join button', async () => {
     const wrapper = mountCard();
 
     await button(wrapper, 'Request to join').trigger('click');
-    await wrapper.find('h3').trigger('click');
-    await wrapper.find('.card').trigger('keydown', { key: 'Enter' });
 
-    expect(wrapper.emitted('request')).toHaveLength(3);
-    expect(wrapper.find('.card').attributes('aria-label')).toBe('Ask to join ' + team().name);
+    expect(wrapper.emitted('request')).toHaveLength(1);
+    expect(wrapper.text()).not.toContain("Who's in the team");
   });
 
-  it('does not open a request from the card of a full team', async () => {
+  it('opens the team details from the card or Enter, and can ask to join from there', async () => {
+    const wrapper = mountCard();
+    expect(wrapper.find('.card').attributes('aria-label')).toBe('See who is in ' + team().name);
+
+    await wrapper.find('h3').trigger('click');
+    expect(wrapper.text()).toContain("Who's in the team");
+
+    await button(wrapper, 'Close').trigger('click');
+    expect(wrapper.text()).not.toContain("Who's in the team");
+
+    await wrapper.find('.card').trigger('keydown', { key: 'Enter' });
+    await wrapper.findAll('.modal-footer button').find((candidate) => candidate.text() === 'Request to join').trigger('click');
+    expect(wrapper.emitted('request')).toHaveLength(1);
+    expect(wrapper.text()).not.toContain("Who's in the team");
+  });
+
+  it('opens details but offers no request on a full team', async () => {
     const wrapper = mountCard({ team: team({ slotsOpen: 0 }) });
 
     await wrapper.find('.card').trigger('click');
 
-    expect(wrapper.emitted('request')).toBeUndefined();
-    expect(wrapper.find('.card').attributes('tabindex')).toBeUndefined();
+    expect(wrapper.text()).toContain('Team is full');
+    expect(wrapper.findAll('.modal-footer button').map((candidate) => candidate.text())).toEqual(['Close']);
   });
 
   it.each([2, 0])(
