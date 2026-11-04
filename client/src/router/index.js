@@ -1,4 +1,3 @@
-import DashboardView from '@/views/dashboard/DashboardView.vue';
 import InterviewView from '@/views/interview/InterviewView.vue';
 import PracticeQuizView from '@/views/interview/PracticeQuizView.vue';
 import OpportunitiesView from '@/views/opportunities/OpportunitiesView.vue';
@@ -19,7 +18,6 @@ const router = createRouter({
     // bare: no page padding, so the banner reaches the screen edges; noScroll: the page never scrolls
     { path: '/onboarding', component: OnboardingView, meta: { requiresAuth: true, bare: true } },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
-    { path: '/dashboard', component: DashboardView, meta: { requiresAuth: true } },
     { path: '/opportunities', component: OpportunitiesView, meta: { requiresAuth: true } },
     { path: '/tracker', component: TrackerView, meta: { requiresAuth: true } },
     { path: '/teams', component: TeamsView, meta: { requiresAuth: true } },
