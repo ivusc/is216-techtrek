@@ -139,7 +139,11 @@ function inviteFromCelebration() {
         />
       </section>
 
-      <div v-else-if="teams.length === 0" class="text-center bg-white rounded-4 p-4">
+      <!-- a new v-if chain, so having your own team does not hide everyone else's -->
+      <div
+        v-if="!isLoading && !loadError && teams.length === 0 && myTeams.length === 0"
+        class="text-center bg-white rounded-4 p-4"
+      >
         <i class="bi bi-people fs-1 text-primary" aria-hidden="true"></i>
         <p class="fw-semibold mt-2 mb-1">Be the first team for this hackathon</p>
         <p class="small text-body-secondary mb-3">Post your team and people with the skills you need can ask to join.</p>
@@ -148,7 +152,7 @@ function inviteFromCelebration() {
         </button>
       </div>
 
-      <template v-else>
+      <template v-else-if="teams.length > 0">
         <p v-if="undoError" class="small text-tt-accent mb-0" role="alert">{{ undoError }}</p>
         <div class="d-flex flex-column gap-3">
           <TeamCard
