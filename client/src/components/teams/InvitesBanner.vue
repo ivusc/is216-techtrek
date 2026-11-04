@@ -22,7 +22,7 @@ defineEmits(['answer'])
       </span>
       <div class="flex-grow-1 min-w-0">
         <p class="fw-semibold mb-0">
-          {{ getDisplayName(invite.team.leader) }} invited you to join {{ invite.team.name }}
+          {{ getDisplayName(invite.team.leader) }} invited you to join {{ invite.team.name }}<template v-if="invite.role"> as <span class="text-primary">{{ invite.role }}</span></template>
         </p>
         <p class="small text-body-secondary mb-0">
           {{ invite.team.event?.name }}<template v-if="invite.message"> · "{{ invite.message }}"</template>

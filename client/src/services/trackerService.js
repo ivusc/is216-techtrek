@@ -37,6 +37,17 @@ export async function addReviewService(id, review){
   return response.data;
 }
 
+// the author edits or takes down their own tips
+export async function updateReviewService(id, review){
+  const response = await serverAPI.put(`${BASE_URL}/${id}/review`, review);
+  return response.data;
+}
+
+export async function deleteReviewService(id){
+  const response = await serverAPI.delete(`${BASE_URL}/${id}/review`);
+  return response.data;
+}
+
 export async function deleteApplicationService(id){
   const response = await serverAPI.delete(`${BASE_URL}/${id}`);
   return response.data;

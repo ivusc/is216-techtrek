@@ -1,11 +1,13 @@
 import {
   addApplicationService,
   addReviewService,
+  deleteReviewService,
   deleteApplicationService,
   fetchAllApplications,
   updateApplicationService,
+  updateReviewService,
 } from '@/services/trackerService';
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export const useApplicationsStore = defineStore('applications', () => {
@@ -78,13 +80,18 @@ export const useApplicationsStore = defineStore('applications', () => {
     status.value = null;
     isSaving.value = true;
     const previous = application.status;
+    // move the card (and celebrate an offer) straight away; the server catches up in the background.
+    // If saving fails the card goes back where it was.
+    application.status = newStatus;
+    const celebrated = reachedOffer(previous, application);
+    if (celebrated) celebrate(application);
     try {
       await updateApplicationService(id, { status: newStatus });
-      application.status = newStatus;
-      if (reachedOffer(previous, application)) celebrate(application);
     } catch (error) {
       console.error(error);
-      status.value = 'There was an error: ' + error.message;
+      application.status = previous;
+      if (celebrated) dismissCelebration();
+      status.value = 'Could not move the card, so it went back: ' + (error.response?.data?.error ?? error.message);
     } finally {
       isSaving.value = false;
     }
@@ -113,18 +120,43 @@ export const useApplicationsStore = defineStore('applications', () => {
     }
   }
 
-  async function submitReview(id, review) {
+  // shares new tips, or saves changes to tips already shared. The form says which one it is
+  // (editing = true), so an edit is never sent as a second share.
+  // Returns the updated application, or null when it failed.
+  async function submitReview(id, review, editing = false) {
     isSaving.value = true;
     status.value = null;
 
     try {
-      const reviewed = await addReviewService(id, review);
+      const reviewed = editing ? await updateReviewService(id, review) : await addReviewService(id, review);
       const index = applications.value.findIndex((item) => item._id === id);
-      applications.value[index] = reviewed;
+      if (index !== -1) applications.value[index] = reviewed;
       dismissCelebration();
+      return reviewed;
     } catch (error) {
       console.error(error);
-      status.value = 'Could not share your tips: ' + (error.response?.data?.error ?? error.message);
+      const action = editing ? 'Could not save your tips: ' : 'Could not share your tips: ';
+      status.value = action + (error.response?.data?.error ?? error.message);
+      return null;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  // takes my tips down; returns the updated application, or null when it failed
+  async function deleteReview(id) {
+    isSaving.value = true;
+    status.value = null;
+
+    try {
+      const updated = await deleteReviewService(id);
+      const index = applications.value.findIndex((item) => item._id === id);
+      applications.value[index] = updated;
+      return updated;
+    } catch (error) {
+      console.error(error);
+      status.value = 'Could not remove your tips: ' + (error.response?.data?.error ?? error.message);
+      return null;
     } finally {
       isSaving.value = false;
     }
@@ -159,5 +191,11 @@ export const useApplicationsStore = defineStore('applications', () => {
     celebrate,
     dismissCelebration,
     submitReview,
+    deleteReview,
   };
 });
+
+// while developing, edits to this file replace the running store instead of keeping the old code
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useApplicationsStore, import.meta.hot));
+}

@@ -17,7 +17,7 @@ import { typeBadge } from '@/constants'
 import { getApplicationDeadline, isDueThisWeek, getStageLabel } from '@/utils/application'
 import { getDaysLeft, isClosed } from '@/utils/opportunity'
 import { formatDate } from '@/utils/date'
-import { getDisplayName, getInitials, getAvatarStyle } from '@/utils/team'
+import { getDisplayName, getInitials, getAvatarStyle, uniqueRoles } from '@/utils/team'
 
 const router = useRouter()
 const auth = useUserStore()
@@ -236,7 +236,7 @@ function showRequestAccepted(request) {
   joinedToast.value = {
     key: request._id,
     title: 'Welcome aboard!',
-    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + '.',
+    message: getDisplayName(request.user).split('@')[0] + ' joined ' + request.team.name + (request.role ? ' as ' + request.role : '') + '.',
     left: personFrom(request.user),
     right: me()
   }
@@ -245,7 +245,7 @@ function showInviteAccepted(invite) {
   joinedToast.value = {
     key: invite._id,
     title: "You're in!",
-    message: 'You joined ' + invite.team.name + '. Say hi to your new team.',
+    message: 'You joined ' + invite.team.name + (invite.role ? ' as ' + invite.role : '') + '. Say hi to your new team.',
     left: me(),
     right: personFrom(invite.team.leader)
   }
@@ -267,13 +267,35 @@ async function respondToInvite(invite, status) {
   busyRequestId.value = ''
 }
 
+// the open roles of the request's team; the lead picks which one to accept them as
+function openRolesOf(request) {
+  return uniqueRoles(request.team?.openRoles ?? [])
+}
+// the role they asked for is no longer open (someone else filled it)
+function askedRoleTaken(request) {
+  const open = openRolesOf(request)
+  return open.length > 0 && Boolean(request.role) && !open.some((role) => role.toLowerCase() === request.role.toLowerCase())
+}
+// the role each request will be accepted as: what they asked for while it's open, else the first open one
+const chosenRoles = ref({})
+function roleFor(request) {
+  if (chosenRoles.value[request._id] !== undefined) return chosenRoles.value[request._id]
+  const open = openRolesOf(request)
+  if (open.length === 0) return ''
+  return open.find((role) => role.toLowerCase() === String(request.role ?? '').toLowerCase()) ?? open[0]
+}
+function pickRole(request, role) {
+  chosenRoles.value = { ...chosenRoles.value, [request._id]: role }
+}
+
 async function respond(request, status) {
   busyRequestId.value = request._id
   requestError.value = ''
   try {
-    await answerRequest(request._id, status)
+    const role = status === 'accepted' ? roleFor(request) || undefined : undefined
+    await answerRequest(request._id, status, role)
     if (status === 'accepted') {
-      showRequestAccepted(request)
+      showRequestAccepted({ ...request, role: role ?? request.role })
     }
     await loadRequests()
   } catch (error) {
@@ -441,24 +463,24 @@ async function respond(request, status) {
               <i class="bi bi-x-lg"></i>
             </button>
           </div>
-          <div v-for="request in incoming" :key="request._id" class="d-flex align-items-center gap-2 py-1">
+          <div v-for="request in incoming" :key="request._id" class="d-flex flex-wrap align-items-center gap-2 py-1">
             <span
               class="request-avatar rounded-circle d-flex align-items-center justify-content-center small fw-semibold flex-shrink-0"
               :style="getAvatarStyle(getDisplayName(request.user))"
             >
               {{ getInitials(getDisplayName(request.user)) }}
             </span>
-            <div class="flex-grow-1 min-w-0 small lh-sm">
+            <div class="request-text min-w-0 small lh-sm">
               <p class="mb-1">
                 <span class="fw-semibold">{{ getDisplayName(request.user).split('@')[0] }}</span>
                 wants to join <span class="fw-semibold">{{ request.team?.name }}</span>
               </p>
-              <span v-if="request.role" class="text-caption text-body-tertiary">{{ request.role }}</span>
+              <span v-if="openRolesOf(request).length === 0 && request.role" class="text-caption text-body-tertiary">as {{ request.role }}</span>
             </div>
             <button
               class="btn btn-sm btn-primary"
               :disabled="busyRequestId === request._id"
-              aria-label="Accept request"
+              :aria-label="roleFor(request) || request.role ? 'Accept as ' + (roleFor(request) || request.role) : 'Accept request'"
               @click="respond(request, 'accepted')"
             >
               <i class="bi bi-check-lg"></i>
@@ -471,6 +493,21 @@ async function respond(request, status) {
             >
               <i class="bi bi-x-lg"></i>
             </button>
+              <!-- a team with open roles: pick which one to accept them as, right here -->
+              <div v-if="openRolesOf(request).length > 0" class="request-role d-flex align-items-center gap-1 text-caption text-body-tertiary">
+                as
+                <select
+                  class="form-select form-select-sm role-select py-0"
+                  :value="roleFor(request)"
+                  :aria-label="'Role to accept ' + getDisplayName(request.user) + ' as'"
+                  @change="pickRole(request, $event.target.value)"
+                >
+                  <option v-for="role in openRolesOf(request)" :key="role" :value="role">
+                    {{ role }}{{ role.toLowerCase() === String(request.role ?? '').toLowerCase() ? ' (asked)' : '' }}
+                  </option>
+                </select>
+              </div>
+              <span v-if="askedRoleTaken(request)" class="request-role d-block text-caption text-tt-accent">{{ request.role }} was filled, pick another</span>
           </div>
           </div>
         </div>

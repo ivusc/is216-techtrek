@@ -5,9 +5,11 @@ import LoginPanel from '@/components/login/LoginPanel.vue';
 import SignUpPanel from '@/components/login/SignUpPanel.vue';
 import LoginView from '@/views/login/LoginView.vue';
 
+const routing = vi.hoisted(() => ({ query: {} }));
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
-  useRoute: () => ({ query: {} }),
+  useRoute: () => ({ query: routing.query }),
 }));
 
 const LOG_IN_SHOWN = {
@@ -46,7 +48,10 @@ beforeEach(() => {
   wrapper = mount(LoginView, { attachTo: document.body });
 });
 
-afterEach(() => wrapper.unmount());
+afterEach(() => {
+  wrapper.unmount();
+  routing.query = {};
+});
 
 describe('LoginView', () => {
   it('switches between the panels', async () => {
@@ -76,5 +81,13 @@ describe('LoginView', () => {
       .trigger('click');
 
     expect(panels()).toEqual(LOG_IN_SHOWN);
+  });
+
+  it('opens on Sign up when the landing page links to /login?mode=signup', () => {
+    wrapper.unmount();
+    routing.query = { mode: 'signup' };
+    wrapper = mount(LoginView, { attachTo: document.body });
+
+    expect(panels()).toEqual(SIGN_UP_SHOWN);
   });
 });

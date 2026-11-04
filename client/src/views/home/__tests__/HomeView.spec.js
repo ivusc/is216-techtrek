@@ -204,15 +204,17 @@ describe('HomeView', () => {
     const wrapper = await mountView();
     mock.onGet('/teams/requests/incoming').reply(200, []);
 
-    await wrapper.find('button[aria-label="Accept request"]').trigger('click');
+    // the button names the role they asked for
+    await wrapper.find('button[aria-label="Accept as Designer"]').trigger('click');
     await flushPromises();
 
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({ status: 'accepted' });
     expect(wrapper.findComponent(TeamJoinedToast).props()).toMatchObject({
       title: 'Welcome aboard!',
-      message: 'Ezekiel Ng joined Byte Me.',
+      message: 'Ezekiel Ng joined Byte Me as Designer.',
     });
-    expect(wrapper.text()).not.toContain('Designer');
+    // the list reloaded, so the answered request is gone
+    expect(wrapper.find('button[aria-label^="Accept as"]').exists()).toBe(false);
   });
 
   it('declining a request shows no toast', async () => {
@@ -244,7 +246,7 @@ describe('HomeView', () => {
     mock.onPatch('/teams/invites/i1').reply(404, { error: 'Invite not found' });
     const wrapper = await mountView();
 
-    await wrapper.find('button[aria-label="Accept request"]').trigger('click');
+    await wrapper.find('button[aria-label="Accept as Designer"]').trigger('click');
     await flushPromises();
     expect(wrapper.text()).toContain('Could not answer the request: Team is full');
 

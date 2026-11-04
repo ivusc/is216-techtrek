@@ -34,6 +34,7 @@ const reviewSchema = new mongoose.Schema(
     rounds: { type: String, trim: true, maxlength: 300 },
     tips: { type: String, required: true, trim: true, maxlength: 1000 },
     createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date }, // set when the author edits their tips
   },
   { _id: false },
 );

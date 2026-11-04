@@ -1,0 +1,292 @@
+/* The landing page. Colours, fonts, radii and shadows all come from the site's theme (globals.scss),
+   so it matches the rest of TechTrek in light and dark mode. */
+
+:root {
+  --landing-nav-bg: rgba(243, 242, 248, 0.85); /* the page colour, see-through under the sticky bar */
+}
+[data-bs-theme='dark'] {
+  --landing-nav-bg: rgba(18, 17, 32, 0.85);
+}
+
+/* the page scrolls inside this box (the app's main area doesn't scroll on this route) */
+.landing {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--bs-body-bg);
+}
+
+.landing-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* sections leave room for the sticky top bar when a nav link scrolls to them */
+.landing section {
+  scroll-margin-top: 72px;
+}
+.landing-section {
+  padding: 88px 0;
+}
+.section-tinted {
+  background-color: var(--tt-surface-subtle);
+}
+
+.section-head {
+  max-width: 680px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+.eyebrow {
+  color: var(--bs-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.section-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -1px;
+}
+.section-lead {
+  font-size: 1.0625rem;
+  color: var(--bs-secondary-color);
+}
+
+/* ─── scroll reveal: hidden and a little lower until the section scrolls into view ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── hero ─── */
+.hero {
+  padding: 56px 0 72px;
+  background:
+    radial-gradient(circle at 15% 10%, var(--bs-primary-bg-subtle) 0, transparent 40%),
+    var(--bs-body-bg);
+}
+.hero-circle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.hero-circle-sky {
+  width: 520px;
+  height: 520px;
+  top: -220px;
+  right: -160px;
+  background-color: var(--tt-sky-subtle);
+}
+.hero-circle-rose {
+  width: 140px;
+  height: 140px;
+  bottom: 160px;
+  left: -60px;
+  background-color: var(--bs-danger-bg-subtle);
+}
+
+.hero-copy .eyebrow {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background-color: var(--tt-surface);
+  border: 1px solid var(--bs-border-color);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 600;
+}
+.hero-title {
+  font-size: clamp(2.375rem, 5vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -2px;
+}
+.hero-lead {
+  max-width: 520px;
+  font-size: 1.125rem;
+  color: var(--bs-secondary-color);
+}
+
+/* the word that swaps sits on its own line; each new word slides up into place
+   (:key makes Vue re-create it, which plays the animation again) */
+.word-slot {
+  display: block;
+  color: var(--bs-primary);
+}
+.word {
+  display: inline-block;
+  animation: word-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes word-in {
+  from { opacity: 0; transform: translateY(0.4em); }
+}
+
+/* the live numbers under the hero */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+.stat-card {
+  border-radius: 16px;
+  background-color: var(--tt-surface);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(28, 26, 61, 0.06), 0 12px 28px -6px rgba(85, 64, 191, 0.22);
+}
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  font-size: 22px;
+  color: var(--bs-primary);
+  background-color: var(--bs-primary-bg-subtle);
+}
+.stat-loading {
+  color: var(--bs-tertiary-color);
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+
+/* ─── the little things ─── */
+.extra-card {
+  border-radius: 16px;
+  background-color: var(--tt-surface);
+}
+/* once revealed, the card gets the site's usual hover lift back (.card-hover) */
+.extra-card.is-in {
+  transition: opacity 0.6s ease, transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.extra-card.is-in:hover {
+  transform: translateY(-3px);
+}
+.extra-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  color: var(--bs-primary);
+  background-color: var(--bs-primary-bg-subtle);
+  transition: transform 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+}
+.extra-card:hover .extra-icon {
+  transform: rotate(-8deg) scale(1.1);
+  color: #fff;
+  background-color: var(--bs-primary);
+}
+
+/* ─── closing band: the same purple and circles as the log in banner ─── */
+.cta-band {
+  padding: 56px 48px;
+  border-radius: 24px;
+}
+.cta-text {
+  max-width: 520px;
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+.cta-circle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cta-circle-sky {
+  width: 320px;
+  height: 320px;
+  top: -140px;
+  right: -60px;
+  background-color: var(--bs-info);
+}
+.cta-circle-peach {
+  width: 180px;
+  height: 180px;
+  bottom: -90px;
+  right: 180px;
+  background-color: var(--tt-peach);
+}
+.cta-circle-rose {
+  width: 90px;
+  height: 90px;
+  top: 40px;
+  right: 300px;
+  background-color: var(--tt-accent);
+}
+/* the circles drift into place as the band appears */
+.cta-band:not(.is-in) .cta-circle {
+  transform: scale(0.6) translateY(40px);
+}
+
+.landing-footer {
+  border-top: 1px solid var(--bs-border-color);
+}
+
+/* ─── smaller screens ─── */
+@media (max-width: 991.98px) {
+  .landing-section {
+    padding: 64px 0;
+  }
+  .cta-circle-rose,
+  .cta-circle-peach {
+    display: none;
+  }
+}
+@media (max-width: 767.98px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .cta-band {
+    padding: 40px 24px;
+  }
+}
+@media (max-width: 575.98px) {
+  .landing-container {
+    padding: 0 16px;
+  }
+  .hero {
+    padding-top: 32px;
+  }
+  .hero-circle-sky {
+    width: 300px;
+    height: 300px;
+    top: -140px;
+    right: -120px;
+  }
+  .section-head {
+    margin-bottom: 28px;
+  }
+}
+
+/* people who switch off motion: everything is simply there, nothing slides or spins */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal.is-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .word,
+  .stat-loading {
+    animation: none;
+  }
+  .stat-card:hover,
+  .extra-card:hover .extra-icon,
+  .extra-card.is-in:hover,
+  .cta-band:not(.is-in) .cta-circle {
+    transform: none;
+  }
+}

@@ -2,11 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import TeamModal from './TeamModal.vue'
 import { inviteToTeam, fetchTeamInvites, cancelInvite, getErrorMessage } from '@/services/teamService'
-import { getDisplayName } from '@/utils/team'
+import { getDisplayName, uniqueRoles } from '@/utils/team'
 
 // for a team lead: invite friends by SMU email, or share a link that opens the team's join form
 const props = defineProps({
   team: { type: Object, required: true },
+  // opened from a role's open spot: start with that role picked
+  initialRole: { type: String, default: '' },
 })
 
 defineEmits(['close'])
@@ -26,6 +28,17 @@ async function copyLink() {
   copied.value = true
   setTimeout(() => (copied.value = false), 2000)
 }
+
+// a team with open roles invites people for one of them; they get that role when they join
+const openRoles = computed(() => uniqueRoles(props.team.openRoles ?? []))
+function startingRole() {
+  const wanted = props.initialRole.trim().toLowerCase()
+  const fromSpot = openRoles.value.find((open) => open.toLowerCase() === wanted)
+  if (fromSpot) return fromSpot
+  return openRoles.value.length === 1 ? openRoles.value[0] : ''
+}
+const role = ref(startingRole())
+const needsRole = computed(() => openRoles.value.length > 0 && role.value === '')
 
 const email = ref('')
 const message = ref('')
@@ -53,9 +66,15 @@ async function sendInvite() {
     error.value = "Type your friend's @smu.edu.sg email."
     return
   }
+  if (needsRole.value) {
+    error.value = 'Pick which role you are inviting them for.'
+    return
+  }
   isSending.value = true
   try {
-    const created = await inviteToTeam(props.team._id, { userName: address, message: message.value.trim() })
+    const invite = { userName: address, message: message.value.trim() }
+    if (role.value) invite.role = role.value
+    const created = await inviteToTeam(props.team._id, invite)
     justSent.value = getDisplayName(created.user)
     email.value = ''
     message.value = ''
@@ -107,6 +126,25 @@ const statusStyle = {
       <form class="border-top pt-4" @submit.prevent="sendInvite">
         <label for="invite-email" class="small fw-semibold mb-1">Or invite someone on TechTrek</label>
         <p class="text-caption text-body-tertiary mb-2">They'll see your invite at the top of their Teams page.</p>
+
+        <div v-if="openRoles.length > 0" class="mb-3">
+          <p id="invite-role-label" class="small fw-semibold mb-1">Which role are they for?</p>
+          <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-labelledby="invite-role-label">
+            <button
+              v-for="choice in openRoles"
+              :key="choice"
+              type="button"
+              role="radio"
+              :aria-checked="role === choice"
+              class="btn btn-sm rounded-pill"
+              :class="role === choice ? 'bg-primary-subtle border border-primary text-primary-emphasis fw-semibold' : 'bg-white border'"
+              @click="role = choice"
+            >
+              <i class="bi" :class="role === choice ? 'bi-check-lg' : 'bi-person-plus'" aria-hidden="true"></i>
+              {{ choice }}
+            </button>
+          </div>
+        </div>
         <div class="d-flex gap-2 mb-2">
           <div class="position-relative flex-grow-1">
             <i class="bi bi-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-body-tertiary" aria-hidden="true"></i>
@@ -120,7 +158,7 @@ const statusStyle = {
               inputmode="email"
             />
           </div>
-          <button class="btn btn-primary fw-semibold text-nowrap" type="submit" :disabled="isSending || email.trim() === ''">
+          <button class="btn btn-primary fw-semibold text-nowrap" type="submit" :disabled="isSending || email.trim() === '' || needsRole">
             <i class="bi bi-send" aria-hidden="true"></i> {{ isSending ? 'Sending...' : 'Invite' }}
           </button>
         </div>
@@ -142,7 +180,9 @@ const statusStyle = {
         <p class="small fw-semibold mb-2">Invited</p>
         <div class="d-flex flex-column gap-2">
           <div v-for="invite in invites" :key="invite._id" class="d-flex align-items-center gap-2 bg-body-secondary rounded-3 px-3 py-2">
-            <span class="flex-grow-1 min-w-0 text-truncate small fw-medium">{{ getDisplayName(invite.user) }}</span>
+            <span class="flex-grow-1 min-w-0 text-truncate small fw-medium">
+              {{ getDisplayName(invite.user) }}<span v-if="invite.role" class="text-body-secondary fw-normal"> · {{ invite.role }}</span>
+            </span>
             <span class="badge rounded-pill fw-medium" :class="statusStyle[invite.status].css">{{ statusStyle[invite.status].label }}</span>
             <button
               v-if="invite.status === 'pending'"

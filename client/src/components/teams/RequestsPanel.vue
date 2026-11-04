@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import {
   getDisplayName,
   getSchoolLine,
-  timeAgo
+  timeAgo,
+  uniqueRoles
 } from '@/utils/team'
 import { safeHttpUrl } from '@/utils/url'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -15,7 +16,35 @@ const props = defineProps({
   busyId: { type: String, default: '' }
 })
 
-defineEmits(['answer', 'withdraw', 'edit-team'])
+const emit = defineEmits(['answer', 'withdraw', 'edit-team'])
+
+// the open roles of the request's team (unique, in order)
+function openRolesOf(request) {
+  return uniqueRoles(request.team?.openRoles ?? [])
+}
+
+// the role each pending request will be accepted as: the one they asked for while it's still open,
+// otherwise the team's first open role. The lead can change it before accepting.
+const chosenRoles = ref({})
+function roleFor(request) {
+  if (chosenRoles.value[request._id] !== undefined) return chosenRoles.value[request._id]
+  const open = openRolesOf(request)
+  // a team without open roles takes them as they asked
+  if (open.length === 0) return ''
+  return open.find((role) => role.toLowerCase() === String(request.role ?? '').toLowerCase()) ?? open[0]
+}
+function pickRole(request, role) {
+  chosenRoles.value = { ...chosenRoles.value, [request._id]: role }
+}
+// true when the role they asked for has been filled by someone else in the meantime
+function askedRoleTaken(request) {
+  const open = openRolesOf(request)
+  return open.length > 0 && request.role && !open.some((role) => role.toLowerCase() === request.role.toLowerCase())
+}
+
+function accept(request) {
+  emit('answer', request, 'accepted', roleFor(request) || undefined)
+}
 
 const openProfileId = ref('')
 
@@ -42,6 +71,15 @@ const statusClass = {
 }
 
 const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Declined' }
+
+// requests TechTrek closed (not the lead): say why instead of "Declined"
+const closedLabel = { full: 'Team filled up', closed: 'Team closed' }
+function badgeText(request) {
+  return request.closedReason ? closedLabel[request.closedReason] : statusLabel[request.status]
+}
+function badgeClass(request) {
+  return request.closedReason ? 'bg-body-secondary text-body-secondary' : statusClass[request.status]
+}
 </script>
 
 <template>
@@ -69,15 +107,36 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
               </p>
               <span class="text-caption text-body-tertiary text-nowrap">{{ timeAgo(request.createdAt) }}</span>
             </div>
-            <p class="text-caption text-body-tertiary mb-0">
-              {{ getSchoolLine(request.user) }}<template v-if="getSchoolLine(request.user) !== '' && request.role"> · </template><template v-if="request.role">as {{ request.role }}</template>
+            <p v-if="getSchoolLine(request.user) !== ''" class="text-caption text-body-tertiary mb-1">{{ getSchoolLine(request.user) }}</p>
+            <p v-if="request.role" class="mb-0">
+              <span class="asked-role badge rounded-pill fw-semibold">
+                <i class="bi bi-person-badge me-1" aria-hidden="true"></i>{{ request.status === 'accepted' ? 'Joined as' : 'Asking to be' }} {{ request.role }}
+              </span>
             </p>
           </div>
         </div>
 
         <p v-if="request.message" class="small bg-body-secondary rounded-3 p-3 my-3">“{{ request.message }}”</p>
 
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" :class="{ 'mt-3': !request.message }">
+        <!-- pick which open role to accept them into -->
+        <div v-if="request.status === 'pending' && openRolesOf(request).length > 0" class="role-pick rounded-3 p-2 mb-3" :class="{ 'mt-3': !request.message }">
+          <label :for="'accept-role-' + request._id" class="small fw-semibold mb-1">Accept them as</label>
+          <select
+            :id="'accept-role-' + request._id"
+            class="form-select form-select-sm"
+            :value="roleFor(request)"
+            @change="pickRole(request, $event.target.value)"
+          >
+            <option v-for="role in openRolesOf(request)" :key="role" :value="role">
+              {{ role }}{{ role.toLowerCase() === String(request.role ?? '').toLowerCase() ? ' (what they asked for)' : '' }}
+            </option>
+          </select>
+          <p v-if="askedRoleTaken(request)" class="text-caption text-tt-accent mt-1 mb-0">
+            {{ request.role }} has been filled, so pick another open role for them.
+          </p>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" :class="{ 'mt-3': !request.message && !(request.status === 'pending' && openRolesOf(request).length > 0) }">
           <div class="d-flex flex-wrap gap-1">
             <span v-for="skill in getSkills(request)" :key="skill" class="badge rounded-pill fw-normal border bg-transparent text-body">{{ skill }}</span>
           </div>
@@ -86,11 +145,11 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
             <button class="btn btn-sm btn-link fw-semibold text-decoration-none" @click="toggleProfile(request)">View profile</button>
             <template v-if="request.status === 'pending'">
               <button class="btn btn-sm btn-outline-primary fw-semibold" :disabled="busyId === request._id" @click="$emit('answer', request, 'declined')">Decline</button>
-              <button class="btn btn-sm btn-primary fw-semibold" :disabled="busyId === request._id" @click="$emit('answer', request, 'accepted')">
-                <i class="bi bi-check2"></i> Accept
+              <button class="btn btn-sm btn-primary fw-semibold" :disabled="busyId === request._id" @click="accept(request)">
+                <i class="bi bi-check2"></i> {{ roleFor(request) ? 'Accept as ' + roleFor(request) : 'Accept' }}
               </button>
             </template>
-            <span v-else class="badge rounded-pill fw-medium" :class="statusClass[request.status]">{{ statusLabel[request.status] }}</span>
+            <span v-else class="badge rounded-pill fw-medium" :class="badgeClass(request)">{{ badgeText(request) }}</span>
           </div>
         </div>
 
@@ -123,7 +182,7 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
               <template v-if="request.role">Requested as {{ request.role }} · </template>{{ timeAgo(request.createdAt) }}
             </p>
           </div>
-          <span class="badge rounded-pill fw-medium" :class="statusClass[request.status]">{{ statusLabel[request.status] }}</span>
+          <span class="badge rounded-pill fw-medium" :class="badgeClass(request)">{{ badgeText(request) }}</span>
           <button
             v-if="request.status === 'pending'"
             class="btn btn-sm btn-link fw-semibold text-decoration-none"
@@ -170,7 +229,8 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
 
         <div v-for="slot in team.slotsOpen" :key="'slot-' + slot" class="open-slot d-flex align-items-center gap-2 small text-body-secondary rounded-3 p-2 mb-2">
           <i class="bi bi-person-plus"></i>
-          Open slot<template v-if="team.skills.length > 0"> · {{ team.skills.slice(0, 2).join(' or ') }}</template>
+          <template v-if="team.openRoles?.[slot - 1]"><span class="fw-semibold text-primary">{{ team.openRoles[slot - 1] }}</span> · open role</template>
+          <template v-else>Open slot<template v-if="team.skills.length > 0"> · {{ team.skills.slice(0, 2).join(' or ') }}</template></template>
         </div>
 
         <button class="btn btn-sm btn-light fw-semibold align-self-start mt-1" @click="$emit('edit-team', team)">Edit team post</button>
@@ -185,3 +245,14 @@ const statusLabel = { pending: 'Pending', accepted: 'Accepted', declined: 'Decli
     </div>
   </div>
 </template>
+
+<style scoped>
+.asked-role {
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
+  border: 1px solid var(--tt-chip-border);
+}
+.role-pick {
+  background-color: var(--bs-primary-bg-subtle);
+}
+</style>

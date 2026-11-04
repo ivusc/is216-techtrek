@@ -7,13 +7,15 @@ import LoginView from '@/views/login/LoginView.vue';
 import HomeView from '@/views/home/HomeView.vue';
 import OnboardingView from '@/views/onboarding/OnboardingView.vue';
 import ProfileView from '@/views/profile/ProfileView.vue';
+import LandingView from '@/views/landing/LandingView.vue';
 import { useUserStore } from '@/store/user';
 import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/home' },
+    // the public landing page; it scrolls inside itself (noScroll), with no sidebar or page padding (bare)
+    { path: '/', component: LandingView, meta: { bare: true, noScroll: true } },
     { path: '/login', component: LoginView, meta: { guestOnly: true, bare: true, noScroll: true } },
     // bare: no page padding, so the banner reaches the screen edges; noScroll: the page never scrolls
     { path: '/onboarding', component: OnboardingView, meta: { requiresAuth: true, bare: true } },

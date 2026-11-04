@@ -36,6 +36,7 @@ const demoUsers = [
 //        so "Find team" on its card shows the team;
 //        an object = a campus event that isn't on Devpost, open for that many days
 // skills: what the team is looking for
+// openRoles: the role each open spot is for (none = anyone can ask)
 const demoTeams = [
   {
     name: 'Pixel Pushers',
@@ -44,6 +45,7 @@ const demoTeams = [
     members: [{ user: 'ethan', role: 'Backend' }],
     teamSize: 4,
     skills: ['React', 'Node.js', 'Pitching'],
+    openRoles: ['Frontend developer', 'Pitch & demo'],
     pitch: 'Designer + backend dev building a study-buddy app. Need a frontend dev and someone to own the demo pitch.',
   },
   {
@@ -53,6 +55,7 @@ const demoTeams = [
     members: [],
     teamSize: 4,
     skills: ['UI/UX', 'Figma', 'Python'],
+    openRoles: ['UI/UX designer', 'Python API developer', 'Frontend developer'],
     pitch: 'First-timer friendly! I can code the web app, looking for a designer and someone comfortable with Python APIs.',
   },
   {
@@ -62,6 +65,7 @@ const demoTeams = [
     members: [{ user: 'sarah', role: 'Data' }],
     teamSize: 5,
     skills: ['Vue.js', 'JavaScript', 'Pitching'],
+    openRoles: ['Frontend developer', 'Dashboard developer', 'Pitch & storytelling'],
     pitch: 'We have the ML model and the data. Need people to turn it into a dashboard and tell the story to judges.',
   },
   {
@@ -71,6 +75,7 @@ const demoTeams = [
     members: [{ user: 'meiling', role: 'Design' }],
     teamSize: 4,
     skills: ['React', 'Node.js', 'SQL'],
+    openRoles: ['Frontend developer', 'Backend developer'],
     pitch: 'Business + design duo with a fintech idea for students. Looking for two devs to build the prototype.',
   },
   {
@@ -80,6 +85,7 @@ const demoTeams = [
     members: [],
     teamSize: 4,
     skills: ['Python', 'Machine Learning', 'Cloud'],
+    openRoles: ['ML engineer', 'Cloud engineer', 'Security researcher'],
     pitch: 'Security-focused hack: phishing detector for SMU emails. Need ML and cloud deployment help.',
   },
   {
@@ -89,6 +95,7 @@ const demoTeams = [
     members: [],
     teamSize: 3,
     skills: ['Figma', 'UI/UX', 'Project Management'],
+    openRoles: ['UI/UX designer', 'Project manager'],
     pitch: 'Data visualisation of public transport crowding. Looking for a designer and someone to keep us on track.',
   },
   {
@@ -98,6 +105,7 @@ const demoTeams = [
     members: [{ user: 'nadia', role: 'Product' }],
     teamSize: 4,
     skills: ['UI/UX', 'Node.js', 'JavaScript'],
+    openRoles: ['UI/UX designer', 'Backend developer'],
     pitch: 'Building a mobile app that splits group project tasks fairly. Need a designer and a backend dev.',
   },
   {
@@ -107,6 +115,7 @@ const demoTeams = [
     members: [],
     teamSize: 3,
     skills: ['React', 'Figma', 'Pitching'],
+    openRoles: ['Frontend developer', 'Pitch & business'],
     pitch: 'AI study planner that reads your syllabus. The model works - we need a nice front end and a strong pitch.',
   },
   {
@@ -116,6 +125,7 @@ const demoTeams = [
     members: [],
     teamSize: 4,
     skills: ['Python', 'SQL', 'Vue.js'],
+    openRoles: ['Data analyst', 'Frontend developer', 'Backend developer'],
     pitch: 'Visualising hawker centre prices across Singapore. Looking for people who can wrangle data and build the site.',
   },
   {
@@ -125,6 +135,7 @@ const demoTeams = [
     members: [{ user: 'meiling', role: 'Design' }],
     teamSize: 4,
     skills: ['Cloud', 'Cybersecurity', 'Machine Learning'],
+    openRoles: ['Cloud engineer', 'Security engineer'],
     pitch: 'Secure file sharing for student clubs. Need help with cloud deployment and keeping it safe.',
   },
   {
@@ -143,6 +154,7 @@ const demoTeams = [
     members: [{ user: 'chloe', role: 'Research' }],
     teamSize: 4,
     skills: ['Python', 'React', 'UI/UX'],
+    openRoles: ['Full-stack developer', 'User researcher'],
     pitch: 'Law + business students with a legal-aid chatbot idea. Looking for two builders who like talking to users.',
   },
 ];
@@ -168,6 +180,18 @@ const SKILL_SETS = [
   ['JavaScript', 'React', 'Data Analysis'],
 ];
 
+// the roles a generated team needs, matching SKILL_SETS one for one
+const ROLE_SETS = [
+  ['Frontend developer', 'Backend developer', 'UI/UX designer'],
+  ['ML engineer', 'Python developer', 'Pitch & business'],
+  ['Frontend developer', 'UI/UX designer', 'Full-stack developer'],
+  ['Data analyst', 'Python developer', 'Data engineer'],
+  ['Mobile developer', 'Backend developer', 'UI/UX designer'],
+  ['Cloud engineer', 'Backend developer', 'Security engineer'],
+  ['UI/UX designer', 'Pitch & business', 'Project manager'],
+  ['Frontend developer', 'Data analyst', 'Full-stack developer'],
+];
+
 // a team for hackathon number `index`; `extra` = 1 for a second team on the same hackathon
 function generatedTeam(index, extra, themes) {
   const n = index * 2 + extra;
@@ -182,6 +206,7 @@ function generatedTeam(index, extra, themes) {
     members: n % 3 === 0 && helper !== leader ? [{ user: helper, role: 'Builder' }] : [],
     teamSize: 3 + (n % 3),
     skills: SKILL_SETS[n % SKILL_SETS.length],
+    openRoles: ROLE_SETS[n % ROLE_SETS.length],
     pitch: PITCHES[n % PITCHES.length](theme),
   };
 }
@@ -267,6 +292,7 @@ async function main() {
       closesAt = new Date(Date.now() + team.event.daysOpen * 24 * 60 * 60 * 1000);
     }
     const leader = users[team.leader];
+    const openSpots = team.teamSize - 1 - team.members.length;
     await Team.create({
       name: team.name,
       leaderId: leader._id,
@@ -280,6 +306,7 @@ async function main() {
       ],
       pitch: team.pitch,
       skills: team.skills,
+      openRoles: (team.openRoles ?? []).slice(0, openSpots),
       autoAccept: false,
       status: 'open',
     });

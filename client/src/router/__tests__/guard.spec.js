@@ -23,6 +23,15 @@ afterEach(() => {
 });
 
 describe('router guard', () => {
+  it('lets a guest see the landing page at /', async () => {
+    mock.onGet('/me').reply(200, { isAuthenticated: false, user: null });
+
+    await router.push('/');
+
+    expect(router.currentRoute.value.path).toBe('/');
+    expect(router.currentRoute.value.meta).toMatchObject({ bare: true, noScroll: true });
+  });
+
   it('sends a guest to login with the way back', async () => {
     mock.onGet('/me').reply(200, { isAuthenticated: false, user: null });
 

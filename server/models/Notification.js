@@ -11,6 +11,9 @@ const NOTIFICATION_TYPES = [
   'member-joined', // someone joined my team straight away (auto-accept)
   'member-left', // someone left my team
   'team-deleted', // the leader deleted a team I was in
+  'role-assigned', // the leader gave me a role in their team
+  'team-full', // my pending request or invite was closed because the team filled up
+  'team-closed', // my pending request or invite was closed because the team's closing date passed
 ];
 
 const notificationSchema = new mongoose.Schema(
@@ -21,12 +24,15 @@ const notificationSchema = new mongoose.Schema(
     actorName: { type: String, trim: true, maxlength: 100 },
     teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
     teamName: { type: String, trim: true, maxlength: 100 }, // kept so it still reads well after a team is deleted
+    role: { type: String, trim: true, maxlength: 100 }, // for role-assigned
+    about: { type: String, enum: ['request', 'invite'] }, // for team-full / team-closed: what was closed
     read: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
 
 notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, read: 1 }); // the unread count on the bell
 
 module.exports = mongoose.model('Notification', notificationSchema);
 module.exports.NOTIFICATION_TYPES = NOTIFICATION_TYPES;
