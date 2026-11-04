@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { safeHttpUrl } from '@/utils/url'
 import { getDisplayName, getSchoolLine } from '@/utils/team'
@@ -10,10 +10,13 @@ import { getDisplayName, getSchoolLine } from '@/utils/team'
 const props = defineProps({
   team: { type: Object, required: true },
   // in the request window: me in the first open spot, with the role I picked { id, name, avatarUpdatedAt, role }
-  you: { type: Object, default: null }
+  you: { type: Object, default: null },
+  // team details window: a role change is being saved, or it failed
+  savingRole: { type: Boolean, default: false },
+  roleError: { type: String, default: '' }
 })
 
-const emit = defineEmits(['invite'])
+const emit = defineEmits(['invite', 'assign-role'])
 
 const leaderId = computed(() => String(props.team.leader?._id ?? props.team.leader ?? ''))
 
@@ -27,8 +30,22 @@ const members = computed(() => {
 })
 
 const externalSpots = computed(() => Array.from({ length: props.team.externalMembers ?? 0 }, (_, index) => index))
+// the roles still to fill; in the request window the role I picked is shown on me instead
+const rolesLeft = computed(() => {
+  const roles = [...(props.team.openRoles ?? [])]
+  const mine = String(props.you?.role ?? '').toLowerCase()
+  const index = roles.findIndex((role) => role.toLowerCase() === mine)
+  if (props.you && index !== -1) roles.splice(index, 1)
+  return roles
+})
+
 // when I am shown in the first open spot, there is one fewer empty circle
-const openSpots = computed(() => Array.from({ length: Math.max(props.team.slotsOpen - (props.you ? 1 : 0), 0) }, (_, index) => index))
+const openSpots = computed(() =>
+  Array.from({ length: Math.max(props.team.slotsOpen - (props.you ? 1 : 0), 0) }, (_, index) => ({
+    index,
+    role: rolesLeft.value[index] ?? null
+  }))
+)
 
 function roleOf(member) {
   if (member.isLead) return 'Team lead'
@@ -39,11 +56,46 @@ function roleOf(member) {
 const openId = ref(null)
 const openMember = computed(() => members.value.find((member) => member.user._id === openId.value) ?? null)
 const sharing = computed(() => String(openId.value).startsWith('share'))
+const sharingRole = computed(() => (sharing.value ? openSpots.value.find((spot) => 'share' + spot.index === openId.value)?.role ?? null : null))
 
 function toggle(id) {
   openId.value = openId.value === id ? null : id
   copied.value = false
+  roleSaved.value = false
+  const member = members.value.find((candidate) => candidate.user._id === id)
+  roleDraft.value = member?.role ?? ''
 }
+
+// the lead gives the open member a role
+const isLeader = computed(() => props.team.isLeader === true)
+const roleDraft = ref('')
+const roleSaved = ref(false)
+let waitingForSave = false
+const roleChanged = computed(() => roleDraft.value.trim() !== (openMember.value?.role ?? ''))
+
+function saveRole() {
+  if (!openMember.value || !roleChanged.value) return
+  roleSaved.value = false
+  waitingForSave = true
+  emit('assign-role', { userId: openMember.value.user._id, role: roleDraft.value.trim() })
+}
+
+// the parent swaps in the updated team once it's saved
+watch(
+  () => props.team,
+  () => {
+    if (!waitingForSave) return
+    waitingForSave = false
+    roleSaved.value = true
+    roleDraft.value = openMember.value?.role ?? ''
+  }
+)
+watch(
+  () => props.roleError,
+  (error) => {
+    if (error) waitingForSave = false
+  }
+)
 
 // the Teams page opens the join form for ?team=<id>
 const teamLink = computed(() => window.location.origin + '/teams?team=' + props.team._id)
@@ -110,22 +162,22 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
 
       <!-- empty spots: click to invite someone or share the team -->
       <button
-        v-for="index in openSpots"
-        :key="'open' + index"
+        v-for="spot in openSpots"
+        :key="'open' + spot.index"
         type="button"
         class="person"
-        :class="{ 'is-open': openId === 'share' + index }"
-        :aria-expanded="openId === 'share' + index"
-        aria-label="Invite someone to this open spot"
-        @click="toggle('share' + index)"
+        :class="{ 'is-open': openId === 'share' + spot.index }"
+        :aria-expanded="openId === 'share' + spot.index"
+        :aria-label="spot.role ? 'Invite someone to be the ' + spot.role : 'Invite someone to this open spot'"
+        @click="toggle('share' + spot.index)"
       >
         <span class="person-ring">
           <span class="spot spot-open rounded-circle d-flex align-items-center justify-content-center">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
           </span>
         </span>
-        <span class="person-name fw-semibold text-primary">Open spot</span>
-        <span class="person-role text-caption text-body-secondary">{{ canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
+        <span class="person-name spot-name fw-semibold text-primary">{{ spot.role ?? 'Open spot' }}</span>
+        <span class="person-role text-caption text-body-secondary">{{ spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
       </button>
     </div>
 
@@ -140,6 +192,40 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
           </p>
         </div>
       </div>
+      <!-- the lead gives this person a role -->
+      <form v-if="isLeader" class="role-editor rounded-3 bg-white border p-2 mb-3" @submit.prevent="saveRole">
+        <label :for="'role-' + openMember.user._id" class="small fw-semibold mb-1">Role in the team</label>
+        <div class="d-flex gap-2">
+          <input
+            :id="'role-' + openMember.user._id"
+            v-model="roleDraft"
+            type="text"
+            class="form-control form-control-sm"
+            maxlength="60"
+            :placeholder="openMember.isLead ? 'Team lead' : 'e.g. Backend developer'"
+            @input="roleSaved = false"
+          >
+          <button class="btn btn-sm fw-semibold text-nowrap" :class="roleSaved ? 'btn-success' : 'btn-primary'" type="submit" :disabled="savingRole || (!roleChanged && !roleSaved)">
+            <template v-if="savingRole">Saving…</template>
+            <template v-else-if="roleSaved && !roleChanged"><i class="bi bi-check-lg" aria-hidden="true"></i> Saved</template>
+            <template v-else>Save role</template>
+          </button>
+        </div>
+        <div v-if="(team.openRoles ?? []).length > 0" class="d-flex flex-wrap align-items-center gap-1 mt-2">
+          <span class="text-caption text-body-tertiary">Give an open role:</span>
+          <button
+            v-for="role in [...new Set(team.openRoles)]"
+            :key="role"
+            type="button"
+            class="btn btn-sm rounded-pill bg-primary-subtle border border-primary-subtle text-primary-emphasis py-0 px-2"
+            @click="roleDraft = role; roleSaved = false"
+          >
+            {{ role }}
+          </button>
+        </div>
+        <p v-if="roleError" class="small text-tt-accent mt-2 mb-0" role="alert">{{ roleError }}</p>
+      </form>
+
       <div v-if="openMember.user.skills?.length" class="d-flex flex-wrap gap-1 mb-2">
         <span v-for="skill in openMember.user.skills" :key="skill" class="badge rounded-pill fw-medium bg-white border text-body">{{ skill }}</span>
       </div>
@@ -156,7 +242,10 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
 
     <!-- an open spot was clicked: invite by email (lead) and share the team's link (everyone) -->
     <div v-else-if="sharing" class="people-panel share-panel rounded-3 p-3">
-      <p class="fw-semibold mb-1">{{ canInvite ? 'Fill this spot' : 'Know someone for this spot?' }}</p>
+      <p class="fw-semibold mb-1">
+        <template v-if="sharingRole">{{ canInvite ? 'Find your ' + sharingRole : 'Know a good ' + sharingRole + '?' }}</template>
+        <template v-else>{{ canInvite ? 'Fill this spot' : 'Know someone for this spot?' }}</template>
+      </p>
       <p class="small text-body-secondary mb-3">
         Send them the team link. It opens {{ team.name }} on TechTrek so they can ask to join.
       </p>
@@ -234,6 +323,16 @@ button.person:hover .person-ring {
 .person-name,
 .person-role {
   max-width: 100%;
+}
+/* open role names wrap onto a second line instead of being cut off */
+.spot-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .lead-crown {

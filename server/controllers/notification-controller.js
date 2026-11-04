@@ -9,6 +9,7 @@ function formatNotification(notification) {
     actorName: notification.actorName ?? null,
     teamId: notification.teamId ?? null,
     teamName: notification.teamName ?? null,
+    role: notification.role ?? null,
     read: notification.read,
     createdAt: notification.createdAt,
   };

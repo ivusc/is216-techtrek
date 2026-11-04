@@ -92,4 +92,26 @@ describe('JoinRequestModal', () => {
     // 2 slots open: one is me, one is still free
     expect(wrapper.findAll('[aria-label="Invite someone to this open spot"]')).toHaveLength(1);
   });
+
+  it('asks for one of the open roles when the team lists them', async () => {
+    const wrapper = mountModal({ team: team({ openRoles: ['Frontend developer', 'Designer'] }), mySkills: ['Vue.js'] });
+
+    expect(wrapper.text()).toContain('Which open role are you asking for?');
+    expect(wrapper.findAll('[role="radio"]').map((choice) => choice.text())).toEqual(['Frontend developer', 'Designer']);
+    expect(button(wrapper, 'Send request').attributes('disabled')).toBeDefined();
+    // the other open role still shows as an open circle
+    await wrapper.findAll('[role="radio"]')[1].trigger('click');
+    expect(wrapper.find('.is-you .person-role').text()).toBe('Designer');
+    expect(wrapper.find('[aria-label="Invite someone to be the Frontend developer"]').exists()).toBe(true);
+
+    await button(wrapper, 'Send request').trigger('click');
+    expect(wrapper.emitted('submit')[0][0].role).toBe('Designer');
+  });
+
+  it('picks the only open role straight away', () => {
+    const wrapper = mountModal({ team: team({ openRoles: ['Designer', 'Designer'] }) });
+
+    expect(wrapper.findAll('[role="radio"]')).toHaveLength(1);
+    expect(button(wrapper, 'Send request').attributes('disabled')).toBeUndefined();
+  });
 });

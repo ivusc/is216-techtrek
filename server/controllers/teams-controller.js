@@ -29,6 +29,27 @@ function handleError(res, err, fallback) {
   res.status(500).json({ error: fallback });
 }
 
+const MAX_ROLE_LENGTH = 60;
+
+// the roles a leader typed for their open spots: trimmed, blanks dropped
+function cleanRoles(roles) {
+  if (!Array.isArray(roles)) return [];
+  return roles
+    .map((role) => String(role ?? '').trim().slice(0, MAX_ROLE_LENGTH))
+    .filter((role) => role !== '');
+}
+
+function tooManyRoles(res, team) {
+  const spots = team.slotsOpen === 1 ? '1 open spot' : team.slotsOpen + ' open spots';
+  return res.status(400).json({ error: `You have ${spots}, so list at most ${team.slotsOpen} roles.` });
+}
+
+// the open role a request is for, spelt the way the team wrote it (null = not one of them)
+function matchOpenRole(team, role) {
+  const wanted = String(role ?? '').trim().toLowerCase();
+  return team.openRoles.find((open) => open.toLowerCase() === wanted) ?? null;
+}
+
 function hasValidSlots(teamSize, openSlots, memberCount, fewestOpen) {
   return (
     Number.isInteger(teamSize) &&
@@ -97,6 +118,7 @@ function formatTeam(team, userId, requestStatus = null) {
     slotsOpen: team.slotsOpen,
     pitch: team.pitch,
     skills: team.skills,
+    openRoles: team.openRoles ?? [],
     autoAccept: team.autoAccept,
     status: team.status,
     leader: team.leaderId,
@@ -200,6 +222,10 @@ async function createTeam(req, res) {
       return res.status(400).json({ error: 'Invalid slots configuration' });
     }
 
+    if (cleanRoles(data.openRoles).length > openSlots) {
+      return tooManyRoles(res, { slotsOpen: openSlots });
+    }
+
     const team = await Team.create({
       name: data.name,
       leaderId: userId,
@@ -210,6 +236,7 @@ async function createTeam(req, res) {
       members: [{ userId, role: 'Team lead' }],
       pitch: data.pitch,
       skills: cleanSkills(data.skills),
+      openRoles: cleanRoles(data.openRoles),
       autoAccept: Boolean(data.autoAccept),
       status: data.status === 'draft' ? 'draft' : 'open',
     });
@@ -243,6 +270,7 @@ async function updateTeam(req, res) {
     if (data.pitch !== undefined) team.pitch = data.pitch;
     if (data.skills !== undefined) team.skills = cleanSkills(data.skills);
     if (data.autoAccept !== undefined) team.autoAccept = Boolean(data.autoAccept);
+    if (data.openRoles !== undefined) team.openRoles = cleanRoles(data.openRoles);
 
     if (data.teamSize !== undefined || data.openSlots !== undefined) {
       const teamSize = Number(data.teamSize ?? team.teamSize);
@@ -266,6 +294,8 @@ async function updateTeam(req, res) {
       team.event = resolved.event;
       team.closesAt = resolved.closesAt;
     }
+    if (team.openRoles.length > team.slotsOpen) return tooManyRoles(res, team);
+
     const publishing = data.status === 'open' && team.status === 'draft';
     if (publishing) {
       if (team.slotsOpen === 0) {
@@ -284,6 +314,44 @@ async function updateTeam(req, res) {
     res.json(formatTeam(updated, userId));
   } catch (err) {
     handleError(res, err, 'Failed to update team');
+  }
+}
+
+// PATCH /teams/:id/members/:userId  body: { role } - the leader gives a member (or themself) a role
+async function assignRole(req, res) {
+  const { id: teamId, userId: memberId } = req.params;
+  const userId = req.session.user._id;
+  const role = String(req.body?.role ?? '').trim();
+  if (role.length > MAX_ROLE_LENGTH) {
+    return res.status(400).json({ error: `Keep the role under ${MAX_ROLE_LENGTH} characters.` });
+  }
+
+  try {
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (!isLeader(team, userId)) return res.status(403).json({ error: 'Only the team lead can give out roles' });
+
+    const member = team.members.find((candidate) => String(candidate.userId) === String(memberId));
+    if (!member) return res.status(404).json({ error: 'That person is not in this team' });
+
+    const isLead = String(memberId) === String(team.leaderId);
+    const oldRole = member.role;
+    member.role = role || (isLead ? 'Team lead' : undefined);
+    // giving someone a role that was still open means that spot no longer needs filling,
+    // and the role they had before is needed instead (they swapped)
+    const filled = team.fillRole(role);
+    const swappedOut = oldRole && !isLead && oldRole.toLowerCase() !== role.toLowerCase();
+    if (filled && swappedOut) team.openRoles.push(oldRole);
+    await team.save();
+
+    if (role) {
+      await notificationService.notify({ userId: memberId, type: 'role-assigned', actorId: userId, team, role });
+    }
+
+    const updated = await populateTeam(Team.findById(team._id));
+    res.json(formatTeam(updated, userId));
+  } catch (err) {
+    handleError(res, err, 'Failed to update the role');
   }
 }
 
@@ -324,16 +392,26 @@ async function createRequest(req, res) {
       return res.status(409).json({ error: 'This team is not taking requests' });
     }
 
+    // a team with open roles takes requests for one of those roles only
+    let askedRole = role;
+    if (team.openRoles.length > 0) {
+      askedRole = matchOpenRole(team, role);
+      if (!askedRole) {
+        return res.status(400).json({ error: 'Pick one of the open roles: ' + team.openRoles.join(', ') });
+      }
+    }
+
     const request = await TeamRequest.create({
       teamId: team._id,
       userId,
-      role,
+      role: askedRole,
       message,
       shareProfile: shareProfile !== false,
     });
 
     if (team.autoAccept && matchedTeamSkills(user.skills, team.skills).length > 0) {
-      team.members.push({ userId, role });
+      team.members.push({ userId, role: askedRole });
+      team.fillRole(askedRole);
       team.syncStatus();
       await team.save();
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
@@ -378,6 +456,7 @@ async function respondToRequest(req, res) {
 
     if (status === 'accepted') {
       team.members.push({ userId: answered.userId, role: answered.role });
+      team.fillRole(answered.role);
       team.syncStatus();
       await team.save();
       await applicationService.markTeamFormed(answered.userId, team.event?.opportunityId);
@@ -621,6 +700,7 @@ async function respondToInvite(req, res) {
 
     if (status === 'accepted') {
       team.members.push({ userId, role: answered.role });
+      team.fillRole(answered.role);
       team.syncStatus();
       await team.save();
       await applicationService.markTeamFormed(userId, team.event?.opportunityId);
@@ -651,7 +731,10 @@ async function leaveTeam(req, res) {
     }
     if (!isMember(team, userId)) return res.status(409).json({ error: 'You are not in this team' });
 
+    const leaving = team.members.find((member) => String(member.userId) === String(userId));
     team.members = team.members.filter((member) => String(member.userId) !== String(userId));
+    // their role is needed again
+    if (leaving.role && team.openRoles.length < team.slotsOpen) team.openRoles.push(leaving.role);
     team.syncStatus();
     await team.save();
     // the old accepted request would stop them asking to join again later
@@ -683,6 +766,7 @@ async function cancelInvite(req, res) {
 }
 
 module.exports = {
+  assignRole,
   leaveTeam,
   getTeams,
   getMyTeams,

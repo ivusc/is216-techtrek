@@ -285,7 +285,7 @@ onMounted(() => dialog.value.focus())
           </div>
 
           <!-- tips I shared: shown in full, with Edit and Delete -->
-          <section v-if="review" ref="tipsCard" class="tips-card rounded-3 p-3" aria-labelledby="my-tips-title">
+          <section v-if="review" ref="tipsCard" class="tips-card rounded-3 p-3" :class="{ 'just-saved': tipsJustSaved }" aria-labelledby="my-tips-title">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
               <i class="bi bi-chat-quote-fill text-primary" aria-hidden="true"></i>
               <h3 id="my-tips-title" class="h6 fw-semibold mb-0">Your interview tips</h3>
@@ -362,6 +362,14 @@ onMounted(() => dialog.value.focus())
   background-color: var(--bs-primary-bg-subtle);
   border: 1px solid var(--bs-primary-border-subtle);
 }
+/* right after saving, the card glows twice so it's clear the new tips are in */
+.tips-card.just-saved {
+  animation: card-glow 1.2s ease-out 0.2s 2;
+}
+@keyframes card-glow {
+  0% { box-shadow: 0 0 0 0 rgba(91, 63, 228, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(91, 63, 228, 0); }
+}
 .tips-saved {
   animation: saved-pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.4);
 }
@@ -369,7 +377,15 @@ onMounted(() => dialog.value.focus())
   from { opacity: 0; transform: scale(0.9); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tips-saved { animation: none; }
+  /* right after saving, the card glows twice so it's clear the new tips are in */
+.tips-card.just-saved {
+  animation: card-glow 1.2s ease-out 0.2s 2;
+}
+@keyframes card-glow {
+  0% { box-shadow: 0 0 0 0 rgba(91, 63, 228, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(91, 63, 228, 0); }
+}
+.tips-saved { animation: none; }
 }
 .tips-text {
   white-space: pre-line;

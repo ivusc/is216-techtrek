@@ -157,6 +157,14 @@ const matchCount = computed(() => {
 })
 
 // Browse teams = my own published teams first (so a new team shows up here straight away), then everyone else's
+// a team changed (e.g. the lead gave someone a role): swap in the new copy wherever it is shown
+function replaceTeam(updated) {
+  for (const list of [teams, myTeams]) {
+    const index = list.value.findIndex((team) => team._id === updated._id)
+    if (index !== -1) list.value[index] = updated
+  }
+}
+
 const myTeamIds = computed(() => new Set(myTeams.value.map((team) => team._id)))
 const browseTeams = computed(() => [...myTeams.value.filter((team) => team.status !== 'draft'), ...teams.value])
 
@@ -578,6 +586,7 @@ onUnmounted(() => {
                 @edit="openCreate(team)"
                 @view-requests="activeTab = 'requests'"
                 @leave="askToLeave(team)"
+                @updated="replaceTeam"
               />
             </div>
           </div>
@@ -599,6 +608,7 @@ onUnmounted(() => {
                 @view-requests="activeTab = 'requests'"
                 @invite="inviteTeam = team"
                 @leave="askToLeave(team)"
+                @updated="replaceTeam"
               />
             </div>
           </div>

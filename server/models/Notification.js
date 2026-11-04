@@ -11,6 +11,7 @@ const NOTIFICATION_TYPES = [
   'member-joined', // someone joined my team straight away (auto-accept)
   'member-left', // someone left my team
   'team-deleted', // the leader deleted a team I was in
+  'role-assigned', // the leader gave me a role in their team
 ];
 
 const notificationSchema = new mongoose.Schema(
@@ -21,6 +22,7 @@ const notificationSchema = new mongoose.Schema(
     actorName: { type: String, trim: true, maxlength: 100 },
     teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
     teamName: { type: String, trim: true, maxlength: 100 }, // kept so it still reads well after a team is deleted
+    role: { type: String, trim: true, maxlength: 100 }, // for role-assigned
     read: { type: Boolean, default: false },
   },
   { timestamps: true },

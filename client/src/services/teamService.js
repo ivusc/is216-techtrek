@@ -85,6 +85,12 @@ export async function answerInvite(inviteId, status) {
   return response.data;
 }
 
+// the team lead gives a member (or themself) a role; returns the updated team
+export async function assignRole(teamId, userId, role) {
+  const response = await serverAPI.patch(BASE_URL + '/' + teamId + '/members/' + userId, { role });
+  return response.data;
+}
+
 export function getErrorMessage(error) {
   return error.response?.data?.error ?? error.message;
 }

@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import TeamModal from './TeamModal.vue'
 import TeamPeople from './TeamPeople.vue'
 import { useUserStore } from '@/store/user'
 import { formatDate } from '@/utils/date'
 import { getDisplayName, getEventBadgeClass, sameSkill } from '@/utils/team'
+import { assignRole, getErrorMessage } from '@/services/teamService'
 
 // everything about one team: who is already in it (with their role and profile), how many more
 // people it needs, and what skills it is looking for
@@ -13,7 +14,7 @@ const props = defineProps({
   canRequest: { type: Boolean, default: false } // show "Request to join"
 })
 
-defineEmits(['close', 'request', 'invite'])
+const emit = defineEmits(['close', 'request', 'invite', 'updated'])
 
 const filled = computed(() => props.team.teamSize - props.team.slotsOpen)
 
@@ -21,6 +22,20 @@ const neededText = computed(() => {
   if (props.team.slotsOpen === 0) return 'Team is full'
   return props.team.slotsOpen === 1 ? '1 more person needed' : props.team.slotsOpen + ' more people needed'
 })
+
+// the lead gives someone a role: save it, then hand the updated team to the page
+const savingRole = ref(false)
+const roleError = ref('')
+async function saveRole({ userId, role }) {
+  savingRole.value = true
+  roleError.value = ''
+  try {
+    emit('updated', await assignRole(props.team._id, userId, role))
+  } catch (error) {
+    roleError.value = getErrorMessage(error)
+  }
+  savingRole.value = false
+}
 
 // wanted skills I have (from my profile) get a tick
 const auth = useUserStore()
@@ -51,7 +66,14 @@ function isMine(skill) {
     </div>
 
     <h3 class="h5 fw-semibold mb-3">Who's in the team</h3>
-    <TeamPeople :team="team" class="mb-4" @invite="$emit('invite')" />
+    <TeamPeople
+      :team="team"
+      :saving-role="savingRole"
+      :role-error="roleError"
+      class="mb-4"
+      @invite="$emit('invite')"
+      @assign-role="saveRole"
+    />
 
     <template v-if="team.skills.length > 0">
       <h3 class="h5 fw-semibold mb-2">Skills they're looking for</h3>

@@ -7,7 +7,7 @@ import {
   updateApplicationService,
   updateReviewService,
 } from '@/services/trackerService';
-import { defineStore } from 'pinia';
+import { acceptHMRUpdate, defineStore } from 'pinia';
 import { ref } from 'vue';
 
 export const useApplicationsStore = defineStore('applications', () => {
@@ -115,17 +115,17 @@ export const useApplicationsStore = defineStore('applications', () => {
     }
   }
 
-  // shares new tips, or saves changes when this application already has them.
+  // shares new tips, or saves changes to tips already shared. The form says which one it is
+  // (editing = true), so an edit is never sent as a second share.
   // Returns the updated application, or null when it failed.
-  async function submitReview(id, review) {
+  async function submitReview(id, review, editing = false) {
     isSaving.value = true;
     status.value = null;
-    const index = applications.value.findIndex((item) => item._id === id);
-    const editing = Boolean(applications.value[index]?.review);
 
     try {
       const reviewed = editing ? await updateReviewService(id, review) : await addReviewService(id, review);
-      applications.value[index] = reviewed;
+      const index = applications.value.findIndex((item) => item._id === id);
+      if (index !== -1) applications.value[index] = reviewed;
       dismissCelebration();
       return reviewed;
     } catch (error) {
@@ -189,3 +189,8 @@ export const useApplicationsStore = defineStore('applications', () => {
     deleteReview,
   };
 });
+
+// while developing, edits to this file replace the running store instead of keeping the old code
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useApplicationsStore, import.meta.hot));
+}

@@ -17,7 +17,21 @@ const emit = defineEmits(['close', 'submit'])
 
 const MAX_MESSAGE = 500
 
-const role = ref(props.team.skills.find((skill) => props.mySkills.some((mine) => sameSkill(mine, skill))) ?? '')
+// a team with open roles takes requests for one of those roles; otherwise pick a skill they want
+const openRoles = [...new Set(props.team.openRoles ?? [])]
+const hasOpenRoles = openRoles.length > 0
+const choices = hasOpenRoles ? openRoles : props.team.skills
+
+function startingRole() {
+  if (hasOpenRoles) {
+    // only one role going, or a role named after one of my skills
+    if (openRoles.length === 1) return openRoles[0]
+    return openRoles.find((open) => props.mySkills.some((mine) => sameSkill(mine, open))) ?? ''
+  }
+  return props.team.skills.find((skill) => props.mySkills.some((mine) => sameSkill(mine, skill))) ?? ''
+}
+
+const role = ref(startingRole())
 const message = ref('')
 const shareProfile = ref(true)
 
@@ -41,20 +55,26 @@ function send() {
     <p class="small fw-semibold mb-2">Who's in the team</p>
     <TeamPeople :team="team" :you="you" class="mb-4" />
 
-    <p v-if="team.skills.length === 0" class="small text-body-secondary mb-3">Anyone keen to join can ask. No particular skills needed.</p>
+    <p v-if="choices.length === 0" class="small text-body-secondary mb-3">Anyone keen to join can ask. No particular skills needed.</p>
 
-    <div v-if="team.skills.length > 0" class="mb-3">
-      <p class="small fw-semibold mb-2">Which role would you take?</p>
-      <div class="d-flex flex-wrap gap-2">
+    <div v-if="choices.length > 0" class="mb-3">
+      <p class="small fw-semibold mb-1">{{ hasOpenRoles ? 'Which open role are you asking for?' : 'Which role would you take?' }}</p>
+      <p v-if="hasOpenRoles" class="text-caption text-body-tertiary mb-2">
+        {{ getDisplayName(team.leader) }} is looking for these roles. Pick the one you'd fill.
+      </p>
+      <div class="d-flex flex-wrap gap-2" role="radiogroup" :aria-label="hasOpenRoles ? 'Open roles' : 'Roles'">
         <button
-          v-for="skill in team.skills"
-          :key="skill"
+          v-for="choice in choices"
+          :key="choice"
           type="button"
+          role="radio"
+          :aria-checked="role === choice"
           class="btn btn-sm rounded-pill"
-          :class="role === skill ? 'bg-primary-subtle border border-primary text-primary-emphasis fw-semibold' : 'bg-white border'"
-          @click="role = skill"
+          :class="role === choice ? 'bg-primary-subtle border border-primary text-primary-emphasis fw-semibold' : 'bg-white border'"
+          @click="role = choice"
         >
-          {{ skill }}
+          <i v-if="hasOpenRoles" class="bi" :class="role === choice ? 'bi-check-lg' : 'bi-person-plus'" aria-hidden="true"></i>
+          {{ choice }}
         </button>
       </div>
     </div>
@@ -81,7 +101,7 @@ function send() {
 
     <template #footer>
       <button class="btn btn-sm btn-outline-primary fw-semibold px-3" @click="$emit('close')">Cancel</button>
-      <button class="btn btn-sm btn-primary fw-semibold px-3" :disabled="busy || (team.skills.length > 0 && role === '')" @click="send">
+      <button class="btn btn-sm btn-primary fw-semibold px-3" :disabled="busy || (choices.length > 0 && role === '')" @click="send">
         <i class="bi bi-send"></i> {{ busy ? 'Sending...' : 'Send request' }}
       </button>
     </template>

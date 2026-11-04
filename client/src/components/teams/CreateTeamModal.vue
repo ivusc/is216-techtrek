@@ -94,6 +94,34 @@ const openSlots = ref(isEditing ? Math.max(props.team.slotsOpen, fewestSlots) : 
 const pitch = ref(isEditing ? props.team.pitch : '')
 const skills = ref(isEditing ? [...props.team.skills] : [])
 const autoAccept = ref(isEditing ? props.team.autoAccept : false)
+
+// one role box per open spot; people asking to join pick one of the filled-in roles
+const ROLE_IDEAS = ['Frontend developer', 'Backend developer', 'Full-stack developer', 'UI/UX designer', 'Data / ML', 'Pitch & business']
+const MAX_ROLE = 60
+const roles = ref(isEditing ? [...(props.team.openRoles ?? [])] : [])
+function fitRoles() {
+  while (roles.value.length < openSlots.value) roles.value.push('')
+  roles.value.length = openSlots.value
+}
+fitRoles()
+watch(openSlots, fitRoles)
+
+const filledRoles = computed(() => roles.value.map((role) => role.trim()).filter((role) => role !== ''))
+
+// an idea chip fills the first empty box (or clears that role if it's already in)
+function toggleRoleIdea(idea) {
+  const index = roles.value.findIndex((role) => role.trim().toLowerCase() === idea.toLowerCase())
+  if (index !== -1) {
+    roles.value[index] = ''
+    return
+  }
+  const empty = roles.value.findIndex((role) => role.trim() === '')
+  if (empty !== -1) roles.value[empty] = idea
+}
+function hasRole(idea) {
+  return roles.value.some((role) => role.trim().toLowerCase() === idea.toLowerCase())
+}
+const rolesFull = computed(() => roles.value.every((role) => role.trim() !== ''))
 const formError = ref('')
 
 const teamSizeOptions = computed(() => {
@@ -140,6 +168,7 @@ function submit(status) {
     openSlots: openSlots.value,
     pitch: pitch.value,
     skills: skills.value,
+    openRoles: filledRoles.value,
     autoAccept: autoAccept.value,
     status: status
   }
@@ -214,6 +243,42 @@ const showDelete = isEditing && props.team.status !== 'draft'
       <p class="text-caption text-body-tertiary text-end mb-0 mt-1">{{ pitch.length }} / {{ MAX_PITCH }}</p>
     </div>
 
+    <fieldset v-if="openSlots > 0" class="mb-3">
+      <legend class="small fw-semibold mb-1">Roles for your open spots <span class="fw-normal text-body-tertiary">(optional)</span></legend>
+      <p class="text-caption text-body-tertiary mb-2">
+        People asking to join pick one of these roles. Leave them blank to take anyone.
+      </p>
+      <div class="row g-2 mb-2">
+        <div v-for="(role, index) in roles" :key="index" class="col-12 col-sm-6">
+          <div class="position-relative">
+            <span class="role-number position-absolute top-50 start-0 translate-middle-y ms-2 rounded-circle d-flex align-items-center justify-content-center" aria-hidden="true">{{ index + 1 }}</span>
+            <input
+              v-model="roles[index]"
+              type="text"
+              class="form-control ps-5"
+              :maxlength="MAX_ROLE"
+              :placeholder="index === 0 ? 'e.g. Frontend developer' : 'e.g. Designer'"
+              :aria-label="'Role for open spot ' + (index + 1)"
+            >
+          </div>
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-1">
+        <button
+          v-for="idea in ROLE_IDEAS"
+          :key="idea"
+          type="button"
+          class="btn btn-sm rounded-pill"
+          :class="hasRole(idea) ? 'bg-primary-subtle border border-primary text-primary-emphasis fw-semibold' : 'bg-white border'"
+          :disabled="!hasRole(idea) && rolesFull"
+          :aria-pressed="hasRole(idea)"
+          @click="toggleRoleIdea(idea)"
+        >
+          <i class="bi" :class="hasRole(idea) ? 'bi-check-lg' : 'bi-plus'" aria-hidden="true"></i> {{ idea }}
+        </button>
+      </div>
+    </fieldset>
+
     <div class="mb-3">
       <label class="small fw-semibold mb-1">Skills you're looking for</label>
       <SkillInput v-model="skills" :suggestions="suggestions" />
@@ -251,3 +316,14 @@ const showDelete = isEditing && props.team.status !== 'draft'
     </template>
   </TeamModal>
 </template>
+
+<style scoped>
+.role-number {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bs-primary);
+  background-color: var(--bs-primary-bg-subtle);
+}
+</style>

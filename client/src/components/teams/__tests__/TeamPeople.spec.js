@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import TeamPeople from '@/components/teams/TeamPeople.vue';
-import { team } from '@/__tests__/fixtures/teams';
+import { team, LEADER, REQUESTER } from '@/__tests__/fixtures/teams';
 
 function mountPeople(overrides = {}) {
   return mount(TeamPeople, { props: { team: team({ slotsOpen: 2, ...overrides }) } });
@@ -34,5 +34,40 @@ describe('TeamPeople', () => {
 
     await wrapper.findAll('.share-panel button').find((button) => button.text() === 'Invite by SMU email').trigger('click');
     expect(wrapper.emitted('invite')).toHaveLength(1);
+  });
+
+  it('names the open spots after the open roles', () => {
+    const wrapper = mountPeople({ openRoles: ['Designer'] });
+    const spots = wrapper.findAll('[aria-label^="Invite someone"]').map((spot) => spot.find('.person-name').text() + ' / ' + spot.find('.person-role').text());
+
+    expect(spots).toEqual(['Designer / Open role', 'Open spot / Could be you']);
+  });
+
+  it('lets the lead give a member a role, with the open roles as shortcuts', async () => {
+    const wrapper = mountPeople({
+      isLeader: true,
+      openRoles: ['Designer'],
+      members: [
+        { user: LEADER, role: 'Team lead' },
+        { user: REQUESTER, role: '' },
+      ],
+    });
+
+    await wrapper.find('[aria-label="See Ezekiel Ng\'s profile"]').trigger('click');
+    await wrapper.findAll('.role-editor button').find((chip) => chip.text() === 'Designer').trigger('click');
+    await wrapper.find('.role-editor').trigger('submit');
+
+    expect(wrapper.emitted('assign-role')).toEqual([[{ userId: REQUESTER._id, role: 'Designer' }]]);
+
+    // once the page hands back the updated team, the button says Saved
+    await wrapper.setProps({ team: { ...wrapper.props('team'), members: [{ user: LEADER, role: 'Team lead' }, { user: REQUESTER, role: 'Designer' }] } });
+    expect(wrapper.find('.role-editor button[type="submit"]').text()).toBe('Saved');
+  });
+
+  it('shows no role editor to members who are not the lead', async () => {
+    const wrapper = mountPeople();
+
+    await wrapper.find('.person').trigger('click');
+    expect(wrapper.find('.role-editor').exists()).toBe(false);
   });
 });

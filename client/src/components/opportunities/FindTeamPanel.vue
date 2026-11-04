@@ -134,6 +134,7 @@ function inviteFromCelebration() {
           :team="team"
           mode="mine"
           @invite="inviteTeam = team"
+          @updated="(updated) => (myTeams[myTeams.findIndex((mine) => mine._id === updated._id)] = updated)"
           @edit="$router.push('/teams')"
           @view-requests="$router.push('/teams')"
         />

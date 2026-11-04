@@ -176,6 +176,7 @@ describe('TeamsView', () => {
     expect(requestsTo('/opportunity/all')).toHaveLength(0);
     expect(JSON.parse(mock.history.post[0].data)).toEqual({
       name: 'Pixel Pushers',
+      openRoles: [],
       teamSize: 5,
       openSlots: 1,
       pitch: 'Design-led team.',
@@ -298,6 +299,7 @@ describe('TeamsView', () => {
     expect(mock.history.patch[0].url).toBe('/teams/m1');
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({
       name: 'Night Owls 2',
+      openRoles: [],
       teamSize: 4,
       openSlots: 2,
       pitch: 'We ship a working demo every weekend.',
@@ -353,6 +355,7 @@ describe('TeamsView', () => {
     expect(mock.history.patch[0].url).toBe('/teams/m1');
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({
       name: 'Night Owls',
+      openRoles: [],
       teamSize: 4,
       openSlots: 2,
       pitch: 'We ship a working demo every weekend.',

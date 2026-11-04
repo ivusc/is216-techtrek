@@ -191,7 +191,7 @@ const thanks = ref(null);
 
 async function saveTips(review) {
   const edited = Boolean(celebration.value.application.review);
-  const saved = await submitReview(celebration.value.application._id, review);
+  const saved = await submitReview(celebration.value.application._id, review, edited);
   if (saved) thanks.value = { key: Date.now(), edited, organisation: saved.opportunityId?.organisation ?? '' };
   if (saved && tipsFromDetails) {
     tipsJustSaved.value = true;

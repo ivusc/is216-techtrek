@@ -21,7 +21,7 @@ const props = defineProps({
   undoing: { type: Boolean, default: false } // true while this team's request is being withdrawn
 })
 
-const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite', 'leave'])
+const emit = defineEmits(['request', 'undo', 'edit', 'view-requests', 'invite', 'leave', 'updated'])
 
 // on Browse, a team I can still join can be asked to join
 const canRequest = computed(() => props.mode === 'browse' && props.team.requestStatus === null && props.team.slotsOpen > 0)
@@ -74,6 +74,15 @@ function isUrgent() {
     </p>
 
     <p class="small text-body-secondary mb-3">{{ team.pitch }}</p>
+
+    <div v-if="(team.openRoles ?? []).length > 0" class="mb-2">
+      <p class="text-overline text-body-tertiary mb-1">OPEN ROLES</p>
+      <div class="d-flex flex-wrap gap-1">
+        <span v-for="(role, index) in team.openRoles" :key="role + index" class="badge rounded-pill fw-semibold open-role-chip">
+          <i class="bi bi-person-plus me-1" aria-hidden="true"></i>{{ role }}
+        </span>
+      </div>
+    </div>
 
     <div v-if="team.skills.length > 0" class="mb-3">
       <p class="text-overline text-body-tertiary mb-1">LOOKING FOR</p>
@@ -155,7 +164,17 @@ function isUrgent() {
         @close="showDetails = false"
         @request="fromDetails('request')"
         @invite="fromDetails('invite')"
+        @updated="$emit('updated', $event)"
       />
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* open roles: a soft lavender, a step stronger than the matched-skill chips below */
+.open-role-chip {
+  color: #3f28b8;
+  background-color: #e2dcfc;
+  border: 1px solid #cbc0f7;
+}
+</style>
