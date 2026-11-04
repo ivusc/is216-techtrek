@@ -12,7 +12,7 @@ const USER = { _id: 'u1', userName: 'kellie.jubela@smu.edu.sg', displayName: 'Ke
 beforeEach(async () => {
   setActivePinia(createPinia());
   Object.assign(useUserStore(), { user: USER, hasCheckedSession: true });
-  await router.push('/dashboard');
+  await router.push('/interview');
   setActivePinia(createPinia());
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
