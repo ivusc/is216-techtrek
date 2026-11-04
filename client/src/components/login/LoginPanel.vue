@@ -14,23 +14,21 @@ const email = ref('');
 const password = ref('');
 const rememberUser = ref(false);
 const errorMessage = ref('');
-const busy = ref(false);
 
 function sameOriginPath(target) {
   return typeof target === 'string' && /^\/(?![/\\])/.test(target) ? target : '/home';
 }
 
 async function submitForm() {
-  if (busy.value) return;
   errorMessage.value = '';
-  const cleanEmail = email.value.trim().toLowerCase();
-  if (cleanEmail.split('@')[1] != 'smu.edu.sg') {
+  if (email.value.includes('@') == false || email.value.split('@')[1] != 'smu.edu.sg') {
     errorMessage.value = 'Please enter a valid SMU email.';
     password.value = '';
     return;
   }
 
-  busy.value = true;
+  const cleanEmail = email.value.trim().toLowerCase();
+
   try {
     await userStore.login(cleanEmail, password.value);
 
@@ -64,8 +62,6 @@ async function submitForm() {
         break;
     }
     console.error(err.response?.data?.error);
-  } finally {
-    busy.value = false;
   }
   password.value = '';
 }
@@ -115,24 +111,29 @@ onMounted(() => {
           placeholder="••••••••••"
         />
       </div>
-      <div class="form-check mb-0">
-        <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
-        <label class="form-check-label fw-normal" for="login-remember">Remember my email</label>
-      </div>
-      <div class="d-flex flex-column gap-3">
-        <div v-if="errorMessage" class="form-error">
-          <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
-          <span role="alert">{{ errorMessage }}</span>
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="form-check mb-0">
+          <input id="login-remember" class="form-check-input" type="checkbox" v-model="rememberUser" />
+          <label class="form-check-label fw-normal" for="login-remember">Remember me</label>
         </div>
-        <button type="submit" class="btn btn-primary btn-auth" :disabled="busy">
-          <span v-if="busy" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-          {{ busy ? 'Logging in…' : 'Log in' }}
-        </button>
+        <a href="#" class="small fw-semibold text-decoration-none" @click.prevent>Forgot password?</a>
       </div>
-      <p class="form-switch-line">
-        New to TechTrek?
-        <button type="button" class="btn btn-link" @click="$emit('switch-to-signup')">Create an account</button>
+      <p v-if="errorMessage" class="errors mb-0" role="alert">{{ errorMessage }}</p>
+      <button type="submit" class="btn btn-primary fw-semibold">Log in</button>
+      <p
+        class="d-flex align-items-center gap-2 bg-primary-subtle text-primary rounded-2 small fw-medium px-3 py-2 mb-0"
+      >
+        <i class="bi bi-lock" aria-hidden="true"></i>
+        Sign-up is limited to @smu.edu.sg emails.
       </p>
+      <div class="d-flex justify-content-center">
+        <a
+          href="#"
+          class="small text-body-secondary link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
+          @click.prevent="$emit('switch-to-signup')"
+          >New to TechTrek? Create an account</a
+        >
+      </div>
     </div>
   </form>
 </template>
