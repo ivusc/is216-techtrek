@@ -1,16 +1,17 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import './tracker.css';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
 import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
 import CalendarView from '@/components/tracker/calendar/CalendarView.vue';
+import TrackerHistory from '@/components/tracker/history/TrackerHistory.vue';
 import ApplicationDetailModal from '@/components/tracker/ApplicationDetailModal.vue';
 import AddApplicationModal from '@/components/tracker/AddApplicationModal.vue';
 import OfferCelebrationModal from '@/components/tracker/OfferCelebrationModal.vue';
 import TipsThanksToast from '@/components/tracker/TipsThanksToast.vue';
 import { trackerStages, hackathonStages } from '@/constants';
-import { isDueThisWeek, isOverdue, isEventType } from '@/utils/application';
+import { isDueThisWeek, isOverdue, isEventType, isArchived } from '@/utils/application';
 import { storeToRefs } from 'pinia';
 import { useApplicationsStore } from '@/store/applications';
 import { buildIcsFile } from '@/utils/calendar';
@@ -31,20 +32,42 @@ const {
 } = applicationStore;
 
 const search = ref('');
-const viewMode = ref('board'); // 'board' or 'calendar'
+const route = useRoute();
+const router = useRouter();
+const viewMode = ref(route.query.view === 'history' ? 'history' : 'board'); // 'board', 'calendar' or 'history'
 const typeFilter = ref(''); // '' = all types
 const deadlineFilter = ref(''); // '' | 'week' | 'overdue'
 const hideRejected = ref(false);
 // which board: jobs & internships, or hackathons & competitions (they have different steps).
 // /tracker?board=hackathons opens the hackathon board
-const board = ref(useRoute().query.board === 'hackathons' ? 'hackathons' : 'jobs');
+const board = ref(route.query.board === 'hackathons' ? 'hackathons' : 'jobs');
 
 // a type filter from the other board would hide everything, so clear it when switching
 watch(board, () => {
   typeFilter.value = '';
 });
 
-onMounted(fetchApplications);
+// /tracker?open=<applicationId> (from a reminder, Home's deadlines or the calendar) opens that card's
+// details once the applications have loaded, on the board it belongs to
+const linkNotFound = ref(false);
+function openFromLink() {
+  const id = route.query.open;
+  if (!id) return;
+  const application = applications.value.find((item) => item._id === id);
+  if (application) {
+    board.value = isEventType(application.opportunityId.type) ? 'hackathons' : 'jobs';
+    openDetails(application);
+  } else {
+    linkNotFound.value = true;
+  }
+}
+
+onMounted(async () => {
+  await fetchApplications();
+  openFromLink();
+});
+// a link clicked while already on the Tracker (e.g. from the bell)
+watch(() => route.query.open, openFromLink);
 onUnmounted(dismissCelebration);
 
 function clearFilters() {
@@ -86,12 +109,34 @@ function onBoard(application, name) {
   return isEventType(application.opportunityId.type) === (name === 'hackathons');
 }
 
-// the board only shows its own kind; the calendar shows both
-const boardApplications = computed(() => filteredApplications.value.filter((application) => onBoard(application, board.value)));
+// the board only shows its own kind (and nothing that moved to History); the calendar shows both
+const activeApplications = computed(() => filteredApplications.value.filter((application) => !isArchived(application)));
+const boardApplications = computed(() => activeApplications.value.filter((application) => onBoard(application, board.value)));
 const boardCounts = computed(() => ({
-  jobs: filteredApplications.value.filter((application) => onBoard(application, 'jobs')).length,
-  hackathons: filteredApplications.value.filter((application) => onBoard(application, 'hackathons')).length,
+  jobs: activeApplications.value.filter((application) => onBoard(application, 'jobs')).length,
+  hackathons: activeApplications.value.filter((application) => onBoard(application, 'hackathons')).length,
 }));
+
+// History: everything that left the board. Only the search and type filters apply here
+// (deadlines and "Hide rejected" are about what's still going on).
+const historyApplications = computed(() => {
+  const keyword = search.value.trim().toLowerCase();
+  return applications.value.filter((application) => {
+    const opportunity = application.opportunityId;
+    if (!isArchived(application)) return false;
+    if (keyword !== '' && !(opportunity.title + ' ' + opportunity.organisation).toLowerCase().includes(keyword)) return false;
+    return typeFilter.value === '' || opportunity.type === typeFilter.value;
+  });
+});
+const historyCount = computed(() => applications.value.filter(isArchived).length);
+
+// "Move to history" from a card's menu, and "Back to board" from History
+const movingId = ref('');
+async function setArchived(applicationId, archived) {
+  movingId.value = applicationId;
+  await updateApplication(applicationId, { archivedAt: archived ? new Date().toISOString() : null });
+  movingId.value = '';
+}
 
 // hackathons have their own columns; "Hide rejected" removes the jobs' Rejected column
 const visibleStages = computed(() => {
@@ -104,7 +149,11 @@ const visibleStages = computed(() => {
   return trackerStages;
 });
 
-const shownApplications = computed(() => (viewMode.value === 'board' ? boardApplications.value : filteredApplications.value));
+const shownApplications = computed(() => {
+  if (viewMode.value === 'board') return boardApplications.value;
+  if (viewMode.value === 'history') return historyApplications.value;
+  return filteredApplications.value;
+});
 const dueThisWeekCount = computed(() => shownApplications.value.filter(isDueThisWeek).length);
 
 function applicationsInStage(status) {
@@ -112,6 +161,11 @@ function applicationsInStage(status) {
 }
 
 //move to a diff status type
+// the card's "Followed up" button: note the date, which hides the nudge for another 14 days
+async function markFollowedUp(applicationId) {
+  await updateApplication(applicationId, { followedUpAt: new Date().toISOString() });
+}
+
 async function moveApplication(applicationId, newStatus) {
   await updateApplicationStatus(applicationId, newStatus);
 }
@@ -162,6 +216,12 @@ function openDetails(application) {
 
 function closeDetails() {
   selectedApplication.value = null;
+  // drop ?open= so a refresh doesn't open it again
+  if (route.query.open) {
+    const rest = { ...route.query };
+    delete rest.open;
+    router.replace({ query: rest });
+  }
 }
 
 // UPDATE changes = { status, notes, interviewAt, deadline }
@@ -220,9 +280,15 @@ async function deleteTips() {
   <div class="p-2 h-100 d-flex flex-column overflow-hidden">
     <PageHeader v-model="search" title="Application tracker" :subtitle="viewMode === 'board'
       ? 'Drag cards between stages. Deadlines sync to your calendar.'
-      : 'Every deadline, interview and hackathon in one month view.'" type="applications" />
+      : viewMode === 'history'
+        ? 'Everything that has finished, newest first.'
+        : 'Every deadline, interview and hackathon in one month view.'" type="applications" />
 
     <div v-if="status" class="alert alert-danger" role="alert">{{ status }}</div>
+    <div v-if="linkNotFound" class="alert alert-warning d-flex align-items-center gap-2" role="status">
+      <span class="flex-grow-1">That application isn't in your tracker any more.</span>
+      <button type="button" class="btn-close" aria-label="Dismiss" @click="linkNotFound = false"></button>
+    </div>
 
     <TrekLoader
       v-if="isLoading"
@@ -232,14 +298,17 @@ async function deleteTips() {
 
     <div v-else class="d-flex flex-column flex-grow-1 min-h-0">
       <TrackerToolbar v-model:view-mode="viewMode" v-model:board="board" v-model:type="typeFilter" v-model:deadline="deadlineFilter"
-        v-model:hide-rejected="hideRejected" :board-counts="boardCounts" :total="shownApplications.length" :due-this-week="dueThisWeekCount"
+        v-model:hide-rejected="hideRejected" :board-counts="boardCounts" :history-count="historyCount" :total="shownApplications.length" :due-this-week="dueThisWeekCount"
         @add="openAddForm('saved')" @clear="clearFilters" />
 
       <div v-if="viewMode === 'board'" class="kanban-board d-flex gap-3 pb-2 flex-grow-1 min-h-0">
         <KanbanColumn v-for="stage in visibleStages" :key="stage.status" :stage="stage"
           :applications="applicationsInStage(stage.status)" @add="openAddForm(stage.status)" @open="openDetails"
-          @move="moveApplication" />
+          @move="moveApplication" @follow-up="markFollowedUp" @archive="(id) => setArchived(id, true)" />
       </div>
+
+      <TrackerHistory v-else-if="viewMode === 'history'" class="flex-grow-1 min-h-0 overflow-auto" :applications="historyApplications"
+        :busy-id="movingId" @open="openDetails" @restore="(application) => setArchived(application._id, false)" />
 
       <CalendarView v-else class="flex-grow-1 min-h-0 overflow-auto" :applications="filteredApplications" @open="openDetails" @export="exportCalendar" />
 

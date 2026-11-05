@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import SideBar from './components/SideBar.vue';
+import DeadlinePrompt from './components/opportunities/DeadlinePrompt.vue';
 import { useUserStore } from '@/store/user.js';
 import { useNotificationStore } from '@/store/notifications.js';
 
@@ -37,6 +38,8 @@ watch(
       </div>
       <RouterView v-else />
     </main>
+    <!-- after tracking a job without a closing date: "When do applications close?" -->
+    <DeadlinePrompt v-if="authStore.isLoggedIn" />
   </div>
 </template>
 

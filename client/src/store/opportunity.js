@@ -3,6 +3,7 @@ import {
   createApplicationService,
   deleteApplicationService,
   fetchAllApplications,
+  updateApplicationService,
 } from '@/services/trackerService';
 import { fetchTeams, getErrorMessage } from '@/services/teamService';
 import { getKey } from '@/utils/opportunity';
@@ -37,6 +38,10 @@ export const useOpportunityStore = defineStore('opportunity', () => {
   }
 
   const savedItems = ref([]);
+
+  // Adzuna jobs come without a closing date, so right after one is tracked we ask for it
+  // (DeadlinePrompt). { applicationId, item } while the question is on screen, null otherwise.
+  const deadlinePrompt = ref(null);
 
   // { "Hackathon title": 3 } - how many teams with open slots each hackathon has, for the "Find team" buttons
   const teamCounts = ref({});
@@ -158,8 +163,13 @@ export const useOpportunityStore = defineStore('opportunity', () => {
         // POST sends back the saved application with its _id, keep the _id so we can delete it later
         const savedApplication = await createApplicationService(item);
         savedItems.value.push({ key: getKey(item), id: savedApplication._id });
+        if (item.type !== 'hackathon' && !item.deadline) {
+          deadlinePrompt.value = { applicationId: savedApplication._id, item };
+        }
       } else {
         await deleteApplicationService(savedItems.value[index].id);
+        // untracked before answering: there is nothing to put a deadline on any more
+        if (deadlinePrompt.value?.applicationId === savedItems.value[index].id) deadlinePrompt.value = null;
         savedItems.value.splice(index, 1);
       }
     } catch (error) {
@@ -168,6 +178,26 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     } finally {
       isSaving.value = false;
     }
+  }
+
+  // the answer to "When do applications close?": saved on the tracked application, so it shows on the
+  // board, the calendar and "due this week". Returns the updated application, or null if it failed.
+  async function saveDeadline(date) {
+    const prompt = deadlinePrompt.value;
+    if (!prompt) return null;
+    try {
+      const updated = await updateApplicationService(prompt.applicationId, { deadline: date });
+      deadlinePrompt.value = null;
+      return updated;
+    } catch (error) {
+      console.error(error);
+      status.value = 'Could not save the deadline: ' + getErrorMessage(error);
+      return null;
+    }
+  }
+
+  function skipDeadline() {
+    deadlinePrompt.value = null;
   }
 
   // counted by event name, the same way the Teams page filters by event
@@ -211,5 +241,8 @@ export const useOpportunityStore = defineStore('opportunity', () => {
     fetchMoreJobs,
     isSaved,
     toggleSave,
+    deadlinePrompt,
+    saveDeadline,
+    skipDeadline,
   };
 });

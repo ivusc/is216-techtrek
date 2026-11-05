@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { PRESET_KEYS } = require('../service/avatar-presets');
 
 // SMU schools a user can pick during onboarding (the client shows the full names)
 const FACULTIES = ['SOA', 'LKCSB', 'SCIS', 'SOE', 'YPHSL', 'SOSS', 'CIS'];
@@ -53,6 +54,10 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // "new opportunities match your skills" alerts: when they were last checked, and the listings
+    // already counted (source:externalId), so the same listing is never announced twice
+    matchAlertsCheckedAt: { type: Date },
+    matchAlertsSeen: { type: [String], default: undefined, select: false },
     openToTeams: {
       type: Boolean,
       required: [true, 'Choose whether to show you in Teammate Finder.'],
@@ -74,9 +79,19 @@ const userSchema = new mongoose.Schema(
         'Use a GitHub profile link like https://github.com/your-username',
       ],
     },
+    // Telegram username (without the @), so teammates can message each other. Only people in the
+    // same team see it.
+    telegram: {
+      type: String,
+      trim: true,
+      match: [/^[A-Za-z][A-Za-z0-9_]{4,31}$/, 'Use your Telegram username: 5 to 32 letters, numbers or _'],
+    },
+    // a profile picture: an uploaded photo (data + contentType), or one of the illustrated
+    // characters (preset, e.g. 'f2', see service/avatar-presets.js). Never both.
     avatar: {
       data: { type: Buffer, select: false },
       contentType: { type: String, select: false },
+      preset: { type: String, enum: PRESET_KEYS },
       updatedAt: Date,
     },
   },

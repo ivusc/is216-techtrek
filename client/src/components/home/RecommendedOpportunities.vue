@@ -1,11 +1,12 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue'
+import TrekLoader from '@/components/TrekLoader.vue'
 import { useOpportunityStore } from '@/store/opportunity'
 import { useApplicationsStore } from '@/store/applications'
-import { isClosed } from '@/utils/opportunity'
+import { getKey, isClosed } from '@/utils/opportunity'
 
 const props = defineProps({
   skills: { type: Array, required: true }
@@ -26,6 +27,10 @@ function matchCount(item) {
   return props.skills.filter((skill) => skillWord(skill) !== '' && text.includes(skillWord(skill))).length
 }
 
+// picks tracked (or untracked) here stay on screen, so their button turns into "Tracked" like on the
+// Opportunities page, instead of the card vanishing and the next pick taking its place
+const keptKeys = ref([])
+
 // best matching open job and best matching open hackathon that are not tracked yet
 const recommended = computed(() => {
   const picks = []
@@ -33,7 +38,7 @@ const recommended = computed(() => {
     let best = null
     let bestScore = -1
     for (const item of list) {
-      if (isClosed(item) || opportunityStore.isSaved(item)) continue
+      if (isClosed(item) || (opportunityStore.isSaved(item) && !keptKeys.value.includes(getKey(item)))) continue
       const score = matchCount(item)
       if (score > bestScore) {
         best = item
@@ -47,6 +52,7 @@ const recommended = computed(() => {
 
 // tracking a pick creates an application, so reload them to update the stat cards and deadlines
 async function trackPick(item) {
+  if (!keptKeys.value.includes(getKey(item))) keptKeys.value.push(getKey(item))
   await opportunityStore.toggleSave(item)
   applicationStore.fetchApplications()
 }
@@ -64,7 +70,14 @@ async function trackPick(item) {
     <p v-if="skills.length === 0" class="small text-body-secondary mb-2">
       Add your skills on the <RouterLink to="/teams">Teams</RouterLink> page to get better matches.
     </p>
-    <p v-if="!opportunityStore.isLoading && recommended.length === 0" class="small text-body-secondary mb-0">
+    <!-- listings take a couple of seconds to arrive: say so, instead of an empty section that suddenly fills -->
+    <TrekLoader
+      v-if="opportunityStore.isLoading && recommended.length === 0"
+      compact
+      title="Finding picks for you"
+      :captions="['Matching listings to your skills…', 'Checking what is still open…']"
+    />
+    <p v-else-if="recommended.length === 0" class="small text-body-secondary mb-0">
       No open picks right now. Browse everything on <RouterLink to="/opportunities">Opportunities</RouterLink>.
     </p>
     <div class="row g-3">

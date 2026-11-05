@@ -4,6 +4,7 @@ import { useUserStore } from '@/store/user';
 import { getErrorMessage } from '@/services/teamService';
 import { toAvatarBlob } from '@/utils/image';
 import UserAvatar from '@/components/UserAvatar.vue';
+import AvatarPicker from '@/components/AvatarPicker.vue';
 import { faculties } from '@/constants';
 
 const displayName = defineModel('displayName', { type: String, required: true });
@@ -17,7 +18,8 @@ defineProps({
   editing: { type: Boolean, default: false },
 });
 
-defineEmits(['edit']);
+// toggle-open: the "Open to teams" switch was clicked (the page saves it straight away)
+defineEmits(['edit', 'toggle-open']);
 
 const schoolLine = computed(() =>
   [year.value ? `Year ${year.value}` : '', course.value, faculty.value || 'SMU']
@@ -49,6 +51,12 @@ function choosePhoto(event) {
 
 function removePhoto() {
   updatePhoto(() => auth.removeAvatar());
+}
+
+// no photo? pick one of the illustrated characters instead
+const pickerOpen = ref(false);
+function pickCharacter(key) {
+  updatePhoto(() => auth.setAvatarPreset(key));
 }
 </script>
 
@@ -87,23 +95,51 @@ function removePhoto() {
         </label>
       </div>
       <p v-if="photoError" class="small text-tt-accent mb-0" role="alert">{{ photoError }}</p>
-      <button
-        v-if="auth.avatarUpdatedAt"
-        type="button"
-        class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
-        :disabled="isUploading"
-        @click="removePhoto"
-      >
-        Remove photo
-      </button>
+      <div class="d-flex flex-wrap justify-content-center column-gap-3">
+        <button
+          type="button"
+          class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
+          :aria-expanded="pickerOpen"
+          aria-controls="profile-avatar-picker"
+          @click="pickerOpen = !pickerOpen"
+        >
+          {{ pickerOpen ? 'Hide characters' : 'Choose a character' }}
+        </button>
+        <button
+          v-if="auth.avatarUpdatedAt"
+          type="button"
+          class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
+          :disabled="isUploading"
+          @click="removePhoto"
+        >
+          {{ auth.avatarPreset ? 'Remove picture' : 'Remove photo' }}
+        </button>
+      </div>
+      <AvatarPicker
+        v-if="pickerOpen"
+        id="profile-avatar-picker"
+        class="w-100 text-start"
+        :selected="auth.avatarPreset"
+        :busy="isUploading"
+        @pick="pickCharacter"
+      />
 
       <template v-if="!editing">
         <h2 class="mb-0 text-break">{{ displayName }}</h2>
         <p class="small text-body-secondary mb-0">{{ schoolLine }}</p>
         <p class="text-caption text-body-tertiary mb-0 text-break">{{ email }}</p>
-        <span v-if="openToTeams" class="badge rounded-pill bg-info-subtle text-body fw-medium">
-          ● Open to teams
-        </span>
+        <!-- a switch: click to show or hide yourself in Teammate Finder -->
+        <button
+          type="button"
+          role="switch"
+          class="open-toggle badge rounded-pill fw-medium border-0"
+          :class="openToTeams ? 'bg-info-subtle text-body' : 'bg-body-secondary text-body-secondary'"
+          :aria-checked="openToTeams"
+          :title="openToTeams ? 'Team leads can find and invite you. Click to hide.' : 'Hidden from Teammate Finder. Click to show.'"
+          @click="$emit('toggle-open')"
+        >
+          {{ openToTeams ? '● Open to teams' : '○ Not open to teams' }}
+        </button>
         <button
           id="profile-edit"
           type="button"
@@ -158,3 +194,19 @@ function removePhoto() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* the Open to teams switch: lifts a little on hover so it reads as clickable */
+.open-toggle {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.open-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(28, 26, 61, 0.12);
+}
+.open-toggle:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+</style>

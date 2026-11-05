@@ -25,4 +25,7 @@ router.get('/requests/sent', teamsController.getSentRequests);
 router.patch('/requests/:id', teamsController.respondToRequest);
 router.delete('/requests/:id', teamsController.withdrawRequest);
 
+// last, so /mine, /invites and /requests/... are not read as a team id
+router.get('/:id', teamsController.getTeam);
+
 module.exports = router;

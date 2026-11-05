@@ -5,6 +5,7 @@ import { typeBadge } from '@/constants'
 import { getMonthlySalary, getPrizeAmount, getPrizeText, getPostedText, getUrgentText, isClosed } from '@/utils/opportunity'
 import { useOpportunityStore } from '@/store/opportunity'
 import MatchMeter from './MatchMeter.vue'
+import { flyToTracker } from '@/utils/flyToTracker'
 
 const props = defineProps({
   items: { type: Array, required: true }, // the filtered results of the open tab
@@ -33,14 +34,13 @@ const savedCount = computed(() => queue.value.slice(0, index.value).filter((item
 
 const cardEl = ref(null)
 
-function trackerIcon() {
-  // the sidebar on laptops, the bottom bar on phones; only one of them is on screen
-  const link = [...document.querySelectorAll('a[href="/tracker"]')].find((a) => a.getClientRects().length > 0)
-  return link?.querySelector('i') ?? link ?? null
-}
-
-// a copy of the card flies to the Tracker icon (save) or off to the left (skip) while the next card comes in
+// a copy of the card flies to the Tracker icon (save, the same "add to cart" flight as the Track
+// buttons) or off to the left (skip) while the next card comes in
 function flyAway(toTracker) {
+  if (toTracker) {
+    flyToTracker(cardEl.value)
+    return
+  }
   const card = cardEl.value
   if (!card?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
@@ -60,36 +60,14 @@ function flyAway(toTracker) {
   ghost.setAttribute('aria-hidden', 'true')
   document.body.appendChild(ghost)
 
-  const target = toTracker ? trackerIcon() : null
-  let animation
-  if (target) {
-    const to = target.getBoundingClientRect()
-    const dx = to.left + to.width / 2 - (from.left + from.width / 2)
-    const dy = to.top + to.height / 2 - (from.top + from.height / 2)
-    animation = ghost.animate(
-      [
-        { transform: 'none', opacity: 1 },
-        { transform: `translate(${dx * 0.15}px, ${dy * 0.15 - 30}px) scale(0.8) rotate(-4deg)`, opacity: 1, offset: 0.3 },
-        { transform: `translate(${dx}px, ${dy}px) scale(0.04)`, opacity: 0.4 }
-      ],
-      { duration: 650, easing: 'cubic-bezier(0.55, 0, 0.7, 0.2)' }
-    )
-  } else {
-    const direction = toTracker ? 1 : -1
-    animation = ghost.animate(
-      [
-        { transform: 'none', opacity: 1 },
-        { transform: `translateX(${direction * 160}px) rotate(${direction * 10}deg)`, opacity: 0 }
-      ],
-      { duration: 300, easing: 'ease-in' }
-    )
-  }
-
-  animation.onfinish = () => {
-    ghost.remove()
-    // the icon gives a little bump when the card lands
-    target?.animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.4)' }, { transform: 'scale(1)' }], { duration: 300 })
-  }
+  const animation = ghost.animate(
+    [
+      { transform: 'none', opacity: 1 },
+      { transform: 'translateX(-160px) rotate(-10deg)', opacity: 0 }
+    ],
+    { duration: 300, easing: 'ease-in' }
+  )
+  animation.onfinish = () => ghost.remove()
 }
 
 function skip() {

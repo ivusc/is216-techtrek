@@ -108,6 +108,7 @@ $modal-content-border-radius: $border-radius-lg;
 $dropdown-bg:        var(--tt-surface);
 $input-bg:           var(--tt-surface);
 $input-border-color: $border-color-translucent;
+$input-placeholder-color: var(--tt-placeholder); // light grey, so a placeholder never reads as typed text
 $input-focus-border-color: $tt-primary;
 $input-focus-box-shadow:   0 0 0 1px $tt-primary; // with the 1px border = "2px primary border" focus, no layout shift
 $form-select-focus-box-shadow: $input-focus-box-shadow;
@@ -140,6 +141,7 @@ $danger-text-emphasis-dark:    #ff9fb3;
 
 // ─── 3. App CSS variables (things Bootstrap has no variable for) ─────────
 :root {
+  --tt-placeholder: #a3a1b8; // placeholder text: clearly lighter than anything typed
   --tt-cream:       #{$tt-cream};
   --tt-peach:       #{$tt-peach};
   --tt-accent:      #{$tt-accent};
@@ -173,6 +175,7 @@ $danger-text-emphasis-dark:    #ff9fb3;
 }
 
 [data-bs-theme="dark"] {
+  --tt-placeholder:    #6c6a85;
   --tt-surface:        #{$body-tertiary-bg-dark};
   --tt-card-header:    #2a2842;
   --tt-cream:          #{$body-bg-dark};
@@ -306,8 +309,9 @@ $danger-text-emphasis-dark:    #ff9fb3;
 .modal-content { box-shadow: $box-shadow-lg; }
 
 // Type scale details: heading weights, line heights, tracking
-h1, .h1 { line-height: 38px; letter-spacing: -1px; }
-h2, .h2 { line-height: 30px; letter-spacing: -.5px; }
+// relative line heights (same 38px / 30px on desktop), so a heading that shrinks and wraps on a phone stays tight
+h1, .h1 { line-height: 1.25; letter-spacing: -1px; }
+h2, .h2 { line-height: 1.35; letter-spacing: -.5px; }
 h3, .h3 { line-height: 26px; letter-spacing: -.25px; font-weight: 600; }
 h4, .h4 { line-height: 22px; font-weight: 600; }
 .display-1 { letter-spacing: -1.5px; }
@@ -344,3 +348,52 @@ h4, .h4 { line-height: 22px; font-weight: 600; }
 html { accent-color: $tt-primary; scrollbar-color: var(--bs-border-color-translucent) transparent; }
 a { text-underline-offset: .18em; }
 .text-stat, .tabular { font-variant-numeric: tabular-nums; }
+
+// "Add to cart" for the tracker (utils/flyToTracker.js): the copy of an opportunity that flies to the
+// Tracker icon, and the "+1" that pops out of the icon when it lands
+.tracker-flight {
+  position: fixed;
+  margin: 0;
+  z-index: 1080;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow: $box-shadow-lg;
+}
+.tracker-plus-one {
+  position: fixed;
+  z-index: 1081;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: var(--tt-accent);
+  pointer-events: none;
+}
+// untracked: the "−1" is grey, not celebratory
+.tracker-minus-one {
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-secondary-bg);
+  border: 1px solid var(--bs-border-color);
+}
+
+// every input and textarea, Bootstrap or not, uses the same light placeholder
+::placeholder {
+  color: var(--tt-placeholder) !important;
+  opacity: 1 !important; // Firefox fades placeholders by default
+}
+
+// ─── 6. Touch screens ─────────────────────────────────────────────────────
+// small buttons and selects are 32px tall, too small for a thumb: 40px on touch screens.
+// Buttons with .p-0 (text links) keep their size, the !important utility wins.
+@media (pointer: coarse) {
+  .btn-sm { --bs-btn-padding-y: .5rem; }
+  .form-select-sm,
+  .form-control-sm { padding-top: .5rem; padding-bottom: .5rem; }
+}
+// iOS Safari zooms the page into any field under 16px when it gets focus
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea { font-size: max(16px, 1em); }
+}

@@ -49,3 +49,14 @@
 .onboarding-card .icon-input .form-control {
   padding-left: 40px;
 }
+
+/* last step: the "Show me in Teammate Finder" choice */
+.open-choice {
+  background-color: var(--bs-secondary-bg);
+}
+
+/* the file input is hidden; its label is the "Upload a photo" button, so show focus on the label */
+.onboarding-photo-input:focus-visible + label {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}

@@ -8,6 +8,10 @@ vi.mock('@/services/notificationService', () => ({
   markAllNotificationsRead: vi.fn(async () => {}),
 }));
 
+vi.mock('@/services/trackerService', () => ({
+  fetchApplicationService: vi.fn(async () => ({ _id: 'a1', status: 'applied', opportunityId: { title: 'Frontend Intern', organisation: 'Acme', type: 'internship' } })),
+}));
+
 import { useNotificationStore } from '@/store/notifications';
 import * as notificationService from '@/services/notificationService';
 import NotificationBell from '@/components/NotificationBell.vue';
@@ -64,6 +68,25 @@ describe('NotificationBell', () => {
       path: '/teams',
       query: { tab: 'requests' },
     });
+  });
+
+  it('opens a deadline reminder as a details card instead of leaving the page', async () => {
+    const store = useNotificationStore();
+    const deadline = new Date(Date.now() + 20 * 3600000).toISOString();
+    store.notifications = [
+      { _id: 'r1', type: 'deadline-reminder', applicationId: 'a1', title: 'Frontend Intern', organisation: 'Acme', deadline, daysLeft: 1, read: false, createdAt: new Date().toISOString() },
+    ];
+    store.unreadCount = 1;
+    const wrapper = mount(NotificationBell, { global: { stubs: { RouterLink } }, attachTo: document.body });
+
+    expect(wrapper.find('.modal').exists()).toBe(false);
+    await wrapper.find('button.notification-item').trigger('click');
+
+    expect(notificationService.markNotificationRead).toHaveBeenCalledWith('r1');
+    expect(wrapper.find('.modal').text()).toContain('Frontend Intern');
+    await wrapper.find('.modal .btn-close').trigger('click');
+    expect(wrapper.find('.modal').exists()).toBe(false);
+    wrapper.unmount();
   });
 
   it('marks everything read', async () => {

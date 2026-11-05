@@ -4,7 +4,8 @@ import { computed, ref } from 'vue'
 const props = defineProps({
   total: { type: Number, required: true }, // applications shown on the board
   dueThisWeek: { type: Number, required: true },
-  boardCounts: { type: Object, default: () => ({ jobs: 0, hackathons: 0 }) }
+  boardCounts: { type: Object, default: () => ({ jobs: 0, hackathons: 0 }) },
+  historyCount: { type: Number, default: 0 } // how many have moved to History
 })
 
 const viewMode = defineModel('viewMode', { type: String, required: true })
@@ -34,7 +35,7 @@ const boardOptions = [
   { value: 'hackathons', label: 'Hackathons & competitions', short: 'Hackathons', icon: 'bi-trophy' }
 ]
 // "Hide rejected" only means something on the jobs board
-const showHideRejected = computed(() => viewMode.value !== 'board' || board.value === 'jobs')
+const showHideRejected = computed(() => viewMode.value === 'calendar' || (viewMode.value === 'board' && board.value === 'jobs'))
 
 const deadlineOptions = [
   { value: '', label: 'Any deadline' },
@@ -60,6 +61,7 @@ const activeFilterCount = computed(() => {
 const summary = computed(() => {
   const isEvents = viewMode.value === 'board' && board.value === 'hackathons'
   const noun = isEvents ? (props.total === 1 ? 'event' : 'events') : props.total === 1 ? 'application' : 'applications'
+  if (viewMode.value === 'history') return props.total + ' in history'
   return props.total + ' ' + noun + ' · ' + props.dueThisWeek + ' due this week'
 })
 </script>
@@ -67,7 +69,7 @@ const summary = computed(() => {
 <template>
   <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
     <!-- board / calendar toggle -->
-    <div class="btn-group bg-body-secondary rounded p-1">
+    <div class="btn-group tracker-views bg-body-secondary rounded p-1">
       <button
         class="btn btn-sm border-0 rounded-1"
         :class="viewMode === 'board' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
@@ -81,6 +83,14 @@ const summary = computed(() => {
         @click="viewMode = 'calendar'"
       >
         <i class="bi bi-calendar me-1"></i> Calendar
+      </button>
+      <button
+        class="btn btn-sm border-0 rounded-1"
+        :class="viewMode === 'history' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
+        @click="viewMode = 'history'"
+      >
+        <i class="bi bi-clock-history me-1"></i> History
+        <span class="badge ms-1 rounded-pill bg-body-secondary text-body-secondary fw-medium">{{ historyCount }}</span>
       </button>
     </div>
 
@@ -133,6 +143,7 @@ const summary = computed(() => {
       </select>
 
       <select
+        v-if="viewMode !== 'history'"
         v-model="deadlineFilter"
         class="form-select form-select-sm rounded-pill w-auto"
         :class="{ 'bg-primary-subtle border-primary text-primary-emphasis': deadlineFilter !== '' }"
@@ -164,3 +175,16 @@ const summary = computed(() => {
     </button>
   </div>
 </template>
+
+<style scoped>
+/* phones: the view toggle spans the row with equal buttons, and the add button is full width */
+@media (max-width: 767.98px) {
+  .tracker-views { width: 100%; }
+  .tracker-views > .btn { flex: 1 1 0; white-space: nowrap; }
+  .btn-cta { width: 100%; }
+}
+/* 320px phones: the labels alone fill the toggle, so the icons go */
+@media (max-width: 399.98px) {
+  .tracker-views .bi { display: none; }
+}
+</style>

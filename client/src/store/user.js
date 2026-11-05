@@ -12,6 +12,8 @@ export const useUserStore = defineStore('user', () => {
   const username = computed(() => user.value?.userName ?? null);
   const displayName = computed(() => user.value?.displayName ?? null);
   const avatarUpdatedAt = computed(() => user.value?.avatar?.updatedAt ?? '');
+  // the illustrated character I picked ('' when I uploaded a photo or have no picture)
+  const avatarPreset = computed(() => user.value?.avatar?.preset ?? '');
   const skills = computed(() => user.value?.skills ?? []);
   const linkedinUrl = computed(() => user.value?.linkedinUrl ?? null);
   const githubUrl = computed(() => user.value?.githubUrl ?? null);
@@ -76,6 +78,10 @@ export const useUserStore = defineStore('user', () => {
     setUser(await userService.removeAvatar());
   }
 
+  async function setAvatarPreset(preset) {
+    setUser(await userService.setAvatarPreset(preset));
+  }
+
   async function deleteMe(password) {
     await userService.deleteMe(password);
     clearSession();
@@ -86,6 +92,7 @@ export const useUserStore = defineStore('user', () => {
     username,
     displayName,
     avatarUpdatedAt,
+    avatarPreset,
     _id,
     skills,
     linkedinUrl,
@@ -104,5 +111,6 @@ export const useUserStore = defineStore('user', () => {
     deleteMe,
     uploadAvatar,
     removeAvatar,
+    setAvatarPreset,
   };
 });

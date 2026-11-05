@@ -7,6 +7,7 @@ import LoginView from '@/views/login/LoginView.vue';
 import HomeView from '@/views/home/HomeView.vue';
 import OnboardingView from '@/views/onboarding/OnboardingView.vue';
 import ProfileView from '@/views/profile/ProfileView.vue';
+import PersonView from '@/views/profile/PersonView.vue';
 import LandingView from '@/views/landing/LandingView.vue';
 import { useUserStore } from '@/store/user';
 import { createRouter, createWebHistory } from 'vue-router';
@@ -21,10 +22,16 @@ const router = createRouter({
     { path: '/onboarding', component: OnboardingView, meta: { requiresAuth: true, bare: true } },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/opportunities', component: OpportunitiesView, meta: { requiresAuth: true } },
+    // a shared listing: the Opportunities page with its details open
+    { path: '/opportunities/:id', component: OpportunitiesView, meta: { requiresAuth: true } },
     { path: '/tracker', component: TrackerView, meta: { requiresAuth: true } },
     { path: '/teams', component: TeamsView, meta: { requiresAuth: true } },
+    // a shared team: the Teams page already opens /teams?team=<id>
+    { path: '/teams/:id', redirect: (to) => ({ path: '/teams', query: { team: to.params.id } }) },
     { path: '/interview', component: InterviewView, meta: { requiresAuth: true } },
     { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
+    // someone else's profile, opened from a team, a request or Teammate Finder
+    { path: '/people/:id', component: PersonView, meta: { requiresAuth: true } },
     { path: '/practice/:applicationId', component: PracticeQuizView, meta: { requiresAuth: true } },
     { path: '/practice/question/:applicationId/:questionId', component: PracticeQuizView, meta: { requiresAuth: true } },
   ],

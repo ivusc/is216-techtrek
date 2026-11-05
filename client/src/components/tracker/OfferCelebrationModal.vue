@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { reviewDifficulties, typeBadge } from '@/constants';
-import ConfettiBurst from '@/components/ConfettiBurst.vue';
+import ConfettiBurst from '@/components/tracker/ConfettiBurst.vue';
 
 const props = defineProps({
   application: { type: Object, required: true },

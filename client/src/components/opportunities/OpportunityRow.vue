@@ -1,6 +1,8 @@
 <script setup>
+import { ref } from 'vue'
 import { formatDate } from '@/utils/date'
 import { typeBadge } from '@/constants'
+import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 import {
   getLocationGroup,
   getMonthlySalary,
@@ -11,13 +13,23 @@ import {
   getPlatform
 } from '@/utils/opportunity'
 
-defineProps({
+const props = defineProps({
   item: { type: Object, required: true },
   saved: { type: Boolean, default: false },
   teamCount: { type: Number, default: 0 } // open teams for this hackathon, shown on "Find team"
 })
 
 const emit = defineEmits(['details', 'toggle-save', 'find-team'])
+
+// Track: a copy of this row flies into the Tracker icon ("add to cart");
+// Tracked (to untrack): a copy flies back out of the Tracker icon into it
+const rowEl = ref(null)
+function track() {
+  if (props.saved) flyFromTracker(rowEl.value)
+  else flyToTracker(rowEl.value)
+  emit('toggle-save')
+}
+
 
 // clicks on the card's own buttons and links are left to them
 function openDetails(event) {
@@ -30,6 +42,7 @@ function openDetails(event) {
   <!-- list view: one row per opportunity, same info as OpportunityCard laid out sideways -->
   <!-- the whole row opens the details panel; its own buttons still do just their job -->
   <div
+    ref="rowEl"
     class="opp-row row-hover"
     tabindex="0"
     :aria-label="'Open details for ' + item.title"
@@ -49,6 +62,9 @@ function openDetails(event) {
         <h3 class="opp-row-title text-truncate mb-0">{{ item.title }}</h3>
         <span class="badge rounded-pill fw-medium flex-shrink-0" :class="typeBadge[item.type]">
           {{ item.type[0].toUpperCase() + item.type.slice(1) }}
+        </span>
+        <span v-if="item.roles?.length" class="badge rounded-pill fw-medium flex-shrink-0 role-tag" :title="'Role: ' + item.roles[0].label">
+          {{ item.roles[0].label }}
         </span>
         <span v-if="getUrgentText(item) !== ''" class="badge rounded-pill fw-medium flex-shrink-0 bg-danger-subtle text-danger-emphasis">
           {{ getUrgentText(item) }}
@@ -90,7 +106,7 @@ function openDetails(event) {
         Find team
         <span v-if="teamCount > 0" class="badge rounded-pill bg-primary ms-1">{{ teamCount }}</span>
       </button>
-      <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="$emit('toggle-save')">
+      <button class="btn btn-sm fw-semibold text-nowrap" :class="saved ? 'btn-light' : 'btn-primary'" @click="track">
         <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
         {{ saved ? 'Tracked' : 'Track' }}
       </button>
@@ -99,6 +115,13 @@ function openDetails(event) {
 </template>
 
 <style scoped>
+/* the job's role (Frontend, Data, ...): the same names as the Role filter */
+.role-tag {
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
+  border: 1px solid var(--tt-chip-border);
+}
+
 .opp-row {
   display: grid;
   /* fixed meta + actions widths so the columns line up from row to row */

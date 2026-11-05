@@ -26,6 +26,8 @@ async function createApplication(userId, opportunity, details) {
     deadline: details.deadline,
     interviewAt: details.interviewAt,
     contactName: details.contactName,
+    appliedAt: details.status === 'applied' ? new Date() : undefined,
+    statusHistory: [{ status: details.status ?? 'saved', at: new Date() }],
   });
 
   return application.populate('opportunityId');
@@ -37,8 +39,18 @@ async function getApplicationById(id, userId) {
   return application;
 }
 
-// Newest first; only filter by status when one is given
-async function getApplications(userId, status) {
+// finished cards move to History 14 days after their last step
+const ARCHIVE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+
+// when the card last moved to a new step (older cards have no history, so their last update is used)
+function lastStepAt(application) {
+  const steps = application.statusHistory ?? [];
+  return steps.length > 0 ? steps[steps.length - 1].at : application.updatedAt;
+}
+
+// Newest first; only filter by status when one is given.
+// Finished cards that have sat for 14 days are moved to History on the way (there is no background job).
+async function getApplications(userId, status, now = new Date()) {
   const filter = { userId: userId };
   if (status) {
     filter.status = status;
@@ -47,10 +59,26 @@ async function getApplications(userId, status) {
   const applications = await Application.find(filter)
     .populate('opportunityId')
     .sort('-updatedAt');
+
+  const due = applications.filter(
+    (application) =>
+      !application.archivedAt &&
+      Application.FINISHED_STATUSES.includes(application.status) &&
+      now - new Date(lastStepAt(application)) >= ARCHIVE_AFTER_MS,
+  );
+  if (due.length > 0) {
+    // timestamps: false, so archiving doesn't count as an update to the card
+    await Application.updateMany(
+      { _id: { $in: due.map((application) => application._id) } },
+      { archivedAt: now },
+      { timestamps: false },
+    );
+    for (const application of due) application.archivedAt = now;
+  }
   return applications;
 }
 
-const EDITABLE_FIELDS = ['status', 'result', 'notes', 'deadline', 'interviewAt', 'contactName', 'checklist'];
+const EDITABLE_FIELDS = ['status', 'result', 'notes', 'deadline', 'interviewAt', 'contactName', 'checklist', 'followedUpAt', 'archivedAt'];
 
 // one read (with the listing) and one save. Each trip to the database costs about 0.2 s on Atlas,
 // so this no longer reads the card twice.
@@ -63,6 +91,15 @@ async function updateApplication(id, userId, changes) {
   if (changes.status !== undefined) {
     checkStatusFits(changes.status, application.opportunityId?.type);
     if (changes.status !== 'results') next.result = null;
+    // moving to Applied starts the follow-up clock again
+    if (changes.status === 'applied' && application.status !== 'applied') application.set('appliedAt', new Date());
+    // a new step: remember it and when it happened (older cards start their history here)
+    if (changes.status !== application.status) {
+      const steps = application.statusHistory ?? [];
+      application.set('statusHistory', [...steps, { status: changes.status, at: new Date() }]);
+      // moving a card to an unfinished step brings it back to the board
+      if (!Application.FINISHED_STATUSES.includes(changes.status)) next.archivedAt = null;
+    }
   }
   for (const field of EDITABLE_FIELDS) {
     if (next[field] !== undefined) application.set(field, next[field]);
@@ -77,7 +114,7 @@ async function markTeamFormed(userId, opportunityId) {
   if (!opportunityId) return;
   await Application.updateOne(
     { userId, opportunityId, status: { $in: ['saved', 'registered'] } },
-    { status: 'team' },
+    { status: 'team', $push: { statusHistory: { status: 'team', at: new Date() } } },
   );
 }
 

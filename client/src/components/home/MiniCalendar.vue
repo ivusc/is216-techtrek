@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { formatTime } from '@/utils/date'
+import { trackerLink } from '@/utils/application'
 
 // events: [{ date, kind, title, organisation }] where kind is 'deadline' or 'interview';
 // each one adds a dot under its day, and clicking a day lists that day's events below the calendar
@@ -149,7 +150,7 @@ function dayLabel(day) {
         <RouterLink
           v-for="(event, index) in selectedEvents"
           :key="index"
-          to="/tracker"
+          :to="trackerLink(event.applicationId)"
           class="mini-event d-flex align-items-center gap-2 rounded-2 px-2 py-1 text-decoration-none text-body"
         >
           <span class="mini-dot rounded-circle flex-shrink-0" :class="'dot-' + event.kind"></span>

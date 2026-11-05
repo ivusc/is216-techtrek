@@ -25,7 +25,7 @@ import LeaveTeamModal from '@/components/teams/LeaveTeamModal.vue'
 import TeamLeftToast from '@/components/teams/TeamLeftToast.vue'
 import DeleteTeamModal from '@/components/teams/DeleteTeamModal.vue'
 import InvitesBanner from '@/components/teams/InvitesBanner.vue'
-import { fetchMyInvites, answerInvite } from '@/services/teamService'
+import { fetchMyInvites, answerInvite, fetchTeam } from '@/services/teamService'
 import { isClosed } from '@/utils/opportunity'
 import { useJoinRequests } from '@/composables/useJoinRequests'
 
@@ -186,7 +186,14 @@ async function openTeamFromLink() {
   } else if (myTeams.value.some((t) => t._id === teamFromLink)) {
     activeTab.value = 'mine'
   } else {
+    // not in the open list (full, closed or gone): look it up so the message can name it
     status.value = 'That team is not taking new members right now.'
+    try {
+      const shared = await fetchTeam(teamFromLink)
+      status.value = `${shared.name} is not taking new members right now.`
+    } catch {
+      status.value = "That team couldn't be found. It may have been deleted."
+    }
   }
 }
 
@@ -447,7 +454,8 @@ const answer = async (request, newStatus, role) => {
   busyRequestId.value = request._id
   try {
     const answered = await answerRequest(request._id, newStatus, role)
-    if (newStatus === 'accepted') {
+    // a different role than they asked for goes to them to OK first; the card then shows it waiting
+    if (newStatus === 'accepted' && answered?.status !== 'pending') {
       showRequestAccepted({ ...request, role: answered?.role ?? role ?? request.role })
     }
     await loadAll(false)
@@ -731,7 +739,8 @@ onUnmounted(() => {
       @close="celebrateTeam = null"
     />
 
-    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null" />
+    <!-- reload quietly on close, so the open-role circles show who was just invited -->
+    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null; loadAll(false)" />
 
     <DeleteTeamModal
       v-if="deletingTeam"

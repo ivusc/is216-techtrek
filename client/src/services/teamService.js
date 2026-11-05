@@ -96,3 +96,9 @@ export async function assignRole(teamId, userId, role) {
 export function getErrorMessage(error) {
   return error.response?.data?.error ?? error.message;
 }
+
+// one team, for a shared link (/teams/<id>)
+export async function fetchTeam(teamId) {
+  const response = await serverAPI.get(`${BASE_URL}/${teamId}`);
+  return response.data;
+}

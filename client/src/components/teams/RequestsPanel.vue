@@ -42,6 +42,16 @@ function askedRoleTaken(request) {
   return open.length > 0 && request.role && !open.some((role) => role.toLowerCase() === request.role.toLowerCase())
 }
 
+// still mine to answer (a role offer I sent is waiting on them instead)
+function needsAnswer(request) {
+  return request.status === 'pending' && request.kind !== 'invite'
+}
+// accepting into another role than the one they asked for sends them an offer to OK
+function isRoleChange(request) {
+  const chosen = roleFor(request)
+  return Boolean(request.role && chosen) && chosen.toLowerCase() !== request.role.toLowerCase()
+}
+
 function accept(request) {
   emit('answer', request, 'accepted', roleFor(request) || undefined)
 }
@@ -58,7 +68,7 @@ const sortedIncoming = computed(() => {
   return [...pending, ...answered]
 })
 
-const pendingCount = computed(() => props.incoming.filter((request) => request.status === 'pending').length)
+const pendingCount = computed(() => props.incoming.filter(needsAnswer).length)
 
 function getSkills(request) {
   return request.user.skills ?? []
@@ -101,14 +111,22 @@ function badgeClass(request) {
           <div class="flex-grow-1 min-w-0">
             <div class="d-flex justify-content-between gap-2">
               <p class="mb-0">
-                <strong>{{ getDisplayName(request.user) }}</strong>
+                <RouterLink v-if="request.shareProfile" :to="'/people/' + request.user._id" class="fw-bold link-body-emphasis link-offset-2 link-underline-opacity-0 link-underline-opacity-75-hover">{{ getDisplayName(request.user) }}</RouterLink>
+                <strong v-else>{{ getDisplayName(request.user) }}</strong>
                 <span class="text-body-secondary"> wants to join </span>
                 <strong class="text-primary">{{ request.team.name }}</strong>
               </p>
               <span class="text-caption text-body-tertiary text-nowrap">{{ timeAgo(request.createdAt) }}</span>
             </div>
             <p v-if="getSchoolLine(request.user) !== ''" class="text-caption text-body-tertiary mb-1">{{ getSchoolLine(request.user) }}</p>
-            <p v-if="request.role" class="mb-0">
+            <!-- I offered a different role: they have to OK it -->
+            <p v-if="request.askedRole" class="mb-0 d-flex flex-wrap align-items-center gap-1">
+              <span class="asked-role badge rounded-pill fw-semibold">
+                <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>{{ request.status === 'accepted' ? 'Joined as' : 'Offered' }} {{ request.role }}
+              </span>
+              <span class="text-caption text-body-tertiary">asked to be {{ request.askedRole }}</span>
+            </p>
+            <p v-else-if="request.role" class="mb-0">
               <span class="asked-role badge rounded-pill fw-semibold">
                 <i class="bi bi-person-badge me-1" aria-hidden="true"></i>{{ request.status === 'accepted' ? 'Joined as' : 'Asking to be' }} {{ request.role }}
               </span>
@@ -119,7 +137,7 @@ function badgeClass(request) {
         <p v-if="request.message" class="small bg-body-secondary rounded-3 p-3 my-3">“{{ request.message }}”</p>
 
         <!-- pick which open role to accept them into -->
-        <div v-if="request.status === 'pending' && openRolesOf(request).length > 0" class="role-pick rounded-3 p-2 mb-3" :class="{ 'mt-3': !request.message }">
+        <div v-if="needsAnswer(request) && openRolesOf(request).length > 0" class="role-pick rounded-3 p-2 mb-3" :class="{ 'mt-3': !request.message }">
           <label :for="'accept-role-' + request._id" class="small fw-semibold mb-1">Accept them as</label>
           <select
             :id="'accept-role-' + request._id"
@@ -132,23 +150,30 @@ function badgeClass(request) {
             </option>
           </select>
           <p v-if="askedRoleTaken(request)" class="text-caption text-tt-accent mt-1 mb-0">
-            {{ request.role }} has been filled, so pick another open role for them.
+            {{ request.role }} has been filled, so pick another open role for them. They'll need to OK it.
+          </p>
+          <p v-else-if="isRoleChange(request)" class="text-caption text-body-secondary mt-1 mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>They asked to be {{ request.role }}, so they'll need to OK {{ roleFor(request) }} before they join.
           </p>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" :class="{ 'mt-3': !request.message && !(request.status === 'pending' && openRolesOf(request).length > 0) }">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" :class="{ 'mt-3': !request.message && !(needsAnswer(request) && openRolesOf(request).length > 0) }">
           <div class="d-flex flex-wrap gap-1">
             <span v-for="skill in getSkills(request)" :key="skill" class="badge rounded-pill fw-normal border bg-transparent text-body">{{ skill }}</span>
           </div>
 
           <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-link fw-semibold text-decoration-none" @click="toggleProfile(request)">View profile</button>
-            <template v-if="request.status === 'pending'">
+            <template v-if="needsAnswer(request)">
               <button class="btn btn-sm btn-outline-primary fw-semibold" :disabled="busyId === request._id" @click="$emit('answer', request, 'declined')">Decline</button>
               <button class="btn btn-sm btn-primary fw-semibold" :disabled="busyId === request._id" @click="accept(request)">
-                <i class="bi bi-check2"></i> {{ roleFor(request) ? 'Accept as ' + roleFor(request) : 'Accept' }}
+                <template v-if="isRoleChange(request)"><i class="bi bi-arrow-left-right"></i> Offer {{ roleFor(request) }}</template>
+                <template v-else><i class="bi bi-check2"></i> {{ roleFor(request) ? 'Accept as ' + roleFor(request) : 'Accept' }}</template>
               </button>
             </template>
+            <span v-else-if="request.status === 'pending'" class="badge rounded-pill fw-medium bg-info-subtle text-body">
+              <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Waiting for their OK
+            </span>
             <span v-else class="badge rounded-pill fw-medium" :class="badgeClass(request)">{{ badgeText(request) }}</span>
           </div>
         </div>
@@ -215,7 +240,7 @@ function badgeClass(request) {
           <UserAvatar :user-id="member.user._id" :name="getDisplayName(member.user)" :avatar-updated-at="member.user.avatar?.updatedAt" :size="32" />
           <div class="min-w-0">
             <p class="small fw-semibold mb-0 text-truncate">
-              {{ getDisplayName(member.user) }}<template v-if="member.user._id === team.leader._id"> (you)</template>
+              <RouterLink :to="'/people/' + member.user._id" class="link-body-emphasis link-offset-2 link-underline-opacity-0 link-underline-opacity-75-hover">{{ getDisplayName(member.user) }}</RouterLink><template v-if="member.user._id === team.leader._id"> (you)</template>
             </p>
             <p class="text-caption text-body-tertiary mb-0">
               {{ member.role || 'Member' }}<template v-if="member.user._id === team.leader._id"> · Leader</template>

@@ -156,6 +156,44 @@ describe('InterviewView', () => {
     expect(third.getComponent(RouterLinkStub).text()).toBe('Retry');
   });
 
+  it('shows each role\'s score trend on its card', async () => {
+    mock.onGet('/interview/dashboard').reply(200, {
+      ...DASHBOARD,
+      trends: [
+        {
+          title: 'Frontend Intern',
+          points: [
+            { completedAt: '2026-11-01T09:00:00Z', score: 5 },
+            { completedAt: '2026-11-03T09:00:00Z', score: 8.5 },
+          ],
+        },
+      ],
+    });
+    const wrapper = await mountDashboard();
+    const cards = wrapper.findAll('article');
+
+    expect(cards[0].find('figcaption').text()).toBe('5 → 8.5 over 2 sessions');
+    expect(cards[1].text()).toContain('Finish a session to start your score trend.');
+  });
+
+  it('shows the first 2 role cards, then the rest after Show more', async () => {
+    const extra = (n) => ({ ...DASHBOARD.applicationCards[0], applicationId: 'x' + n, title: 'Role ' + n });
+    mock.onGet('/interview/dashboard').reply(200, {
+      ...DASHBOARD,
+      applicationCards: [...DASHBOARD.applicationCards, extra(1), extra(2), extra(3)],
+    });
+    const wrapper = await mountDashboard();
+    const more = () => wrapper.findAll('button').find((candidate) => /Show .*(more|fewer)/.test(candidate.text()));
+
+    expect(wrapper.findAll('article')).toHaveLength(2);
+    expect(more().text()).toBe('Show 3 more roles');
+    await more().trigger('click');
+    expect(wrapper.findAll('article')).toHaveLength(5);
+    expect(wrapper.find('.role-cards-scroll').exists()).toBe(true);
+    await more().trigger('click');
+    expect(wrapper.findAll('article')).toHaveLength(2);
+  });
+
   it('filters the bank by search, role, type and difficulty and clears the filters', async () => {
     mock.onGet('/interview/dashboard').reply(200, DASHBOARD);
     const wrapper = await mountDashboard();

@@ -4,6 +4,10 @@ import { useRouter } from 'vue-router'
 import './onboarding.css'
 import BrandBanner from '@/components/login/BrandBanner.vue'
 import SkillPicker from '@/components/SkillPicker.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import AvatarPicker from '@/components/AvatarPicker.vue'
+import { toAvatarBlob } from '@/utils/image'
+import { getErrorMessage } from '@/services/teamService'
 import { useUserStore } from '@/store/user'
 import { faculties } from '@/constants'
 
@@ -11,7 +15,7 @@ const router = useRouter()
 const auth = useUserStore()
 
 const steps = [
-  { title: 'Your name', text: 'So teammates know who they are working with', icon: 'bi-person' },
+  { title: 'Your name', text: 'So teammates know who they are working with and what you are into', icon: 'bi-person' },
   { title: 'Your school', text: 'Shown on your team profile', icon: 'bi-building' },
   { title: 'Your skills', text: 'Matches you with teams looking for them', icon: 'bi-stars' },
 ]
@@ -19,11 +23,37 @@ const step = ref(0) // 0, 1 or 2
 
 // start with what we already know, so people who come back do not retype it
 const name = ref(auth.displayName ?? '')
+// a short intro shown on your profile page (optional, editable on your profile)
+const about = ref(auth.user?.about ?? '')
 const faculty = ref(auth.faculty ?? '')
 const skills = ref([...(auth.skills ?? [])])
+// show me in Teammate Finder, so team leads can find and invite me (on unless they turned it off)
+const openToTeams = ref(auth.user?.openToTeams ?? true)
 
 const errorMessage = ref('')
 const isSaving = ref(false)
+
+// profile picture (optional): upload a photo or pick a character. Saved straight away, like on the profile page.
+const isPhotoSaving = ref(false)
+const photoError = ref('')
+async function updatePhoto(change) {
+  isPhotoSaving.value = true
+  photoError.value = ''
+  try {
+    await change()
+  } catch (error) {
+    photoError.value = getErrorMessage(error)
+  }
+  isPhotoSaving.value = false
+}
+function choosePhoto(event) {
+  const [file] = event.target.files
+  event.target.value = ''
+  if (file) updatePhoto(async () => auth.uploadAvatar(await toAvatarBlob(file)))
+}
+function pickCharacter(key) {
+  updatePhoto(() => auth.setAvatarPreset(key))
+}
 
 const canContinue = computed(() => {
   if (step.value === 0) return name.value.trim() !== ''
@@ -50,8 +80,10 @@ async function next() {
   try {
     await auth.updateMe({
       displayName: name.value.trim(),
+      about: about.value.trim(),
       faculty: faculty.value,
       skills: skills.value,
+      openToTeams: openToTeams.value,
       onboarded: true,
     })
     router.push('/home')
@@ -110,6 +142,34 @@ async function next() {
             <p class="onboarding-subtitle">This is the name teammates see on your team posts and requests.</p>
           </div>
           <div>
+            <p class="form-label small fw-semibold mb-2">Profile picture <span class="fw-normal text-body-tertiary">(optional)</span></p>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <UserAvatar
+                :user-id="auth._id ?? ''"
+                :name="name || auth.user?.userName || '?'"
+                :avatar-updated-at="auth.avatarUpdatedAt"
+                :size="64"
+                class="bg-tt-peach text-body"
+              />
+              <div class="d-flex flex-column align-items-start gap-1">
+                <input
+                  id="onboarding-photo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  class="onboarding-photo-input visually-hidden"
+                  :disabled="isPhotoSaving"
+                  @change="choosePhoto"
+                />
+                <label for="onboarding-photo" class="btn btn-sm btn-outline-primary fw-semibold mb-0">
+                  <i class="bi bi-camera me-1" aria-hidden="true"></i>{{ auth.avatarUpdatedAt && !auth.avatarPreset ? 'Change photo' : 'Upload a photo' }}
+                </label>
+                <span class="text-caption text-body-tertiary">Or pick a character below. You can change it later on your profile.</span>
+              </div>
+            </div>
+            <AvatarPicker :selected="auth.avatarPreset" :busy="isPhotoSaving" @pick="pickCharacter" />
+            <p v-if="photoError" class="small text-tt-accent mb-0 mt-1" role="alert">{{ photoError }}</p>
+          </div>
+          <div>
             <label for="onboarding-name" class="form-label small fw-semibold">Your name</label>
             <div class="icon-input">
               <i class="bi bi-person"></i>
@@ -123,6 +183,21 @@ async function next() {
                 placeholder="e.g. Kellie Jubela"
               />
             </div>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between align-items-baseline">
+              <label for="onboarding-about" class="form-label small fw-semibold">About you <span class="fw-normal text-body-tertiary">(optional)</span></label>
+              <span class="text-caption text-body-tertiary">{{ about.length }} / 500</span>
+            </div>
+            <textarea
+              id="onboarding-about"
+              v-model="about"
+              class="form-control"
+              rows="3"
+              maxlength="500"
+              placeholder="What you study, what you like building and what you're looking for."
+            ></textarea>
+            <p class="text-caption text-body-tertiary mt-1 mb-0">Shown on your profile. You can change it any time.</p>
           </div>
         </template>
 
@@ -157,6 +232,19 @@ async function next() {
             </p>
           </div>
           <SkillPicker v-model="skills" />
+
+          <!-- can be changed any time on the profile page -->
+          <div class="open-choice d-flex align-items-center gap-3 rounded-3 p-3">
+            <div class="flex-grow-1">
+              <label for="onboarding-open" class="d-block small fw-semibold">Show me in Teammate Finder</label>
+              <span class="text-caption text-body-tertiary">
+                Team leads looking for your skills can find and invite you. You can change this on your profile.
+              </span>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input id="onboarding-open" v-model="openToTeams" class="form-check-input" type="checkbox" role="switch" />
+            </div>
+          </div>
         </template>
 
         <p v-if="errorMessage" class="small text-tt-accent mb-0">{{ errorMessage }}</p>

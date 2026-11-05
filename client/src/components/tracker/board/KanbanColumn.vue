@@ -6,8 +6,9 @@ const props = defineProps({
   applications: { type: Array, required: true } // only the applications in this stage
 })
 
-// add = + button or "Add", open = a card was clicked, move = (applicationId, newStatus)
-const emit = defineEmits(['add', 'open', 'move'])
+// add = + button or "Add", open = a card was clicked, move = (applicationId, newStatus),
+// follow-up = (applicationId) the card's "Followed up" button
+const emit = defineEmits(['add', 'open', 'move', 'follow-up', 'archive'])
 
 // a card was dragged onto this column: KanbanCard put its id in dataTransfer
 function onDrop(event) {
@@ -39,6 +40,8 @@ function onDrop(event) {
       :application="application"
       @open="$emit('open', application)"
       @move="(status) => $emit('move', application._id, status)"
+      @follow-up="$emit('follow-up', application._id)"
+      @archive="$emit('archive', application._id)"
     />
 
     <button class="btn btn-sm add-dashed fw-medium text-body-tertiary" type="button" @click="$emit('add')">

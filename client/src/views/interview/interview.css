@@ -18,3 +18,11 @@
   flex: 1 1 20rem;
   min-width: 0;
 }
+
+/* all role cards shown: they scroll inside this box instead of pushing the stats and question bank far down */
+.role-cards-scroll {
+  max-height: 560px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 4px;
+}

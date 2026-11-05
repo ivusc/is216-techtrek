@@ -121,9 +121,23 @@ describe('RequestsPanel', () => {
     const accept = () => wrapper.findAll('button').find((b) => b.text().startsWith('Accept as'));
     expect(accept().text()).toBe('Accept as Designer');
 
+    // a different role becomes an offer they have to OK
     await wrapper.find('select').setValue('Frontend developer');
-    await accept().trigger('click');
+    const offer = wrapper.findAll('button').find((b) => b.text() === 'Offer Frontend developer');
+    expect(wrapper.text()).toContain("They asked to be Designer, so they'll need to OK Frontend developer before they join.");
+    await offer.trigger('click');
     expect(wrapper.emitted('answer')).toEqual([[request, 'accepted', 'Frontend developer']]);
+  });
+
+  it('shows an offered role as waiting for their OK, with nothing for the lead to press', () => {
+    const request = joinRequest({ kind: 'invite', role: 'Frontend developer', askedRole: 'Designer', team: { ...joinRequest().team, openRoles: ['Frontend developer', 'Designer'] } });
+    const wrapper = mountPanel({ incoming: [request] });
+
+    expect(wrapper.text()).toContain('Offered Frontend developer');
+    expect(wrapper.text()).toContain('asked to be Designer');
+    expect(wrapper.text()).toContain('Waiting for their OK');
+    expect(wrapper.findAll('button').some((b) => /Accept|Offer|Decline/.test(b.text()))).toBe(false);
+    expect(wrapper.text()).not.toContain('new');
   });
 
   it('says when the role they asked for has been filled and picks an open one', () => {
@@ -131,7 +145,7 @@ describe('RequestsPanel', () => {
     const wrapper = mountPanel({ incoming: [request] });
 
     expect(wrapper.text()).toContain('Designer has been filled, so pick another open role for them.');
-    expect(wrapper.findAll('button').some((b) => b.text() === 'Accept as Backend developer')).toBe(true);
+    expect(wrapper.findAll('button').some((b) => b.text() === 'Offer Backend developer')).toBe(true);
   });
 
   it('says a request was closed because the team filled up, not that the lead declined it', () => {

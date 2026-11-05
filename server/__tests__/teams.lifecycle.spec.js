@@ -196,7 +196,7 @@ describe('GET /teams', () => {
     ).toEqual({ 'Byte Me': 'pending', 'Not Asked': null });
   });
 
-  it("never exposes anyone's email", async () => {
+  it("never exposes anyone's email to people outside the team", async () => {
     const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
     const member = await loginAs(app, { userName: 'member@smu.edu.sg' });
     const privateRequester = await loginAs(app, { userName: 'private.requester@smu.edu.sg' });
@@ -210,14 +210,30 @@ describe('GET /teams', () => {
 
     const bodies = [
       (await outsider.get('/teams').expect(200)).body,
-      (await leader.get('/teams/mine').expect(200)).body,
       (await leader.get('/teams/requests/incoming').expect(200)).body,
       (await privateRequester.get('/teams/requests/sent').expect(200)).body,
       (await member.get('/teams/requests/sent').expect(200)).body,
     ];
 
-    expect(bodies.map((body) => body.length)).toEqual([1, 1, 2, 1, 1]);
+    expect(bodies.map((body) => body.length)).toEqual([1, 2, 1, 1]);
     expect(JSON.stringify(bodies)).not.toContain('@smu.edu.sg');
+    expect(bodies[0][0].canContact).toBe(false);
+  });
+
+  it('lets people in the same team see how to contact each other', async () => {
+    const leader = await loginAs(app, { userName: 'leader@smu.edu.sg' });
+    const member = await loginAs(app, { userName: 'member@smu.edu.sg' });
+    await member.patch('/me').send({ telegram: '@member_tg' }).expect(200);
+    const team = await post(leader, TEAM);
+    await join(leader, member, team._id);
+
+    const [mine] = (await leader.get('/teams/mine').expect(200)).body;
+
+    expect(mine.canContact).toBe(true);
+    expect(mine.leader.userName).toBe('leader@smu.edu.sg');
+    const joined = mine.members.find((m) => m.user.userName === 'member@smu.edu.sg');
+    // "@member_tg" is saved without the @
+    expect(joined.user.telegram).toBe('member_tg');
   });
 });
 

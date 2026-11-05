@@ -1,11 +1,12 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
 import TeamModal from './TeamModal.vue'
+import CopyLinkButton from '@/components/CopyLinkButton.vue'
 import TeamPeople from './TeamPeople.vue'
 import JoinRequestFields from './JoinRequestFields.vue'
 import { useUserStore } from '@/store/user'
 import { formatDate } from '@/utils/date'
-import { getDisplayName, getEventBadgeClass, sameSkill, joinChoices, startingJoinRole } from '@/utils/team'
+import { emailLink, getDisplayName, getEventBadgeClass, sameSkill, joinChoices, startingJoinRole } from '@/utils/team'
 import { assignRole, sendRequest, getErrorMessage } from '@/services/teamService'
 
 // everything about one team: who is already in it (with their role and profile), how many more
@@ -42,6 +43,27 @@ async function saveRole({ userId, role }) {
 
 // wanted skills I have (from my profile) get a tick
 const auth = useUserStore()
+
+// people in the team can reach each other: email everyone at once, or message someone on Telegram
+const teammates = computed(() =>
+  props.team.canContact ? props.team.members.map((member) => member.user).filter((user) => user._id !== auth._id) : []
+)
+const teamEmails = computed(() => teammates.value.map((user) => user.userName).filter(Boolean))
+// a new Outlook message to all of them, with the team's name as the subject
+const emailEveryone = computed(() => emailLink(teamEmails.value, props.team.name))
+const emailsCopied = ref(false)
+async function copyEmails() {
+  try {
+    await navigator.clipboard.writeText(teamEmails.value.join('; '))
+  } catch {
+    return
+  }
+  emailsCopied.value = true
+  setTimeout(() => (emailsCopied.value = false), 2000)
+}
+const onTelegram = computed(() => teammates.value.filter((user) => user.telegram))
+// my own Telegram: only nudge me to add one when I haven't
+const iHaveTelegram = computed(() => Boolean(auth.user?.telegram))
 
 // "Request to join" opens the request form right here, under the team, instead of a new window
 const requesting = ref(false)
@@ -82,6 +104,11 @@ if (props.startRequesting && props.canRequest) startRequest()
 function isMine(skill) {
   return auth.skills.some((mine) => sameSkill(mine, skill))
 }
+
+// a link to send a friend: /teams/<id> opens this team on their Teams page
+function teamLink() {
+  return `${window.location.origin}/teams/${props.team._id}`
+}
 </script>
 
 <template>
@@ -112,10 +139,50 @@ function isMine(skill) {
       :saving-role="savingRole"
       :role-error="roleError"
       class="mb-4"
-      @invite="$emit('invite', $event)"
+      @invited="(invite) => $emit('updated', { ...team, pendingInvites: [...(team.pendingInvites ?? []), invite] })"
       @assign-role="saveRole"
       @pick-role="role = $event"
     />
+
+    <!-- people in the team: how to reach the others -->
+    <section v-if="teammates.length > 0" class="contact-box rounded-3 p-3 mb-4" aria-labelledby="contact-title">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <h3 id="contact-title" class="h6 fw-semibold mb-0 me-auto">
+          <i class="bi bi-chat-dots me-1 text-primary" aria-hidden="true"></i>Contact your team
+        </h3>
+        <template v-if="emailEveryone">
+          <button type="button" class="btn btn-sm fw-semibold" :class="emailsCopied ? 'btn-success' : 'btn-light'" @click="copyEmails">
+            <i :class="emailsCopied ? 'bi bi-check-lg' : 'bi bi-copy'" class="me-1" aria-hidden="true"></i>{{ emailsCopied ? 'Copied!' : 'Copy emails' }}
+          </button>
+          <a :href="emailEveryone" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary fw-semibold">
+            <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email everyone
+          </a>
+        </template>
+      </div>
+      <!-- everyone's SMU email, so it's clear who the email goes to -->
+      <p v-if="teamEmails.length > 0" class="small text-body-secondary text-break mt-2 mb-0">
+        <span class="fw-semibold text-body">To:</span> {{ teamEmails.join(', ') }}
+      </p>
+      <div v-if="onTelegram.length > 0" class="d-flex flex-wrap gap-2 mt-2">
+        <a
+          v-for="user in onTelegram"
+          :key="user._id"
+          :href="'https://t.me/' + encodeURIComponent(user.telegram)"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-sm btn-light fw-semibold"
+        >
+          <i class="bi bi-telegram me-1" aria-hidden="true"></i>{{ getDisplayName(user).split('@')[0] }}
+        </a>
+      </div>
+      <p v-else-if="iHaveTelegram" class="text-caption text-body-secondary mt-2 mb-0">
+        Your teammates haven't added their Telegram yet, so email is the way to reach them for now.
+      </p>
+      <p v-if="!iHaveTelegram" class="text-caption text-body-secondary mt-2 mb-0">
+        Add your Telegram on your profile so teammates can message you.
+      </p>
+      <p class="text-caption text-body-tertiary mt-2 mb-0">Only people in this team can see these.</p>
+    </section>
 
     <!-- the request form slides open here when "Request to join" is pressed -->
     <Transition name="drop">
@@ -150,6 +217,7 @@ function isMine(skill) {
         </button>
       </template>
       <template v-else>
+        <CopyLinkButton class="me-auto" :get-link="teamLink" />
         <button type="button" class="btn btn-light fw-semibold" @click="$emit('close')">Close</button>
         <button v-if="canRequest" type="button" class="btn btn-primary fw-semibold" @click="startRequest()">Request to join</button>
       </template>
@@ -158,6 +226,11 @@ function isMine(skill) {
 </template>
 
 <style scoped>
+.contact-box {
+  background-color: var(--bs-primary-bg-subtle);
+  border: 1px solid var(--bs-primary-border-subtle);
+}
+
 .request-form {
   background-color: var(--bs-primary-bg-subtle);
   border: 1px solid var(--bs-primary-border-subtle);

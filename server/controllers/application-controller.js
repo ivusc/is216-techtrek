@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const applicationService = require('../service/application-service');
+const notificationService = require('../service/notification-service');
 
 function handleError(res, err, fallback) {
   if (err.name === 'ValidationError' || err.name === 'CastError') {
@@ -59,10 +60,12 @@ async function getApplication(req, res) {
   }
 }
 
-// PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName, checklist ([{ label, done }])
+// PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName, checklist ([{ label, done }]),
+// followedUpAt (a date, or null to undo "Followed up"), archivedAt (a date to move it to History, null to bring it back)
 async function updateApplication(req, res) {
   const { id: applicationId } = req.params;
-  const { status, result, notes, deadline, interviewAt, contactName, checklist } = req.body ?? {};
+  const { status, result, notes, deadline, interviewAt, contactName, checklist, followedUpAt, archivedAt } =
+    req.body ?? {};
 
   if (!mongoose.isValidObjectId(applicationId)) {
     return res.status(400).json({ error: 'Invalid ID' });
@@ -73,7 +76,7 @@ async function updateApplication(req, res) {
   }
 
   try {
-    const changes = { status, result, notes, deadline, interviewAt, contactName, checklist };
+    const changes = { status, result, notes, deadline, interviewAt, contactName, checklist, followedUpAt, archivedAt };
     const application = await applicationService.updateApplication(applicationId, req.session.user._id, changes);
 
     if (!application) {
@@ -99,6 +102,9 @@ async function deleteApplication(req, res) {
     if (!deletedApplication) {
       return res.status(404).json({ error: 'Application not found' });
     }
+
+    // its deadline reminders no longer make sense
+    await notificationService.remove({ userId: req.session.user._id, applicationId: deletedApplication._id });
 
     res.status(204).end();
   } catch (err) {

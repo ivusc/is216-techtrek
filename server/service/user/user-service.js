@@ -1,4 +1,5 @@
 const { IllegalArguementError, DatabaseError, WrongPasswordError } = require('./user-service-errors');
+const { PRESETS } = require('../avatar-presets');
 const User = require('../../models/User');
 const Application = require('../../models/Application');
 const InterviewAttempt = require('../../models/interviewAttempt');
@@ -10,7 +11,7 @@ const { MAX_SKILLS, cleanSkills } = require('../skills');
 
 const SALT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
-const OPTIONAL_FIELDS = ['year', 'course', 'about', 'linkedinUrl', 'githubUrl'];
+const OPTIONAL_FIELDS = ['year', 'course', 'about', 'linkedinUrl', 'githubUrl', 'telegram'];
 
 /**
  *
@@ -128,7 +129,10 @@ async function updateUser(userId, changes) {
   const unset = {};
   for (const [field, value] of Object.entries(changes)) {
     if (OPTIONAL_FIELDS.includes(field) && isBlank(value)) unset[field] = 1;
-    else set[field] = field === 'skills' ? cleanSkills(value) : value;
+    else if (field === 'skills') set[field] = cleanSkills(value);
+    // "@kellie_j" and "kellie_j" are the same Telegram username
+    else if (field === 'telegram') set[field] = String(value).trim().replace(/^@/, '');
+    else set[field] = value;
   }
 
   try {
@@ -183,6 +187,19 @@ async function setAvatar(userId, data, contentType) {
   }
 }
 
+// picks one of the illustrated characters as the profile picture (replaces any uploaded photo)
+async function setAvatarPreset(userId, preset) {
+  try {
+    return await User.findByIdAndUpdate(
+      userId,
+      { avatar: { preset, updatedAt: new Date() } },
+      { returnDocument: 'after', runValidators: true },
+    );
+  } catch (err) {
+    throw new DatabaseError('Database could not save the picture.');
+  }
+}
+
 async function removeAvatar(userId) {
   try {
     return await User.findByIdAndUpdate(
@@ -198,9 +215,25 @@ async function removeAvatar(userId) {
 async function findAvatar(userId) {
   try {
     const user = await User.findById(userId).select('+avatar.data +avatar.contentType');
+    if (user?.avatar?.preset && PRESETS[user.avatar.preset]) {
+      return { data: Buffer.from(PRESETS[user.avatar.preset].svg), contentType: 'image/svg+xml' };
+    }
     return user?.avatar?.data ? user.avatar : null;
   } catch (err) {
     throw new DatabaseError('Database could not find the photo.');
+  }
+}
+
+// what other students see on someone's profile page: everything on their profile and their SMU
+// email, but never their Telegram (that stays inside their teams)
+const PUBLIC_PROFILE_FIELDS =
+  'userName displayName faculty year course about skills openToTeams githubUrl linkedinUrl avatar.updatedAt';
+
+async function findPublicProfile(userId) {
+  try {
+    return await User.findById(userId).select(PUBLIC_PROFILE_FIELDS);
+  } catch (err) {
+    throw new DatabaseError('Database could not find the profile.');
   }
 }
 
@@ -242,7 +275,9 @@ module.exports = {
   updateUser,
   changePassword,
   setAvatar,
+  setAvatarPreset,
   removeAvatar,
   findAvatar,
+  findPublicProfile,
   deleteUserById,
 };

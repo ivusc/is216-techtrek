@@ -18,6 +18,17 @@
   overflow-y: hidden;
 }
 
+/* phones: one column fills most of the screen and the next one peeks in; swipes snap to a column */
+@media (max-width: 767.98px) {
+  .kanban-board {
+    scroll-snap-type: x mandatory;
+  }
+  .kanban-column {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+}
+
 .status-dot {
   width: 10px;
   height: 10px;
@@ -115,11 +126,6 @@
   padding-top: 11px;
   padding-bottom: 11px;
   padding-left: 14px;
-}
-
-.field-lg::placeholder,
-.notes-field ::placeholder {
-  opacity: 0.45;
 }
 
 .notes-field {
@@ -327,4 +333,16 @@
 /* lets flex children shrink below their content so they can scroll */
 .min-h-0 {
   min-height: 0;
+}
+
+/* "Applied 16 days ago with no update. Send a follow-up?" on an Applied card */
+.follow-up-nudge {
+  background-color: var(--bs-warning-bg-subtle);
+  color: var(--bs-warning-text-emphasis);
+}
+
+/* a card's "Move to" menu: never taller than the screen, scrolls if it has to */
+.card-move-menu {
+  max-height: min(360px, calc(100vh - 32px));
+  overflow-y: auto;
 }

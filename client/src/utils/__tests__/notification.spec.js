@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeNotification } from '@/utils/notification';
+import { describeNotification, timeLeftText, withOrganisation } from '@/utils/notification';
 
 const BASE = { actorName: 'Kellie', teamName: 'Byte Me' };
 
@@ -33,6 +33,51 @@ describe('describeNotification', () => {
       tone: 'muted',
       to: { path: '/teams' },
     });
+  });
+
+  it('reminds me about a tracked deadline 3 days and 1 day before, and opens the tracker', () => {
+    const reminder = (daysLeft) => describeNotification({ type: 'deadline-reminder', title: 'Frontend Intern', organisation: 'Acme', daysLeft });
+
+    expect(reminder(3)).toEqual({ text: 'Frontend Intern at Acme is due in 3 days', icon: 'bi-alarm', tone: 'primary', to: { path: '/tracker' } });
+    expect(reminder(1)).toMatchObject({ text: 'Frontend Intern at Acme is due within 24 hours', tone: 'warning' });
+    expect(describeNotification({ type: 'deadline-reminder', daysLeft: 2 }).text).toBe('A tracked application is due in 2 days');
+    expect(describeNotification({ type: 'deadline-reminder', daysLeft: 2, applicationId: 'a9' }).to).toEqual({ path: '/tracker', query: { open: 'a9' } });
+  });
+
+  it("doesn't repeat the organisation when the title already names it", () => {
+    const text = describeNotification({ type: 'deadline-reminder', title: 'Girls Who Code HHS Hackathon 2026', organisation: 'Girls Who Code HHS', daysLeft: 1 }).text;
+
+    expect(text).toBe('Girls Who Code HHS Hackathon 2026 is due within 24 hours');
+    expect(withOrganisation('Frontend Intern', 'Acme')).toBe(' at Acme');
+    expect(withOrganisation('Frontend Intern', '')).toBe('');
+  });
+
+  it('says how long is left before a deadline', () => {
+    const now = new Date('2026-11-05T10:00:00Z');
+    const at = (hours) => new Date(now.getTime() + hours * 3600000);
+
+    expect(timeLeftText(at(-1), now)).toBe('Deadline passed');
+    expect(timeLeftText(at(0.5), now)).toBe('in under an hour');
+    expect(timeLeftText(at(1), now)).toBe('in 1 hour');
+    expect(timeLeftText(at(20), now)).toBe('in 20 hours');
+    expect(timeLeftText(at(30), now)).toBe('in 1 day');
+    expect(timeLeftText(at(72), now)).toBe('in 3 days');
+  });
+
+  it('sums up new matching listings and opens the right Opportunities tab', () => {
+    const matches = (fields) => describeNotification({ type: 'new-matches', ...fields });
+
+    expect(matches({ hackathonCount: 3, jobCount: 1, skills: ['Vue.js', 'Python'] })).toEqual({
+      text: '3 new hackathons and 1 new job mention your skills: Vue.js, Python',
+      icon: 'bi-stars',
+      tone: 'primary',
+      to: { path: '/opportunities', query: { tab: 'overview' } },
+    });
+    expect(matches({ hackathonCount: 1, jobCount: 0, skills: ['UI/UX'] })).toMatchObject({
+      text: '1 new hackathon mentions your skills: UI/UX',
+      to: { path: '/opportunities', query: { tab: 'hackathons' } },
+    });
+    expect(matches({ hackathonCount: 0, jobCount: 2 }).to.query.tab).toBe('jobs');
   });
 
   it('says which role the lead gave me', () => {

@@ -43,7 +43,12 @@ describe('OpportunityFilters', () => {
     const overview = mountFilters({ tab: 'overview' });
 
     expect(selectLabels(jobsTab)).toEqual(['Sort by', 'Role', 'Work type', 'Location']);
-    expect(jobsTab.find('select[aria-label="Role"]').text()).toContain('Role: Data');
+    // "Role" is the label beside the dropdown; the dropdown lists just the role names
+    expect(jobsTab.find('label[for="opportunity-role"]').text()).toBe('Role');
+    const roleOptions = jobsTab.findAll('select[aria-label="Role"] option').map((option) => option.text());
+    expect(roleOptions[0]).toBe('Any');
+    expect(roleOptions).toContain('Data');
+    expect(roleOptions.some((text) => text.startsWith('Role:'))).toBe(false);
     expect(selectLabels(mountFilters({ tab: 'jobs', roles: [] }))).toEqual([
       'Sort by',
       'Work type',

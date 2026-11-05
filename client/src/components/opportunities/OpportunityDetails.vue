@@ -1,7 +1,11 @@
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { typeBadge } from '@/constants'
+import OpportunityTips from './OpportunityTips.vue'
+import CopyLinkButton from '@/components/CopyLinkButton.vue'
+import { shareOpportunity } from '@/services/opportunityService'
+import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 import {
   getMonthlySalary,
   getPrizeAmount,
@@ -17,6 +21,16 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'toggle-save'])
+
+// Track: a copy of this organisation row flies into the Tracker icon ("add to cart");
+// Tracked (to untrack): a copy flies back out of the Tracker icon into it
+const summaryEl = ref(null)
+function track() {
+  if (props.saved) flyFromTracker(summaryEl.value)
+  else flyToTracker(summaryEl.value)
+  emit('toggle-save')
+}
+
 
 function onKeydown(event) {
   if (event.key === 'Escape') {
@@ -80,6 +94,13 @@ const infoBoxes = computed(() => {
     }
   ]
 })
+
+// "Copy link to share": a listing opened from a shared link already has its id; anything else is
+// saved first so the link keeps working after it leaves Adzuna or Devpost's results
+async function shareLink() {
+  const id = props.item._id ?? (await shareOpportunity(props.item))
+  return `${window.location.origin}/opportunities/${id}`
+}
 </script>
 
 <template>
@@ -92,6 +113,7 @@ const infoBoxes = computed(() => {
       <!-- header: label + open listing + close -->
       <div class="d-flex align-items-center gap-2">
         <span class="text-overline text-body-tertiary flex-grow-1">Details</span>
+        <CopyLinkButton compact label="Copy link to share" :get-link="shareLink" />
         <a
           :href="item.url"
           target="_blank"
@@ -106,8 +128,8 @@ const infoBoxes = computed(() => {
         </button>
       </div>
 
-      <!-- organisation -->
-      <div class="d-flex align-items-center gap-3">
+      <!-- organisation (this is what flies to the Tracker on Track) -->
+      <div ref="summaryEl" class="d-flex align-items-center gap-3">
         <div
           class="details-logo h3 mb-0 d-flex justify-content-center align-items-center"
           :class="isHackathon ? 'bg-tt-peach text-body' : 'bg-primary-subtle text-primary'"
@@ -129,6 +151,9 @@ const infoBoxes = computed(() => {
       <div class="d-flex flex-wrap details-badges">
         <span class="badge rounded-pill details-badge" :class="typeBadge[item.type]">
           {{ item.type[0].toUpperCase() + item.type.slice(1) }}
+        </span>
+        <span v-for="role in item.roles ?? []" :key="role.key" class="badge rounded-pill details-badge role-tag" :title="'Role: ' + role.label">
+          {{ role.label }}
         </span>
         <span v-if="getJobType(item) !== ''" class="badge rounded-pill details-badge bg-body-secondary text-body-secondary">
           {{ getJobType(item) }}
@@ -171,14 +196,13 @@ const infoBoxes = computed(() => {
         </ul>
       </section>
 
+      <!-- tips from seniors who got an offer at this company (jobs and internships) -->
+      <OpportunityTips v-if="!isHackathon && item.organisation" :key="item.organisation + item.title" :organisation="item.organisation" :title="item.title" />
+
       <p v-if="item.registrations" class="text-body-secondary mb-0">
         {{ item.registrations.toLocaleString() }} people have registered so far.
       </p>
 
-      <div class="details-tip d-flex align-items-center bg-warning-subtle small fw-medium">
-        <i class="bi bi-lightbulb"></i>
-        Practise "Tell me about a project you're proud of" in Interview Prep before applying.
-      </div>
     </div>
 
     <!-- buttons at the bottom of the panel -->
@@ -188,7 +212,7 @@ const infoBoxes = computed(() => {
         class="btn fw-semibold text-nowrap details-btn"
         :class="saved ? 'btn-light' : 'btn-outline-primary'"
         type="button"
-        @click="$emit('toggle-save')"
+        @click="track"
       >
         <i :class="saved ? 'bi bi-check-lg' : 'bi bi-plus-lg'"></i>
         {{ saved ? 'Tracked' : 'Track' }}
@@ -201,3 +225,12 @@ const infoBoxes = computed(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* the job's role (Frontend, Data, ...): the same names as the Role filter */
+.role-tag {
+  color: var(--tt-chip-text);
+  background-color: var(--tt-chip-bg);
+  border: 1px solid var(--tt-chip-border);
+}
+</style>

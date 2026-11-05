@@ -31,3 +31,21 @@ export async function fetchJobFilterOptions() {
   const response = await serverAPI.get(BASE_URL + '/job-filters')
   return response.data
 }
+
+// anonymous interview tips from seniors who got an offer at this company (same role first)
+export async function fetchTipsForOpportunity(organisation, title) {
+  const response = await serverAPI.get('/interview/tips', { params: { organisation, title } })
+  return response.data.tips
+}
+
+// saves a copy of a listing so it has a link that keeps working: returns its id for /opportunities/<id>
+export async function shareOpportunity(opportunity) {
+  const response = await serverAPI.post(BASE_URL + '/share', { opportunity })
+  return response.data._id
+}
+
+// one shared listing, by the id from its link
+export async function fetchOpportunity(id) {
+  const response = await serverAPI.get(BASE_URL + '/item/' + id)
+  return response.data
+}
