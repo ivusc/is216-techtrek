@@ -1,6 +1,6 @@
 <script setup>
 import { typeBadge } from '@/constants'
-import { getStageLabel } from '@/utils/application'
+import { getStageLabel, trackerLink } from '@/utils/application'
 
 // entries are { application, deadline, daysLeft }, soonest first
 defineProps({
@@ -38,7 +38,7 @@ function monthShort(date) {
       <RouterLink
         v-for="entry in deadlines.slice(0, 10)"
         :key="entry.application._id"
-        to="/tracker"
+        :to="trackerLink(entry.application._id)"
         class="deadline-row row-hover d-flex align-items-center gap-3 py-2 px-2 text-decoration-none text-body"
       >
         <div

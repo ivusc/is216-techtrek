@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useNotificationStore } from '@/store/notifications'
 import { describeNotification } from '@/utils/notification'
 import { timeAgo } from '@/utils/team'
+import ReminderDetailsModal from '@/components/ReminderDetailsModal.vue'
 
 // the bell in the page header: a red count of unread notifications, and a dropdown listing them
 defineProps({
@@ -19,6 +20,13 @@ const badgeText = computed(() => (unreadCount.value > 9 ? '9+' : String(unreadCo
 function markRead(item) {
   const original = notifications.value.find((notification) => notification._id === item._id)
   if (original) store.markRead(original)
+}
+
+// a deadline reminder opens a card with its details instead of going straight to another page
+const openReminder = ref(null)
+function showReminder(item) {
+  markRead(item)
+  openReminder.value = item
 }
 </script>
 
@@ -59,26 +67,47 @@ function markRead(item) {
           </p>
         </div>
 
-        <!-- clicking one marks it read and goes to the page it is about -->
-        <RouterLink
-          v-for="item in items"
-          :key="item._id"
-          :to="item.to"
-          class="notification-item d-flex align-items-start gap-2 w-100 text-start text-decoration-none px-3 py-2"
-          :class="{ 'is-unread': !item.read }"
-          @click="markRead(item)"
-        >
-          <span class="notification-icon rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :class="'tone-' + item.tone">
-            <i class="bi" :class="item.icon" aria-hidden="true"></i>
-          </span>
-          <span class="flex-grow-1 min-w-0">
-            <span class="d-block small" :class="{ 'fw-semibold': !item.read }">{{ item.text }}</span>
-            <span class="d-block text-caption text-body-secondary">{{ timeAgo(item.createdAt) }}</span>
-          </span>
-          <span v-if="!item.read" class="unread-dot rounded-circle bg-primary flex-shrink-0 mt-2" aria-label="Unread"></span>
-        </RouterLink>
+        <!-- clicking one marks it read and goes to the page it is about;
+             a deadline reminder opens its details card instead -->
+        <template v-for="item in items" :key="item._id">
+          <button
+            v-if="item.type === 'deadline-reminder'"
+            type="button"
+            class="notification-item d-flex align-items-start gap-2 w-100 text-start border-0 px-3 py-2"
+            :class="{ 'is-unread': !item.read }"
+            @click="showReminder(item)"
+          >
+            <span class="notification-icon rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :class="'tone-' + item.tone">
+              <i class="bi" :class="item.icon" aria-hidden="true"></i>
+            </span>
+            <span class="flex-grow-1 min-w-0">
+              <span class="d-block small" :class="{ 'fw-semibold': !item.read }">{{ item.text }}</span>
+              <span class="d-block text-caption text-body-secondary">{{ timeAgo(item.createdAt) }}</span>
+            </span>
+            <span v-if="!item.read" class="unread-dot rounded-circle bg-primary flex-shrink-0 mt-2" aria-label="Unread"></span>
+          </button>
+          <RouterLink
+            v-else
+            :to="item.to"
+            class="notification-item d-flex align-items-start gap-2 w-100 text-start text-decoration-none px-3 py-2"
+            :class="{ 'is-unread': !item.read }"
+            @click="markRead(item)"
+          >
+            <span class="notification-icon rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :class="'tone-' + item.tone">
+              <i class="bi" :class="item.icon" aria-hidden="true"></i>
+            </span>
+            <span class="flex-grow-1 min-w-0">
+              <span class="d-block small" :class="{ 'fw-semibold': !item.read }">{{ item.text }}</span>
+              <span class="d-block text-caption text-body-secondary">{{ timeAgo(item.createdAt) }}</span>
+            </span>
+            <span v-if="!item.read" class="unread-dot rounded-circle bg-primary flex-shrink-0 mt-2" aria-label="Unread"></span>
+          </RouterLink>
+        </template>
       </div>
     </div>
+
+    <!-- outside the dropdown menu, so it isn't clipped by it -->
+    <ReminderDetailsModal v-if="openReminder" :notification="openReminder" @close="openReminder = null" />
   </div>
 </template>
 

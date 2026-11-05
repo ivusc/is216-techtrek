@@ -65,7 +65,8 @@ function getJobFilterOptions() {
   };
 }
 
-async function getJobs({ type, field, page }) {
+// sortBy: 'date' for the newest first (Adzuna's default is relevance)
+async function getJobs({ type, field, page, sortBy }) {
   const role = JOB_FIELDS[field];
   const response = await axios.get(`${process.env.JOB_API_URL}/jobs/sg/search/${page ?? 1}`, {
     params: {
@@ -75,6 +76,7 @@ async function getJobs({ type, field, page }) {
       category: IT_CATEGORY,
       ...JOB_TYPES[type],
       ...(role ? { what_or: role.what_or } : {}),
+      ...(sortBy ? { sort_by: sortBy } : {}),
     },
   });
   return {

@@ -9,9 +9,12 @@ import OpportunitiesView from '@/views/opportunities/OpportunitiesView.vue';
 import { HACKATHONS, jobs } from '@/__tests__/fixtures/opportunities';
 import { NOW } from '@/__tests__/fixtures/applications';
 
-const routing = vi.hoisted(() => ({ query: {} }));
+const routing = vi.hoisted(() => ({ query: {}, params: {}, replace: vi.fn() }));
 
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: routing.query }) }));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({ query: routing.query, params: routing.params }),
+  useRouter: () => ({ replace: routing.replace }),
+}));
 
 const mock = new MockAdapter(serverAPI);
 
@@ -24,6 +27,7 @@ enableAutoUnmount(afterEach);
 
 beforeEach(() => {
   routing.query = {};
+  routing.params = {};
   vi.setSystemTime(NOW);
   setActivePinia(createPinia());
   useUserStore().user = {
@@ -229,6 +233,44 @@ describe('OpportunitiesView', () => {
     expect(opportunityRequests()).toHaveLength(2);
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('24 results');
+  });
+
+  it('opens a shared listing from its link, and goes back to the plain page when closed', async () => {
+    routing.params = { id: '64b000000000000000000001' };
+    mock.onGet('/opportunity/all').reply(200, BOTH_SOURCES);
+    mock.onGet('/opportunity/item/64b000000000000000000001').reply(200, {
+      _id: '64b000000000000000000001',
+      source: 'adzuna',
+      externalId: '77',
+      type: 'internship',
+      title: 'Shared Intern',
+      organisation: 'Acme',
+      url: 'https://adzuna.test/77',
+    });
+    const wrapper = await mountView();
+    const drawer = wrapper.find('[role="dialog"]');
+
+    expect(drawer.find('h1').text()).toBe('Shared Intern');
+    await drawer.find('button[aria-label="Close"]').trigger('click');
+    expect(routing.replace).toHaveBeenCalledWith({ path: '/opportunities' });
+  });
+
+  it('opens the tab named in the address', async () => {
+    routing.query = { tab: 'hackathons' };
+    mock.onGet('/opportunity/all').reply(200, BOTH_SOURCES);
+    const wrapper = await mountView();
+
+    expect(wrapper.find('#opportunities-tab-hackathons').attributes('aria-selected')).toBe('true');
+    expect(wrapper.find('#opportunities-tab-overview').attributes('aria-selected')).toBe('false');
+  });
+
+  it("says so when a shared listing can't be found", async () => {
+    routing.params = { id: '64b000000000000000000002' };
+    mock.onGet('/opportunity/all').reply(200, BOTH_SOURCES);
+    mock.onGet('/opportunity/item/64b000000000000000000002').reply(404);
+    const wrapper = await mountView();
+
+    expect(wrapper.text()).toContain("That shared listing couldn't be found.");
   });
 
   it('opens the details drawer and closes it on the backdrop, the close button and Esc', async () => {

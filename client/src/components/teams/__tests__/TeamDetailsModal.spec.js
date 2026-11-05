@@ -72,16 +72,16 @@ describe('TeamDetailsModal', () => {
   it('offers Request to join only when allowed', async () => {
     const footer = (wrapper) => wrapper.findAll('.modal-footer button').map((button) => button.text());
 
-    expect(footer(mountDetails())).toEqual(['Close']);
+    expect(footer(mountDetails())).toEqual(['Copy link', 'Close']);
     const wrapper = mountDetails({}, { canRequest: true });
-    expect(footer(wrapper)).toEqual(['Close', 'Request to join']);
+    expect(footer(wrapper)).toEqual(['Copy link', 'Close', 'Request to join']);
   });
 
   it('opens the request form inside the window, and Back closes it again', async () => {
     const footer = (wrapper) => wrapper.findAll('.modal-footer button').map((button) => button.text());
     const wrapper = mountDetails({ openRoles: ['Frontend developer'] }, { canRequest: true });
 
-    await wrapper.findAll('.modal-footer button')[1].trigger('click');
+    await wrapper.findAll('.modal-footer button').find((button) => button.text() === 'Request to join').trigger('click');
 
     expect(wrapper.find('.request-form').text()).toContain('Ask to join');
     expect(footer(wrapper)).toEqual(['Back', 'Send request']);
@@ -90,7 +90,7 @@ describe('TeamDetailsModal', () => {
 
     await wrapper.findAll('.modal-footer button')[0].trigger('click');
     expect(wrapper.find('.request-form').exists()).toBe(false);
-    expect(footer(wrapper)).toEqual(['Close', 'Request to join']);
+    expect(footer(wrapper)).toEqual(['Copy link', 'Close', 'Request to join']);
   });
 
   it('sends the request from the window and shows the server reason there', async () => {
@@ -132,6 +132,24 @@ describe('TeamDetailsModal', () => {
     expect(box.findAll('a[href^="https://t.me/"]').map((a) => a.attributes('href'))).toEqual(['https://t.me/ivus_c']);
   });
 
+  it("only asks me to add my Telegram when I haven't", () => {
+    const members = [{ user: { ...REQUESTER, userName: 'john.doe@smu.edu.sg' }, role: 'Designer' }];
+    const hint = 'Add your Telegram on your profile';
+
+    // I have Telegram, my teammate doesn't: no nudge for me, just say they haven't added theirs
+    useUserStore().user = { ...ME, skills: [], telegram: 'kellie_j' };
+    const mine = mountDetails({ canContact: true, members }).find('.contact-box').text();
+    expect(mine).not.toContain(hint);
+    expect(mine).toContain("Your teammates haven't added their Telegram yet");
+
+    // I don't have Telegram: nudge me, whether or not my teammates have it
+    useUserStore().user = { ...ME, skills: [] };
+    expect(mountDetails({ canContact: true, members }).find('.contact-box').text()).toContain(hint);
+    const withTheirs = mountDetails({ canContact: true, members: [{ user: { ...REQUESTER, telegram: 'ezekiel_n' }, role: 'Designer' }] });
+    expect(withTheirs.find('.contact-box').text()).toContain(hint);
+    expect(withTheirs.findAll('a[href^="https://t.me/"]')).toHaveLength(1);
+  });
+
   it('copies everyone\'s email', async () => {
     const writeText = vi.fn().mockResolvedValue();
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
@@ -152,6 +170,17 @@ describe('TeamDetailsModal', () => {
 
   it('shows no contacts to people outside the team', () => {
     expect(mountDetails().find('.contact-box').exists()).toBe(false);
+  });
+
+  it('copies a link to the team for sharing', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const wrapper = mountDetails();
+
+    await wrapper.findAll('button').find((b) => b.text() === 'Copy link').trigger('click');
+    await flushPromises();
+
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/teams/${team()._id}`);
   });
 });
 

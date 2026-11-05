@@ -4,6 +4,7 @@ import { useUserStore } from '@/store/user';
 import { getErrorMessage } from '@/services/teamService';
 import { toAvatarBlob } from '@/utils/image';
 import UserAvatar from '@/components/UserAvatar.vue';
+import AvatarPicker from '@/components/AvatarPicker.vue';
 import { faculties } from '@/constants';
 
 const displayName = defineModel('displayName', { type: String, required: true });
@@ -51,6 +52,12 @@ function choosePhoto(event) {
 function removePhoto() {
   updatePhoto(() => auth.removeAvatar());
 }
+
+// no photo? pick one of the illustrated characters instead
+const pickerOpen = ref(false);
+function pickCharacter(key) {
+  updatePhoto(() => auth.setAvatarPreset(key));
+}
 </script>
 
 <template>
@@ -88,15 +95,34 @@ function removePhoto() {
         </label>
       </div>
       <p v-if="photoError" class="small text-tt-accent mb-0" role="alert">{{ photoError }}</p>
-      <button
-        v-if="auth.avatarUpdatedAt"
-        type="button"
-        class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
-        :disabled="isUploading"
-        @click="removePhoto"
-      >
-        Remove photo
-      </button>
+      <div class="d-flex flex-wrap justify-content-center column-gap-3">
+        <button
+          type="button"
+          class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
+          :aria-expanded="pickerOpen"
+          aria-controls="profile-avatar-picker"
+          @click="pickerOpen = !pickerOpen"
+        >
+          {{ pickerOpen ? 'Hide characters' : 'Choose a character' }}
+        </button>
+        <button
+          v-if="auth.avatarUpdatedAt"
+          type="button"
+          class="btn btn-link btn-sm p-0 text-caption text-decoration-none"
+          :disabled="isUploading"
+          @click="removePhoto"
+        >
+          {{ auth.avatarPreset ? 'Remove picture' : 'Remove photo' }}
+        </button>
+      </div>
+      <AvatarPicker
+        v-if="pickerOpen"
+        id="profile-avatar-picker"
+        class="w-100 text-start"
+        :selected="auth.avatarPreset"
+        :busy="isUploading"
+        @pick="pickCharacter"
+      />
 
       <template v-if="!editing">
         <h2 class="mb-0 text-break">{{ displayName }}</h2>

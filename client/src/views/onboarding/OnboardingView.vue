@@ -4,6 +4,10 @@ import { useRouter } from 'vue-router'
 import './onboarding.css'
 import BrandBanner from '@/components/login/BrandBanner.vue'
 import SkillPicker from '@/components/SkillPicker.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import AvatarPicker from '@/components/AvatarPicker.vue'
+import { toAvatarBlob } from '@/utils/image'
+import { getErrorMessage } from '@/services/teamService'
 import { useUserStore } from '@/store/user'
 import { faculties } from '@/constants'
 
@@ -28,6 +32,28 @@ const openToTeams = ref(auth.user?.openToTeams ?? true)
 
 const errorMessage = ref('')
 const isSaving = ref(false)
+
+// profile picture (optional): upload a photo or pick a character. Saved straight away, like on the profile page.
+const isPhotoSaving = ref(false)
+const photoError = ref('')
+async function updatePhoto(change) {
+  isPhotoSaving.value = true
+  photoError.value = ''
+  try {
+    await change()
+  } catch (error) {
+    photoError.value = getErrorMessage(error)
+  }
+  isPhotoSaving.value = false
+}
+function choosePhoto(event) {
+  const [file] = event.target.files
+  event.target.value = ''
+  if (file) updatePhoto(async () => auth.uploadAvatar(await toAvatarBlob(file)))
+}
+function pickCharacter(key) {
+  updatePhoto(() => auth.setAvatarPreset(key))
+}
 
 const canContinue = computed(() => {
   if (step.value === 0) return name.value.trim() !== ''
@@ -114,6 +140,34 @@ async function next() {
           <div>
             <h1 class="onboarding-title">Welcome! What should we call you?</h1>
             <p class="onboarding-subtitle">This is the name teammates see on your team posts and requests.</p>
+          </div>
+          <div>
+            <p class="form-label small fw-semibold mb-2">Profile picture <span class="fw-normal text-body-tertiary">(optional)</span></p>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <UserAvatar
+                :user-id="auth._id ?? ''"
+                :name="name || auth.user?.userName || '?'"
+                :avatar-updated-at="auth.avatarUpdatedAt"
+                :size="64"
+                class="bg-tt-peach text-body"
+              />
+              <div class="d-flex flex-column align-items-start gap-1">
+                <input
+                  id="onboarding-photo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  class="onboarding-photo-input visually-hidden"
+                  :disabled="isPhotoSaving"
+                  @change="choosePhoto"
+                />
+                <label for="onboarding-photo" class="btn btn-sm btn-outline-primary fw-semibold mb-0">
+                  <i class="bi bi-camera me-1" aria-hidden="true"></i>{{ auth.avatarUpdatedAt && !auth.avatarPreset ? 'Change photo' : 'Upload a photo' }}
+                </label>
+                <span class="text-caption text-body-tertiary">Or pick a character below. You can change it later on your profile.</span>
+              </div>
+            </div>
+            <AvatarPicker :selected="auth.avatarPreset" :busy="isPhotoSaving" @pick="pickCharacter" />
+            <p v-if="photoError" class="small text-tt-accent mb-0 mt-1" role="alert">{{ photoError }}</p>
           </div>
           <div>
             <label for="onboarding-name" class="form-label small fw-semibold">Your name</label>

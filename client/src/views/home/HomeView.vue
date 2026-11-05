@@ -38,9 +38,12 @@ const requestError = ref('')
 
 onMounted(() => {
   // each part loads on its own, so one failing does not blank the whole dashboard
-  applicationStore.fetchApplications().finally(() => (firstLoadDone.value = true))
+  // the stat cards need both applications and team requests, so wait for both before showing them
+  // (otherwise "0 waiting" shows first and changes a moment later)
+  Promise.allSettled([applicationStore.fetchApplications(), loadRequests()]).finally(
+    () => (firstLoadDone.value = true)
+  )
   opportunityStore.fetchOpportunities()
-  loadRequests()
 })
 
 async function loadRequests() {
@@ -168,7 +171,7 @@ const calendarEvents = computed(() => {
   for (const application of applications.value) {
     const deadline = getApplicationDeadline(application)
     // title and organisation are shown when the day is clicked on the calendar
-    const details = { title: application.opportunityId.title, organisation: application.opportunityId.organisation }
+    const details = { title: application.opportunityId.title, organisation: application.opportunityId.organisation, applicationId: application._id }
     if (deadline) events.push({ date: deadline, kind: 'deadline', ...details })
     if (application.interviewAt) events.push({ date: application.interviewAt, kind: 'interview', ...details })
   }
@@ -244,7 +247,7 @@ async function respond(request, status, role) {
     <PageHeader
       v-model="search"
       :title="greeting + ', ' + firstName"
-      :subtitle="todayText + ' · ' + dueThisWeek.length + (dueThisWeek.length === 1 ? ' deadline' : ' deadlines') + ' this week'"
+      :subtitle="firstLoadDone ? todayText + ' · ' + dueThisWeek.length + (dueThisWeek.length === 1 ? ' deadline' : ' deadlines') + ' this week' : todayText"
       type="opportunities"
       @keydown.enter="goToOpportunities"
     />

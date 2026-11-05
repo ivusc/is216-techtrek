@@ -5,6 +5,7 @@ import serverAPI from '@/services/serverAPI';
 import PageHeader from '@/components/PageHeader.vue';
 import TrekLoader from '@/components/TrekLoader.vue';
 import TabCards from '@/components/TabCards.vue';
+import ScoreTrend from '@/components/interviews/ScoreTrend.vue';
 import SeniorTips from '@/components/interviews/SeniorTips.vue';
 
 const search = ref('');
@@ -19,6 +20,7 @@ const applicationCards = ref([]);
 const titles = ref([]);
 const questions = ref([]);
 const seniorTips = ref([]);
+const trends = ref([]); // [{ title, points: [{ completedAt, score }] }], one per role
 const activeTab = ref('bank');
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -34,6 +36,7 @@ const loadData = async () => {
     averageScore.value = response.data.averageScore;
     highestScore.value = response.data.highestScore;
     seniorTips.value = response.data.seniorTips;
+    trends.value = response.data.trends ?? [];
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Failed to load interview dashboard.';
@@ -116,6 +119,19 @@ const stats = computed(() => [
     tile: 'bg-primary-subtle text-primary',
   },
 ]);
+
+// only the first 2 role cards show until "Show more"; then the rest open in a box that scrolls
+const SHOWN_CARDS = 2;
+const showAllCards = ref(false);
+const visibleCards = computed(() =>
+  showAllCards.value ? applicationCards.value : applicationCards.value.slice(0, SHOWN_CARDS),
+);
+const hiddenCardCount = computed(() => Math.max(0, applicationCards.value.length - SHOWN_CARDS));
+
+// the score trend for a role card (empty until a session is finished)
+function trendFor(title) {
+  return trends.value.find((trend) => trend.title === title)?.points ?? [];
+}
 
 function clearFilters() {
   selectedTitle.value = '';
@@ -276,9 +292,10 @@ function shortDate(value) {
       </div>
 
       <div class="col-12 col-xl-9 d-flex flex-column gap-4">
-        <div v-if="applicationCards.length" class="row g-3">
+        <div v-if="applicationCards.length">
+        <div class="row g-3" :class="{ 'role-cards-scroll': showAllCards && hiddenCardCount > 0 }">
           <div
-            v-for="application in applicationCards"
+            v-for="application in visibleCards"
             :key="application.applicationId"
             class="col-12 col-md-6"
           >
@@ -294,6 +311,7 @@ function shortDate(value) {
               </p>
               <h2 class="h4 text-white mb-0">{{ application.title }}</h2>
               <p class="small mb-2">{{ application.company }}</p>
+              <ScoreTrend :points="trendFor(application.title)" class="mb-2" />
               <RouterLink
                 class="btn btn-light fw-semibold mt-auto align-self-start"
                 :to="`/practice/${application.applicationId}`"
@@ -302,6 +320,19 @@ function shortDate(value) {
               </RouterLink>
             </article>
           </div>
+        </div>
+        <button
+          v-if="hiddenCardCount > 0"
+          type="button"
+          class="btn btn-link fw-semibold text-decoration-none px-0 mt-2"
+          :aria-expanded="showAllCards"
+          @click="showAllCards = !showAllCards"
+        >
+          <template v-if="showAllCards"><i class="bi bi-chevron-up me-1" aria-hidden="true"></i>Show fewer roles</template>
+          <template v-else>
+            <i class="bi bi-chevron-down me-1" aria-hidden="true"></i>Show {{ hiddenCardCount }} more {{ hiddenCardCount === 1 ? 'role' : 'roles' }}
+          </template>
+        </button>
         </div>
 
         <div class="row g-3">

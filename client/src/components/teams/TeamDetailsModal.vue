@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
 import TeamModal from './TeamModal.vue'
+import CopyLinkButton from '@/components/CopyLinkButton.vue'
 import TeamPeople from './TeamPeople.vue'
 import JoinRequestFields from './JoinRequestFields.vue'
 import { useUserStore } from '@/store/user'
@@ -61,6 +62,8 @@ async function copyEmails() {
   setTimeout(() => (emailsCopied.value = false), 2000)
 }
 const onTelegram = computed(() => teammates.value.filter((user) => user.telegram))
+// my own Telegram: only nudge me to add one when I haven't
+const iHaveTelegram = computed(() => Boolean(auth.user?.telegram))
 
 // "Request to join" opens the request form right here, under the team, instead of a new window
 const requesting = ref(false)
@@ -100,6 +103,11 @@ async function sendJoinRequest() {
 if (props.startRequesting && props.canRequest) startRequest()
 function isMine(skill) {
   return auth.skills.some((mine) => sameSkill(mine, skill))
+}
+
+// a link to send a friend: /teams/<id> opens this team on their Teams page
+function teamLink() {
+  return `${window.location.origin}/teams/${props.team._id}`
 }
 </script>
 
@@ -167,7 +175,10 @@ function isMine(skill) {
           <i class="bi bi-telegram me-1" aria-hidden="true"></i>{{ getDisplayName(user).split('@')[0] }}
         </a>
       </div>
-      <p v-else class="text-caption text-body-secondary mt-2 mb-0">
+      <p v-else-if="iHaveTelegram" class="text-caption text-body-secondary mt-2 mb-0">
+        Your teammates haven't added their Telegram yet, so email is the way to reach them for now.
+      </p>
+      <p v-if="!iHaveTelegram" class="text-caption text-body-secondary mt-2 mb-0">
         Add your Telegram on your profile so teammates can message you.
       </p>
       <p class="text-caption text-body-tertiary mt-2 mb-0">Only people in this team can see these.</p>
@@ -206,6 +217,7 @@ function isMine(skill) {
         </button>
       </template>
       <template v-else>
+        <CopyLinkButton class="me-auto" :get-link="teamLink" />
         <button type="button" class="btn btn-light fw-semibold" @click="$emit('close')">Close</button>
         <button v-if="canRequest" type="button" class="btn btn-primary fw-semibold" @click="startRequest()">Request to join</button>
       </template>

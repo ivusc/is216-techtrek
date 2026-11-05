@@ -119,12 +119,27 @@ describe('KanbanCard', () => {
   it('emits move from the menu without opening the card', async () => {
     const wrapper = mountCard();
     const items = wrapper.findAll('.dropdown-item');
-    expect(items.map((item) => item.text())).toEqual(['Applied', 'Interview', 'Offer', 'Rejected']);
+    expect(items.map((item) => item.text())).toEqual(['Applied', 'Interview', 'Offer', 'Rejected', 'Move to history']);
 
     await items[1].trigger('click');
     await wrapper.find('button[aria-label="Move Frontend Intern"]').trigger('keydown.enter');
 
     expect(wrapper.emitted('move')).toEqual([['interview']]);
+    expect(wrapper.emitted('open')).toBeUndefined();
+  });
+
+  it("opens its menu outside the column, so the column's scrolling can't cut it off", () => {
+    const toggle = mountCard().find('button[data-bs-toggle="dropdown"]');
+
+    expect(JSON.parse(toggle.attributes('data-bs-popper-config'))).toEqual({ strategy: 'fixed' });
+  });
+
+  it('moves to history from the menu', async () => {
+    const wrapper = mountCard();
+
+    await wrapper.findAll('.dropdown-item').find((item) => item.text() === 'Move to history').trigger('click');
+
+    expect(wrapper.emitted('archive')).toHaveLength(1);
     expect(wrapper.emitted('open')).toBeUndefined();
   });
 
@@ -137,4 +152,34 @@ describe('KanbanCard', () => {
     expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'a1');
     expect(dataTransfer.effectAllowed).toBe('move');
   });
+
+  it('suggests a follow-up on an Applied card with no news for 14 days, and marks it in one click', async () => {
+    // NOW is 3 Nov; applied 16 days before
+    const wrapper = mountCard({ status: 'applied', deadline: undefined, appliedAt: '2026-10-18T00:00:00.000Z' });
+    const nudge = wrapper.find('.follow-up-nudge');
+
+    expect(nudge.text()).toContain('Applied 16 days ago with no update. Send a follow-up?');
+    await nudge.find('button').trigger('click');
+    expect(wrapper.emitted('follow-up')).toHaveLength(1);
+    // the click doesn't also open the card
+    expect(wrapper.emitted('open')).toBeUndefined();
+  });
+
+  it('shows "Followed up" instead of the nudge once it is done', () => {
+    const wrapper = mountCard({
+      status: 'applied',
+      deadline: undefined,
+      appliedAt: '2026-10-01T00:00:00.000Z',
+      followedUpAt: '2026-11-01T02:00:00.000Z',
+    });
+
+    expect(wrapper.find('.follow-up-nudge').exists()).toBe(false);
+    expect(wrapper.find('.followed-up').text()).toBe('Followed up 1 Nov');
+  });
+
+  it('leaves recent and non-Applied cards alone', () => {
+    expect(mountCard({ status: 'applied', appliedAt: '2026-10-30T00:00:00.000Z' }).find('.follow-up-nudge').exists()).toBe(false);
+    expect(mountCard({ status: 'interview', appliedAt: '2026-09-01T00:00:00.000Z' }).find('.follow-up-nudge').exists()).toBe(false);
+  });
 });
+

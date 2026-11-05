@@ -70,7 +70,7 @@ describe('TeamCard', () => {
     await wrapper.find('.card').trigger('click');
 
     expect(wrapper.text()).toContain('Team is full');
-    expect(wrapper.findAll('.modal-footer button').map((candidate) => candidate.text())).toEqual(['Close']);
+    expect(wrapper.findAll('.modal-footer button').map((candidate) => candidate.text())).toEqual(['Copy link', 'Close']);
   });
 
   it.each([2, 0])(

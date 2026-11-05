@@ -31,6 +31,21 @@ function summariseQuestions(attempts, titleByApplication) {
   return [...byId.values()];
 }
 
+// score trend per role: one point per practice session, oldest first, scored as the session's
+// average out of 10 (attempts come in already sorted by completedAt)
+function scoreTrends(attempts, titleByApplication) {
+  const byTitle = new Map();
+  for (const attempt of attempts) {
+    const title = titleByApplication.get(String(attempt.applicationId));
+    if (!title || attempt.questions.length === 0) continue;
+    const total = attempt.questions.reduce((sum, asked) => sum + asked.score, 0);
+    const point = { completedAt: attempt.completedAt, score: Math.round((total / attempt.questions.length) * 10) / 10 };
+    if (!byTitle.has(title)) byTitle.set(title, []);
+    byTitle.get(title).push(point);
+  }
+  return [...byTitle].map(([title, points]) => ({ title, points }));
+}
+
 async function getInterviewDashboard(req, res) {
   try {
     const userId = req.session.user._id;
@@ -68,6 +83,7 @@ async function getInterviewDashboard(req, res) {
       applicationId: { $in: preparing.map((application) => application._id) },
     }).sort({ completedAt: 1, _id: 1 });
     const allQuestions = summariseQuestions(attempts, titleByApplication);
+    const trends = scoreTrends(attempts, titleByApplication);
     const highestScore = Math.max(0, ...allQuestions.map((question) => question.bestScore));
     const averageScore = allQuestions.length
       ? (
@@ -96,6 +112,7 @@ async function getInterviewDashboard(req, res) {
       highestScore,
       averageScore,
       seniorTips,
+      trends,
     })
   } catch (error) {
     console.log(error)
@@ -105,6 +122,54 @@ async function getInterviewDashboard(req, res) {
     })
   }
 }
+// regex-safe text, so a company name like "C++ Labs" is matched literally
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// GET /interview/tips?organisation=Grab&title=Software Engineer Intern
+// anonymous tips from other students who got an offer at this company, for the opportunity's details panel.
+// Tips for the same role come first, then the newest.
+const MAX_TIPS = 5;
+async function getTipsForOpportunity(req, res) {
+  const organisation = String(req.query.organisation ?? '').trim();
+  const title = String(req.query.title ?? '').trim().toLowerCase();
+  if (!organisation) return res.status(400).json({ error: 'organisation is required' });
+
+  try {
+    const opportunities = await Opportunity.find({
+      organisation: new RegExp(`^${escapeRegex(organisation)}$`, 'i'),
+    }).select('_id');
+    const shared = await Application.find({
+      opportunityId: { $in: opportunities.map((opportunity) => opportunity._id) },
+      userId: { $ne: req.session.user._id },
+      review: { $exists: true },
+    })
+      .populate('opportunityId', 'organisation title')
+      .sort('-review.createdAt');
+
+    const tips = shared
+      .filter((application) => application.opportunityId)
+      .map((application) => ({
+        organisation: application.opportunityId.organisation,
+        title: application.opportunityId.title,
+        sameRole: application.opportunityId.title.toLowerCase() === title,
+        difficulty: application.review.difficulty,
+        rounds: application.review.rounds,
+        tips: application.review.tips,
+        createdAt: application.review.createdAt,
+      }))
+      // stable sort: same role first, newest first within each group
+      .sort((a, b) => Number(b.sameRole) - Number(a.sameRole))
+      .slice(0, MAX_TIPS);
+
+    res.json({ tips });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to load tips' });
+  }
+}
+
 //helper function to get the opportunity from the applicationId
 //only finds applications that belong to userId
 async function getOpportunityFromApplication(applicationId, userId) {
@@ -367,6 +432,7 @@ async function saveAttempt(req, res) {
 
 module.exports = {
   getInterviewDashboard,
+  getTipsForOpportunity,
   getQuestion,
   generateQuestions,
   generateFeedback,

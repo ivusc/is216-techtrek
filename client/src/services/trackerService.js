@@ -8,6 +8,12 @@ export async function fetchAllApplications(){
   return response.data;
 }
 
+// one application with its listing, e.g. for a deadline reminder's details card
+export async function fetchApplicationService(id){
+  const response = await serverAPI.get(`${BASE_URL}/${id}`);
+  return response.data;
+}
+
 export async function createApplicationService(payload){
   const response = await serverAPI.post(BASE_URL,{
     opportunity: payload,

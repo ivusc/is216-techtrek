@@ -238,6 +238,26 @@ async function getTeams(req, res) {
   }
 }
 
+// GET /teams/:id - one team, for a shared link (/teams/<id>). Drafts are only shown to people in the team.
+async function getTeam(req, res) {
+  const userId = req.session.user._id;
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Team not found' });
+
+  try {
+    const team = await populateTeam(Team.findById(req.params.id));
+    const inTeam = team && team.leaderId && (isLeader(team, userId) || isMember(team, userId));
+    if (!team || !team.leaderId || (team.status === 'draft' && !inTeam)) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    const request = inTeam ? null : await TeamRequest.findOne({ userId, teamId: team._id, kind: { $ne: 'invite' } });
+    const live = request && !request.closedReason ? request : null;
+    const formatted = { ...formatTeam(team, userId, live?.status ?? null), requestId: live?._id ?? null };
+    res.json(await withPendingInvites(formatted));
+  } catch (err) {
+    handleError(res, err, 'Failed to fetch team');
+  }
+}
+
 async function getMyTeams(req, res) {
   const userId = req.session.user._id;
 
@@ -891,6 +911,7 @@ module.exports = {
   leaveTeam,
   getTeams,
   getMyTeams,
+  getTeam,
   createTeam,
   updateTeam,
   deleteTeam,

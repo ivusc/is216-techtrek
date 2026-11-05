@@ -557,3 +557,26 @@ describe('TeamsView event link', () => {
     expect(titles(wrapper)).toEqual(['Night Owls', 'Byte Me']);
   });
 });
+
+describe('TeamsView shared team links', () => {
+  it('opens the join window for a shared team that is taking members', async () => {
+    route.query = { team: team()._id };
+    mockLists();
+
+    const wrapper = await mountTeams();
+
+    expect(dialog(wrapper).exists()).toBe(true);
+  });
+
+  it('names a shared team that is not taking members, and says when it is gone', async () => {
+    route.query = { team: 'full-team' };
+    mockLists();
+    mock.onGet('/teams/full-team').reply(200, { ...team(), _id: 'full-team', name: 'Packed Out' });
+    expect((await mountTeams()).text()).toContain('Packed Out is not taking new members right now.');
+
+    route.query = { team: 'deleted-team' };
+    mock.onGet('/teams/deleted-team').reply(404);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect((await mountTeams()).text()).toContain("That team couldn't be found.");
+  });
+});

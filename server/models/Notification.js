@@ -16,6 +16,7 @@ const NOTIFICATION_TYPES = [
   'team-full', // my pending request or invite was closed because the team filled up
   'team-closed', // my pending request or invite was closed because the team's closing date passed
   'deadline-reminder', // one of my tracked applications is due soon (3 days before, then 1 day before)
+  'new-matches', // new jobs or hackathons mention my skills
 ];
 
 // which deadline reminder it is: about 3 days before, or 1 day before (or on the day)
@@ -38,6 +39,10 @@ const notificationSchema = new mongoose.Schema(
     deadline: { type: Date },
     reminder: { type: String, enum: REMINDER_TYPES },
     daysLeft: { type: Number },
+    // for new-matches: how many new listings of each kind, and which of my skills they mention
+    jobCount: { type: Number },
+    hackathonCount: { type: Number },
+    skills: { type: [String], default: undefined },
     read: { type: Boolean, default: false },
   },
   { timestamps: true },

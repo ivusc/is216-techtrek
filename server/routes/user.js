@@ -15,7 +15,11 @@ router.put(
   express.raw({ type: 'image/*', limit: '100kb' }),
   userController.uploadAvatar,
 );
+router.put('/me/avatar/preset', requireLogin, userController.setAvatarPreset);
 router.delete('/me/avatar', requireLogin, userController.removeAvatar);
+// the illustrated characters to pick from (public: just pictures)
+router.get('/avatars', userController.listAvatarPresets);
+router.get('/avatars/:key', userController.getAvatarPreset);
 router.get('/users/:id/avatar', requireLogin, userController.getAvatar);
 router.get('/users/:id', requireLogin, userController.getProfile);
 router.delete('/me', requireLogin, userController.deleteUser);

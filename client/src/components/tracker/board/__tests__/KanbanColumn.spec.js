@@ -53,4 +53,14 @@ describe('KanbanColumn', () => {
     expect(wrapper.emitted('open')).toEqual([[saved]]);
     expect(wrapper.emitted('move')).toEqual([['a1', 'offer']]);
   });
+
+  it("passes a card's Followed up up with its id", async () => {
+    const card = { ...applications()[0], status: 'applied', deadline: undefined, appliedAt: '2020-01-01T00:00:00.000Z' };
+    const wrapper = mountColumn([card], APPLIED);
+
+    await wrapper.find('.follow-up-nudge button').trigger('click');
+
+    expect(wrapper.emitted('follow-up')).toEqual([['a1']]);
+  });
 });
+

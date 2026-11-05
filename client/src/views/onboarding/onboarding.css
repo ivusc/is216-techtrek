@@ -54,3 +54,9 @@
 .open-choice {
   background-color: var(--bs-secondary-bg);
 }
+
+/* the file input is hidden; its label is the "Upload a photo" button, so show focus on the label */
+.onboarding-photo-input:focus-visible + label {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}

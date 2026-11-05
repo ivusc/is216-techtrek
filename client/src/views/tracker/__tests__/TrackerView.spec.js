@@ -11,9 +11,11 @@ import { NOW, applications } from '@/__tests__/fixtures/applications';
 process.env.TZ = 'Asia/Singapore';
 
 const route = vi.hoisted(() => ({ query: {} }));
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
+  useRouter: () => router,
 }));
 
 const mock = new MockAdapter(serverAPI);
@@ -121,6 +123,47 @@ describe('TrackerView', () => {
 
     expect(boardTab(wrapper, 'Hackathons').attributes('aria-selected')).toBe('true');
     expect(cardTitles(wrapper)).toEqual(['Hack&Roll']);
+  });
+
+  it('opens a card from a link, on the board it belongs to, and forgets the link when closed', async () => {
+    route.query = { open: 'a2' };
+
+    const wrapper = await mountTracker();
+
+    expect(boardTab(wrapper, 'Hackathons').attributes('aria-selected')).toBe('true');
+    expect(detailModal(wrapper).text()).toContain('Hack&Roll');
+    await detailModal(wrapper).find('[aria-label="Close"]').trigger('click');
+    expect(router.replace).toHaveBeenCalledWith({ query: {} });
+  });
+
+  it("says so when a link's application is gone", async () => {
+    route.query = { open: 'deleted-one' };
+
+    const wrapper = await mountTracker();
+
+    expect(wrapper.text()).toContain("That application isn't in your tracker any more.");
+  });
+
+  it('keeps finished cards in History instead of on the board, and brings one back', async () => {
+    const list = applications();
+    list[0] = { ...list[0], status: 'rejected', archivedAt: '2026-11-01T00:00:00.000Z', statusHistory: [{ status: 'rejected', at: '2026-10-10T00:00:00.000Z' }] };
+    mock.onGet('/application').reply(200, list);
+    mock.onPatch(`/application/${list[0]._id}`).reply((config) => [200, { ...list[0], ...JSON.parse(config.data) }]);
+    const wrapper = await mountTracker();
+
+    expect(cardTitles(wrapper)).not.toContain('Frontend Intern');
+    const historyButton = wrapper.findAll('button').find((candidate) => candidate.text().startsWith('History'));
+    expect(historyButton.text()).toBe('History 1');
+    await historyButton.trigger('click');
+    const history = wrapper.find('.tracker-history');
+    expect(history.text()).toContain('October 2026');
+    expect(history.text()).toContain('Frontend Intern');
+    expect(history.find('.history-outcome').text()).toBe('Rejected');
+
+    await history.findAll('button').find((candidate) => candidate.text() === 'Back to board').trigger('click');
+    await flushPromises();
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ archivedAt: null });
+    expect(wrapper.find('.tracker-history').text()).not.toContain('Frontend Intern');
   });
 
   it('shows a failed load as an alert', async () => {
