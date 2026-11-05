@@ -334,3 +334,9 @@
   background-color: var(--bs-warning-bg-subtle);
   color: var(--bs-warning-text-emphasis);
 }
+
+/* a card's "Move to" menu: never taller than the screen, scrolls if it has to */
+.card-move-menu {
+  max-height: min(360px, calc(100vh - 32px));
+  overflow-y: auto;
+}

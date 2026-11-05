@@ -144,6 +144,28 @@ describe('TrackerView', () => {
     expect(wrapper.text()).toContain("That application isn't in your tracker any more.");
   });
 
+  it('keeps finished cards in History instead of on the board, and brings one back', async () => {
+    const list = applications();
+    list[0] = { ...list[0], status: 'rejected', archivedAt: '2026-11-01T00:00:00.000Z', statusHistory: [{ status: 'rejected', at: '2026-10-10T00:00:00.000Z' }] };
+    mock.onGet('/application').reply(200, list);
+    mock.onPatch(`/application/${list[0]._id}`).reply((config) => [200, { ...list[0], ...JSON.parse(config.data) }]);
+    const wrapper = await mountTracker();
+
+    expect(cardTitles(wrapper)).not.toContain('Frontend Intern');
+    const historyButton = wrapper.findAll('button').find((candidate) => candidate.text().startsWith('History'));
+    expect(historyButton.text()).toBe('History 1');
+    await historyButton.trigger('click');
+    const history = wrapper.find('.tracker-history');
+    expect(history.text()).toContain('October 2026');
+    expect(history.text()).toContain('Frontend Intern');
+    expect(history.find('.history-outcome').text()).toBe('Rejected');
+
+    await history.findAll('button').find((candidate) => candidate.text() === 'Back to board').trigger('click');
+    await flushPromises();
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ archivedAt: null });
+    expect(wrapper.find('.tracker-history').text()).not.toContain('Frontend Intern');
+  });
+
   it('shows a failed load as an alert', async () => {
     mock.onGet('/application').reply(500);
 

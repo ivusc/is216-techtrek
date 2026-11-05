@@ -119,12 +119,27 @@ describe('KanbanCard', () => {
   it('emits move from the menu without opening the card', async () => {
     const wrapper = mountCard();
     const items = wrapper.findAll('.dropdown-item');
-    expect(items.map((item) => item.text())).toEqual(['Applied', 'Interview', 'Offer', 'Rejected']);
+    expect(items.map((item) => item.text())).toEqual(['Applied', 'Interview', 'Offer', 'Rejected', 'Move to history']);
 
     await items[1].trigger('click');
     await wrapper.find('button[aria-label="Move Frontend Intern"]').trigger('keydown.enter');
 
     expect(wrapper.emitted('move')).toEqual([['interview']]);
+    expect(wrapper.emitted('open')).toBeUndefined();
+  });
+
+  it("opens its menu outside the column, so the column's scrolling can't cut it off", () => {
+    const toggle = mountCard().find('button[data-bs-toggle="dropdown"]');
+
+    expect(JSON.parse(toggle.attributes('data-bs-popper-config'))).toEqual({ strategy: 'fixed' });
+  });
+
+  it('moves to history from the menu', async () => {
+    const wrapper = mountCard();
+
+    await wrapper.findAll('.dropdown-item').find((item) => item.text() === 'Move to history').trigger('click');
+
+    expect(wrapper.emitted('archive')).toHaveLength(1);
     expect(wrapper.emitted('open')).toBeUndefined();
   });
 

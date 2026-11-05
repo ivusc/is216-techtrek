@@ -176,6 +176,24 @@ describe('InterviewView', () => {
     expect(cards[1].text()).toContain('Finish a session to start your score trend.');
   });
 
+  it('shows the first 2 role cards, then the rest after Show more', async () => {
+    const extra = (n) => ({ ...DASHBOARD.applicationCards[0], applicationId: 'x' + n, title: 'Role ' + n });
+    mock.onGet('/interview/dashboard').reply(200, {
+      ...DASHBOARD,
+      applicationCards: [...DASHBOARD.applicationCards, extra(1), extra(2), extra(3)],
+    });
+    const wrapper = await mountDashboard();
+    const more = () => wrapper.findAll('button').find((candidate) => /Show .*(more|fewer)/.test(candidate.text()));
+
+    expect(wrapper.findAll('article')).toHaveLength(2);
+    expect(more().text()).toBe('Show 3 more roles');
+    await more().trigger('click');
+    expect(wrapper.findAll('article')).toHaveLength(5);
+    expect(wrapper.find('.role-cards-scroll').exists()).toBe(true);
+    await more().trigger('click');
+    expect(wrapper.findAll('article')).toHaveLength(2);
+  });
+
   it('filters the bank by search, role, type and difficulty and clears the filters', async () => {
     mock.onGet('/interview/dashboard').reply(200, DASHBOARD);
     const wrapper = await mountDashboard();

@@ -13,6 +13,18 @@ function statusesFor(type) {
   return EVENT_TYPES.includes(type) ? EVENT_STATUSES : JOB_STATUSES;
 }
 
+// the steps a card that has finished: after 14 days in one of these it moves to History by itself
+const FINISHED_STATUSES = ['offer', 'rejected', 'results'];
+
+// one step in an application's history, e.g. { status: 'applied', at: 3 Oct }
+const statusStepSchema = new mongoose.Schema(
+  {
+    status: { type: String, required: true },
+    at: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 // one tick box in the tracker's "Prep checklist"
 const checklistItemSchema = new mongoose.Schema(
   {
@@ -50,6 +62,10 @@ const applicationSchema = new mongoose.Schema(
     interviewAt: { type: Date },
     appliedAt: { type: Date }, // when it last moved to Applied (for the follow-up nudge)
     followedUpAt: { type: Date }, // when the user last marked "Followed up" (null after undo)
+    // every step it went through, with the date, oldest first (for the History view)
+    statusHistory: { type: [statusStepSchema], default: undefined },
+    // when it left the board for History (null while it is on the board)
+    archivedAt: { type: Date },
     contactName: { type: String, trim: true, maxlength: 200 },
     // left out until the first save from the detail modal, which fills in the default items;
     // no [] default, so a checklist the user emptied stays empty instead of getting the defaults back
@@ -67,3 +83,4 @@ module.exports.EVENT_STATUSES = EVENT_STATUSES;
 module.exports.EVENT_TYPES = EVENT_TYPES;
 module.exports.RESULT_TYPES = RESULT_TYPES;
 module.exports.statusesFor = statusesFor;
+module.exports.FINISHED_STATUSES = FINISHED_STATUSES;

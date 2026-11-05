@@ -9,7 +9,7 @@ const props = defineProps({
   application: { type: Object, required: true }
 })
 
-defineEmits(['open', 'move', 'follow-up'])
+defineEmits(['open', 'move', 'follow-up', 'archive'])
 
 const opportunity = computed(() => props.application.opportunityId)
 
@@ -88,15 +88,23 @@ function onDragStart(event) {
           class="btn p-0 border-0 text-body-tertiary icon-16"
           type="button"
           data-bs-toggle="dropdown"
+          data-bs-popper-config='{"strategy":"fixed"}'
           aria-expanded="false"
           :aria-label="'Move ' + opportunity.title"
         >
           <i class="bi bi-three-dots"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <!-- fixed positioning (above) lets the menu show outside the scrolling column instead of being cut off -->
+        <ul class="dropdown-menu dropdown-menu-end card-move-menu">
           <li><h6 class="dropdown-header">Move to</h6></li>
           <li v-for="stage in otherStages" :key="stage.status">
             <button class="dropdown-item" type="button" @click="$emit('move', stage.status)">{{ stage.label }}</button>
+          </li>
+          <li><hr class="dropdown-divider" /></li>
+          <li>
+            <button class="dropdown-item" type="button" @click="$emit('archive')">
+              <i class="bi bi-clock-history me-2" aria-hidden="true"></i>Move to history
+            </button>
           </li>
         </ul>
       </div>
