@@ -18,7 +18,8 @@ test.describe('profile page', () => {
       const about = await page.locator('.card', { hasText: 'About' }).first().boundingBox();
       expect(about.x > identity.x + identity.width).toBe(width >= LG);
 
-      await page.getByRole('switch', { name: 'Show me in Teammate Finder' }).click();
+      // the Teammate Finder switch saves at once, so open the edit mode to bring up the save bar
+      await page.getByRole('button', { name: 'Edit profile' }).click();
       const saveBar = page.getByRole('region', { name: 'Unsaved profile changes' });
       await saveBar.scrollIntoViewIfNeeded();
       await expect(saveBar).toBeInViewport();

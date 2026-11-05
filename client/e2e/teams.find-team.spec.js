@@ -84,10 +84,7 @@ async function mockOpportunities(page, opportunities) {
 
 async function findTeam(page, title) {
   await page.goto('/opportunities');
-  await page
-    .getByRole('button', { name: /^Hackathons/ })
-    .filter({ visible: true })
-    .click();
+  await page.getByRole('tab', { name: /^Hackathons/ }).click();
   await page
     .locator('.opp-card', { hasText: title })
     .getByRole('button', { name: /^Find team/ })
