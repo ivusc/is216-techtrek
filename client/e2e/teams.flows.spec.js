@@ -143,7 +143,8 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
       await openTeams(requester.page, size);
       await requester.page.getByLabel('Search teams').fill(name);
       await teamCard(requester.page, name).getByRole('button', { name: 'Request to join' }).click();
-      const request = requester.page.getByRole('dialog', { name: `Request to join ${name}` });
+      // the request form opens inside the team window, which is titled with the team's name
+      const request = requester.page.getByRole('dialog', { name, exact: true });
       await request.getByLabel(/Message to/).fill('Keen to help.');
       await request.getByRole('button', { name: 'Send request' }).click();
       await expect(teamCard(requester.page, name)).toContainText('Request sent');

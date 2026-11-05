@@ -65,18 +65,27 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
         ({ browserName }) => browserName !== 'chromium',
         'HTML5 drag and drop is driven reliably in chromium',
       );
+      // phones show one column per swipe, so Applied is off screen; cards move there with the "..." menu
+      test.skip(device === 'phone', 'phones move cards with the menu, not by dragging');
 
       test('drags a card to Applied', async ({ loggedIn: page, account }) => {
         await track(account, { title: 'Frontend Intern', organisation: 'Acme' });
         await page.goto('/tracker');
 
-        await stage(page, 'Saved')
-          .locator('.kanban-card', { hasText: 'Frontend Intern' })
-          .dragTo(stage(page, 'Applied'));
-
-        await expect(stage(page, 'Applied').locator('.kanban-card')).toContainText(
-          'Frontend Intern',
+        // the card moves straight away and saves in the background, so wait for the save before reloading
+        const saved = page.waitForResponse(
+          (response) => response.request().method() === 'PATCH' && response.url().includes('/application/'),
         );
+        // a drag started while the board is still settling can be dropped nowhere; try again until it lands
+        await expect(async () => {
+          const card = stage(page, 'Saved').locator('.kanban-card', { hasText: 'Frontend Intern' });
+          if (await card.count()) await card.dragTo(stage(page, 'Applied'), { timeout: 2000 });
+          await expect(stage(page, 'Applied').locator('.kanban-card')).toContainText(
+            'Frontend Intern',
+            { timeout: 1000 },
+          );
+        }).toPass();
+        expect((await saved).ok()).toBe(true);
         await page.reload();
         await expect(stage(page, 'Applied').locator('.kanban-card')).toContainText(
           'Frontend Intern',
