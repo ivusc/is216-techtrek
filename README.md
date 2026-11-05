@@ -37,7 +37,7 @@ Hackathon data for this project was sourced from https://devpost.com/api/hackath
 ## Links
 
 - **Live app (Vercel):** https://is216-techtrek.vercel.app
-- **Git repository:** https://github.com/ivusc/techtrek
+- **Git repository:** https://github.com/ivusc/is216-techtrek
 
 The client is on Vercel and calls `/api`. `client/vercel.json` forwards those calls to the API project at https://techtrek-server.vercel.app.
 
@@ -48,8 +48,8 @@ You need **Node.js 22.18+ or 24.12+** and **pnpm** (`npm install -g pnpm`, or `c
 1. Get the code: unzip the submitted folder, or clone the repo:
 
 ```bash
-git clone https://github.com/ivusc/techtrek.git
-cd techtrek
+git clone https://github.com/ivusc/is216-techtrek.git
+cd is216-techtrek
 ```
 
 2. Install dependencies for both packages from the repo root:
