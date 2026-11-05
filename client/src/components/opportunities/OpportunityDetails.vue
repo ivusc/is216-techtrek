@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { typeBadge } from '@/constants'
-import { flyToTracker } from '@/utils/flyToTracker'
+import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 import {
   getMonthlySalary,
   getPrizeAmount,
@@ -19,10 +19,12 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'toggle-save'])
 
-// Track: a copy of this organisation row flies into the Tracker icon ("add to cart"); untracking just untracks
+// Track: a copy of this organisation row flies into the Tracker icon ("add to cart");
+// Tracked (to untrack): a copy flies back out of the Tracker icon into it
 const summaryEl = ref(null)
 function track() {
-  if (!props.saved) flyToTracker(summaryEl.value)
+  if (props.saved) flyFromTracker(summaryEl.value)
+  else flyToTracker(summaryEl.value)
   emit('toggle-save')
 }
 

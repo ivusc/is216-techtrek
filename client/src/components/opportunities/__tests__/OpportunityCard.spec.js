@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue';
-import { flyToTracker } from '@/utils/flyToTracker';
+import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker';
 
-vi.mock('@/utils/flyToTracker', () => ({ flyToTracker: vi.fn() }));
+vi.mock('@/utils/flyToTracker', () => ({ flyToTracker: vi.fn(), flyFromTracker: vi.fn() }));
 import { HACKATHONS, jobs } from '@/__tests__/fixtures/opportunities';
 import { NOW } from '@/__tests__/fixtures/applications';
 
@@ -102,9 +102,10 @@ describe('OpportunityCard', () => {
     expect(mountCard(job).findAll('.role-tag')).toHaveLength(0);
   });
 
-  it('flies the card to the Tracker when it is tracked, but not when it is untracked', async () => {
+  it('flies the card into the Tracker when tracked, and back out of it when untracked', async () => {
     const [job] = jobs(1);
     flyToTracker.mockClear();
+    flyFromTracker.mockClear();
 
     const card = mountCard(job, false);
     await button(card, 'Track').trigger('click');
@@ -114,6 +115,7 @@ describe('OpportunityCard', () => {
     const tracked = mountCard(job, true);
     await button(tracked, 'Tracked').trigger('click');
     expect(flyToTracker).toHaveBeenCalledTimes(1);
+    expect(flyFromTracker).toHaveBeenCalledWith(tracked.find('.opp-card').element);
     expect(tracked.emitted('toggle-save')).toHaveLength(1);
   });
 });

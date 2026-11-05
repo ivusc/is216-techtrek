@@ -1,5 +1,8 @@
-// "Add to cart" for the tracker: a copy of the opportunity flies in a curve into the Tracker icon
-// (the sidebar on laptops, the bottom bar on phones), the icon gives a bump and a "+1" floats up.
+// "Add to cart" for the tracker, both ways:
+// - Track: a copy of the opportunity flies in a curve into the Tracker icon (the sidebar on laptops,
+//   the bottom bar on phones), the icon gives a bump and a "+1" floats up.
+// - Untrack: the icon gives a little shake, a "−1" floats up, and a copy pops out of the icon and flies
+//   back along the same curve into the card, which settles as it lands.
 // Built with element.animate() (the browser's Web Animations API), the same way the Quick pick deck did it.
 
 const FLIGHT_MS = 700
@@ -14,24 +17,16 @@ function reducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-// the icon bumps, and a "+1" floats up from it and fades
-export function bumpTracker() {
-  const icon = trackerIcon()
-  if (!icon?.animate) return
-  icon.animate(
-    [{ transform: 'scale(1)' }, { transform: 'scale(1.45) rotate(-8deg)' }, { transform: 'scale(0.9)' }, { transform: 'scale(1)' }],
-    { duration: 450, easing: 'ease-out' }
-  )
-  if (reducedMotion()) return
-
+// a little "+1" or "−1" that floats up from the icon and fades
+function popBadge(icon, text, className) {
   const box = icon.getBoundingClientRect()
-  const plusOne = document.createElement('span')
-  plusOne.textContent = '+1'
-  plusOne.className = 'tracker-plus-one'
-  plusOne.setAttribute('aria-hidden', 'true')
-  Object.assign(plusOne.style, { left: box.left + box.width / 2 + 'px', top: box.top + 'px' })
-  document.body.appendChild(plusOne)
-  plusOne
+  const badge = document.createElement('span')
+  badge.textContent = text
+  badge.className = className
+  badge.setAttribute('aria-hidden', 'true')
+  Object.assign(badge.style, { left: box.left + box.width / 2 + 'px', top: box.top + 'px' })
+  document.body.appendChild(badge)
+  badge
     .animate(
       [
         { transform: 'translate(-50%, 0) scale(0.6)', opacity: 0 },
@@ -40,7 +35,35 @@ export function bumpTracker() {
       ],
       { duration: 900, easing: 'ease-out' }
     )
-    .finished.then(() => plusOne.remove())
+    .finished.then(() => badge.remove())
+}
+
+// tracked: the icon bumps and a "+1" floats up from it
+export function bumpTracker() {
+  const icon = trackerIcon()
+  if (!icon?.animate) return
+  icon.animate(
+    [{ transform: 'scale(1)' }, { transform: 'scale(1.45) rotate(-8deg)' }, { transform: 'scale(0.9)' }, { transform: 'scale(1)' }],
+    { duration: 450, easing: 'ease-out' }
+  )
+  if (!reducedMotion()) popBadge(icon, '+1', 'tracker-plus-one')
+}
+
+// untracked: the icon gives a little "no" shake and a "−1" floats up from it
+export function shakeTracker() {
+  const icon = trackerIcon()
+  if (!icon?.animate) return
+  icon.animate(
+    [
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-4px) rotate(-6deg)' },
+      { transform: 'translateX(4px) rotate(6deg)' },
+      { transform: 'translateX(-2px)' },
+      { transform: 'translateX(0)' }
+    ],
+    { duration: 400, easing: 'ease-in-out' }
+  )
+  if (!reducedMotion()) popBadge(icon, '−1', 'tracker-plus-one tracker-minus-one')
 }
 
 // the points along a curve from `from` to `to` that bulges upwards, for the flight path
@@ -60,29 +83,26 @@ function arc(from, to, steps) {
   return points
 }
 
-// source: the card (or row, or panel) being tracked. A copy of it flies to the Tracker icon.
-export function flyToTracker(source) {
-  const target = trackerIcon()
-  if (!source || !target || !source.animate || reducedMotion()) {
-    bumpTracker()
-    return
-  }
-
-  const from = source.getBoundingClientRect()
-  const to = target.getBoundingClientRect()
-  const ghost = source.cloneNode(true)
+// a copy of the card, laid over the card in the same place and size
+function makeGhost(card) {
+  const box = card.getBoundingClientRect()
+  const ghost = card.cloneNode(true)
   ghost.setAttribute('aria-hidden', 'true')
   ghost.classList.add('tracker-flight')
-  // the same place and size as the original. !important because the card's own classes
-  // (Bootstrap's h-100 is "height: 100% !important") would otherwise stretch the copy
-  for (const [name, value] of [['left', from.left], ['top', from.top], ['width', from.width], ['height', from.height]]) {
+  // !important because the card's own classes (Bootstrap's h-100 is "height: 100% !important")
+  // would otherwise stretch the copy
+  for (const [name, value] of [['left', box.left], ['top', box.top], ['width', box.width], ['height', box.height]]) {
     ghost.style.setProperty(name, value + 'px', 'important')
   }
   document.body.appendChild(ghost)
+  return { ghost, box }
+}
 
-  // move the copy's centre along the curve, shrinking it to a dot as it reaches the icon
-  const start = { x: from.left + from.width / 2, y: from.top + from.height / 2 }
-  const end = { x: to.left + to.width / 2, y: to.top + to.height / 2 }
+// the flight from the card into the icon: the copy's centre follows the curve and it shrinks to a dot.
+// Played backwards, it is the trip from the icon back into the card.
+function flightKeyframes(cardBox, iconBox) {
+  const start = { x: cardBox.left + cardBox.width / 2, y: cardBox.top + cardBox.height / 2 }
+  const end = { x: iconBox.left + iconBox.width / 2, y: iconBox.top + iconBox.height / 2 }
   const keyframes = arc(start, end, 10).map((point) => ({
     transform: `translate(${point.x - start.x}px, ${point.y - start.y}px) scale(${1 - point.t * 0.94}) rotate(${point.t * -12}deg)`,
     opacity: point.t < 0.85 ? 1 : 0.6,
@@ -91,9 +111,50 @@ export function flyToTracker(source) {
   }))
   // a little "lift off" first, like picking the card up
   keyframes.splice(1, 0, { transform: 'translate(0, -6px) scale(1.04)', opacity: 1, borderRadius: '12px', offset: 0.06 })
+  return keyframes
+}
 
-  ghost.animate(keyframes, { duration: FLIGHT_MS, easing: 'cubic-bezier(0.5, 0, 0.75, 0.5)' }).finished.then(() => {
-    ghost.remove()
+function canFly(card, icon) {
+  return Boolean(card && icon && card.animate) && !reducedMotion()
+}
+
+// Track: a copy of the card (or row, or panel) flies into the Tracker icon
+export function flyToTracker(card) {
+  const icon = trackerIcon()
+  if (!canFly(card, icon)) {
     bumpTracker()
-  })
+    return
+  }
+  const { ghost, box } = makeGhost(card)
+  ghost
+    .animate(flightKeyframes(box, icon.getBoundingClientRect()), { duration: FLIGHT_MS, easing: 'cubic-bezier(0.5, 0, 0.75, 0.5)' })
+    .finished.then(() => {
+      ghost.remove()
+      bumpTracker()
+    })
+}
+
+// Untrack: the icon shakes, then a copy pops out of it and flies back along the same curve into the card
+export function flyFromTracker(card) {
+  const icon = trackerIcon()
+  shakeTracker()
+  if (!canFly(card, icon)) return
+
+  const { ghost, box } = makeGhost(card)
+  ghost
+    .animate(flightKeyframes(box, icon.getBoundingClientRect()), {
+      duration: FLIGHT_MS,
+      delay: 150, // after the shake has started
+      direction: 'reverse', // icon -> card
+      easing: 'cubic-bezier(0.25, 0.5, 0.5, 1)',
+      fill: 'backwards' // sit at the icon (tiny) during the delay, not over the card
+    })
+    .finished.then(() => {
+      ghost.remove()
+      // the card settles as the copy lands back in it
+      card.animate([{ transform: 'scale(0.97)' }, { transform: 'scale(1.01)' }, { transform: 'scale(1)' }], {
+        duration: 300,
+        easing: 'ease-out'
+      })
+    })
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { flyToTracker, trackerIcon } from '@/utils/flyToTracker';
+import { flyFromTracker, flyToTracker, trackerIcon } from '@/utils/flyToTracker';
 
 // jsdom has no layout or element.animate, so give the elements a size and a fake animate()
 function fakeAnimate() {
@@ -75,4 +75,27 @@ describe('flyToTracker', () => {
     expect(icon.animate).toHaveBeenCalled();
     expect(Element.prototype.animate).not.toHaveBeenCalled(); // no flying copy, no "+1"
   });
+
+  it('untracking shakes the icon with a −1, then flies a copy back out of the icon into the card', async () => {
+    flyFromTracker(card);
+
+    const [shake] = icon.animate.mock.calls[0];
+    expect(shake.some((frame) => frame.transform.includes('translateX(-4px)'))).toBe(true);
+    const animated = Element.prototype.animate.mock.contexts;
+    expect(animated.some((element) => element.classList.contains('tracker-minus-one') && element.textContent === '−1')).toBe(true);
+
+    const ghost = document.querySelector('.tracker-flight');
+    const call = Element.prototype.animate.mock.contexts.indexOf(ghost);
+    const [keyframes, options] = Element.prototype.animate.mock.calls[call];
+    // the same path as tracking, played backwards: from the icon (tiny) to the card (full size)
+    expect(options.direction).toBe('reverse');
+    expect(keyframes.at(-1).transform).toContain('translate(-720px, -280px)');
+    expect(keyframes[0].transform).toContain('scale(1)');
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(document.querySelector('.tracker-flight')).toBeNull();
+    expect(card.animate).toHaveBeenCalled(); // the card settles as it lands
+  });
 });
+

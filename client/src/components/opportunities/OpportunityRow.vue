@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { formatDate } from '@/utils/date'
 import { typeBadge } from '@/constants'
-import { flyToTracker } from '@/utils/flyToTracker'
+import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 import {
   getLocationGroup,
   getMonthlySalary,
@@ -21,10 +21,12 @@ const props = defineProps({
 
 const emit = defineEmits(['details', 'toggle-save', 'find-team'])
 
-// Track: a copy of this row flies into the Tracker icon ("add to cart"); untracking just untracks
+// Track: a copy of this row flies into the Tracker icon ("add to cart");
+// Tracked (to untrack): a copy flies back out of the Tracker icon into it
 const rowEl = ref(null)
 function track() {
-  if (!props.saved) flyToTracker(rowEl.value)
+  if (props.saved) flyFromTracker(rowEl.value)
+  else flyToTracker(rowEl.value)
   emit('toggle-save')
 }
 

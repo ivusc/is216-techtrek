@@ -12,7 +12,7 @@ import {
   getPlatform
 } from '@/utils/opportunity'
 import MatchMeter from './MatchMeter.vue'
-import { flyToTracker } from '@/utils/flyToTracker'
+import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -23,10 +23,12 @@ const props = defineProps({
 
 const emit = defineEmits(['details', 'toggle-save', 'find-team'])
 
-// Track: a copy of this card flies into the Tracker icon ("add to cart"); untracking just untracks
+// Track: a copy of this card flies into the Tracker icon ("add to cart");
+// Tracked (to untrack): a copy flies back out of the Tracker icon into it
 const cardEl = ref(null)
 function track() {
-  if (!props.saved) flyToTracker(cardEl.value)
+  if (props.saved) flyFromTracker(cardEl.value)
+  else flyToTracker(cardEl.value)
   emit('toggle-save')
 }
 
