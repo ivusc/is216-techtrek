@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 // the bar along the top of the landing page. It sticks to the top as you scroll (position: sticky),
 // gets a shadow once the page has moved, and underlines the section you are looking at.
@@ -49,6 +50,7 @@ function go(id) {
       </nav>
 
       <div class="d-flex align-items-center gap-2 ms-auto">
+        <ThemeToggle />
         <template v-if="loggedIn">
           <RouterLink to="/home" class="btn btn-primary fw-semibold">
             Open TechTrek <i class="bi bi-arrow-right" aria-hidden="true"></i>
