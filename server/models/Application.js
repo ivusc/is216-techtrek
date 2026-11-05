@@ -48,6 +48,8 @@ const applicationSchema = new mongoose.Schema(
     notes: { type: String, trim: true, maxlength: 2000 },
     deadline: { type: Date },
     interviewAt: { type: Date },
+    appliedAt: { type: Date }, // when it last moved to Applied (for the follow-up nudge)
+    followedUpAt: { type: Date }, // when the user last marked "Followed up" (null after undo)
     contactName: { type: String, trim: true, maxlength: 200 },
     // left out until the first save from the detail modal, which fills in the default items;
     // no [] default, so a checklist the user emptied stays empty instead of getting the defaults back

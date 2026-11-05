@@ -449,6 +449,39 @@ describe('GET /interview/dashboard', () => {
     expect(body.averageScore).toBe('8.0');
   });
 
+  it('gives a score trend per role: each session averaged, oldest first', async () => {
+    const agent = await loginAs(app, { userName: ME });
+    const frontend = await saveApplication(agent, { status: 'applied' });
+    const data = await saveApplication(agent, {
+      status: 'interview',
+      opportunity: manualOpportunity({ title: 'Data Analyst' }),
+    });
+    const userId = await idOf(ME);
+    const session = (applicationId, day, scores) =>
+      InterviewAttempt.create({
+        userId,
+        applicationId,
+        completedAt: new Date(`2026-11-0${day}T09:00:00Z`),
+        questions: scores.map((score, index) => ({ ...SCORED[index], score })),
+      });
+    await session(frontend._id, 3, [8, 9]);
+    await session(frontend._id, 1, [4, 5, 6]);
+    await session(data._id, 2, [7]);
+
+    const { body } = await agent.get('/interview/dashboard').expect(200);
+
+    expect(body.trends).toEqual([
+      {
+        title: 'Frontend Intern',
+        points: [
+          { completedAt: '2026-11-01T09:00:00.000Z', score: 5 },
+          { completedAt: '2026-11-03T09:00:00.000Z', score: 8.5 },
+        ],
+      },
+      { title: 'Data Analyst', points: [{ completedAt: '2026-11-02T09:00:00.000Z', score: 7 }] },
+    ]);
+  });
+
   it('is empty for a new user', async () => {
     const agent = await loginAs(app, { userName: ME });
 
@@ -461,6 +494,7 @@ describe('GET /interview/dashboard', () => {
       highestScore: 0,
       averageScore: 0,
       seniorTips: [],
+      trends: [],
     });
   });
 

@@ -31,3 +31,9 @@ export async function fetchJobFilterOptions() {
   const response = await serverAPI.get(BASE_URL + '/job-filters')
   return response.data
 }
+
+// anonymous interview tips from seniors who got an offer at this company (same role first)
+export async function fetchTipsForOpportunity(organisation, title) {
+  const response = await serverAPI.get('/interview/tips', { params: { organisation, title } })
+  return response.data.tips
+}

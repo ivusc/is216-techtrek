@@ -2,14 +2,14 @@
 import { computed } from 'vue'
 import { formatDate } from '@/utils/date'
 import { getDaysLeft } from '@/utils/opportunity'
-import { getApplicationDeadline, stagesFor } from '@/utils/application'
+import { getApplicationDeadline, getFollowUpNudge, stagesFor } from '@/utils/application'
 import { typeBadge, hackathonResults } from '@/constants'
 
 const props = defineProps({
   application: { type: Object, required: true }
 })
 
-defineEmits(['open', 'move'])
+defineEmits(['open', 'move', 'follow-up'])
 
 const opportunity = computed(() => props.application.opportunityId)
 
@@ -54,6 +54,9 @@ const dateLine = computed(() => {
   }
   return { text: 'No deadline', urgent: false }
 })
+
+// "Applied 16 days ago with no update": suggest a follow-up email (null when not due)
+const nudge = computed(() => getFollowUpNudge(props.application))
 
 // the column reads this id when the card is dropped on it
 function onDragStart(event) {
@@ -121,5 +124,20 @@ function onDragStart(event) {
         :aria-label="'Notes: ' + application.notes"
       ></i>
     </div>
+
+    <!-- no news for 14+ days: suggest a follow-up, one click marks it done (.stop so the card doesn't open) -->
+    <div v-if="nudge" class="follow-up-nudge rounded-2 p-2 d-flex flex-column gap-2" @click.stop @keydown.enter.stop>
+      <p class="text-caption mb-0">
+        <template v-if="nudge.followedUp">Followed up {{ nudge.days }} days ago with no reply. Follow up again?</template>
+        <template v-else>Applied {{ nudge.days }} days ago with no update. Send a follow-up?</template>
+      </p>
+      <button type="button" class="btn btn-sm btn-light fw-semibold align-self-start" @click="$emit('follow-up')">
+        <i class="bi bi-check2" aria-hidden="true"></i> Followed up
+      </button>
+    </div>
+    <!-- the marker once it's done -->
+    <p v-else-if="application.status === 'applied' && application.followedUpAt" class="followed-up text-caption text-success-emphasis mb-0">
+      <i class="bi bi-check2-circle" aria-hidden="true"></i> Followed up {{ formatDate(application.followedUpAt) }}
+    </p>
   </div>
 </template>

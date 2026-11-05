@@ -112,6 +112,11 @@ function applicationsInStage(status) {
 }
 
 //move to a diff status type
+// the card's "Followed up" button: note the date, which hides the nudge for another 14 days
+async function markFollowedUp(applicationId) {
+  await updateApplication(applicationId, { followedUpAt: new Date().toISOString() });
+}
+
 async function moveApplication(applicationId, newStatus) {
   await updateApplicationStatus(applicationId, newStatus);
 }
@@ -238,7 +243,7 @@ async function deleteTips() {
       <div v-if="viewMode === 'board'" class="kanban-board d-flex gap-3 pb-2 flex-grow-1 min-h-0">
         <KanbanColumn v-for="stage in visibleStages" :key="stage.status" :stage="stage"
           :applications="applicationsInStage(stage.status)" @add="openAddForm(stage.status)" @open="openDetails"
-          @move="moveApplication" />
+          @move="moveApplication" @follow-up="markFollowedUp" />
       </div>
 
       <CalendarView v-else class="flex-grow-1 min-h-0 overflow-auto" :applications="filteredApplications" @open="openDetails" @export="exportCalendar" />

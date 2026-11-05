@@ -328,3 +328,9 @@
 .min-h-0 {
   min-height: 0;
 }
+
+/* "Applied 16 days ago with no update. Send a follow-up?" on an Applied card */
+.follow-up-nudge {
+  background-color: var(--bs-warning-bg-subtle);
+  color: var(--bs-warning-text-emphasis);
+}

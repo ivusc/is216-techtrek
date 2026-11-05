@@ -60,10 +60,11 @@ async function getApplication(req, res) {
   }
 }
 
-// PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName, checklist ([{ label, done }])
+// PATCH /application/:id  body: any of status, notes, deadline, interviewAt, contactName, checklist ([{ label, done }]),
+// followedUpAt (a date, or null to undo "Followed up")
 async function updateApplication(req, res) {
   const { id: applicationId } = req.params;
-  const { status, result, notes, deadline, interviewAt, contactName, checklist } = req.body ?? {};
+  const { status, result, notes, deadline, interviewAt, contactName, checklist, followedUpAt } = req.body ?? {};
 
   if (!mongoose.isValidObjectId(applicationId)) {
     return res.status(400).json({ error: 'Invalid ID' });
@@ -74,7 +75,7 @@ async function updateApplication(req, res) {
   }
 
   try {
-    const changes = { status, result, notes, deadline, interviewAt, contactName, checklist };
+    const changes = { status, result, notes, deadline, interviewAt, contactName, checklist, followedUpAt };
     const application = await applicationService.updateApplication(applicationId, req.session.user._id, changes);
 
     if (!application) {

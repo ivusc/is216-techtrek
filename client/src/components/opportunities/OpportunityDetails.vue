@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { typeBadge } from '@/constants'
+import OpportunityTips from './OpportunityTips.vue'
 import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 import {
   getMonthlySalary,
@@ -184,6 +185,9 @@ const infoBoxes = computed(() => {
           </li>
         </ul>
       </section>
+
+      <!-- tips from seniors who got an offer at this company (jobs and internships) -->
+      <OpportunityTips v-if="!isHackathon && item.organisation" :key="item.organisation + item.title" :organisation="item.organisation" :title="item.title" />
 
       <p v-if="item.registrations" class="text-body-secondary mb-0">
         {{ item.registrations.toLocaleString() }} people have registered so far.

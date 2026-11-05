@@ -5,6 +5,7 @@ import serverAPI from '@/services/serverAPI';
 import PageHeader from '@/components/PageHeader.vue';
 import TrekLoader from '@/components/TrekLoader.vue';
 import TabCards from '@/components/TabCards.vue';
+import ScoreTrend from '@/components/interviews/ScoreTrend.vue';
 import SeniorTips from '@/components/interviews/SeniorTips.vue';
 
 const search = ref('');
@@ -19,6 +20,7 @@ const applicationCards = ref([]);
 const titles = ref([]);
 const questions = ref([]);
 const seniorTips = ref([]);
+const trends = ref([]); // [{ title, points: [{ completedAt, score }] }], one per role
 const activeTab = ref('bank');
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -34,6 +36,7 @@ const loadData = async () => {
     averageScore.value = response.data.averageScore;
     highestScore.value = response.data.highestScore;
     seniorTips.value = response.data.seniorTips;
+    trends.value = response.data.trends ?? [];
   } catch (error) {
     console.error(error);
     errorMessage.value = 'Failed to load interview dashboard.';
@@ -116,6 +119,11 @@ const stats = computed(() => [
     tile: 'bg-primary-subtle text-primary',
   },
 ]);
+
+// the score trend for a role card (empty until a session is finished)
+function trendFor(title) {
+  return trends.value.find((trend) => trend.title === title)?.points ?? [];
+}
 
 function clearFilters() {
   selectedTitle.value = '';
@@ -294,6 +302,7 @@ function shortDate(value) {
               </p>
               <h2 class="h4 text-white mb-0">{{ application.title }}</h2>
               <p class="small mb-2">{{ application.company }}</p>
+              <ScoreTrend :points="trendFor(application.title)" class="mb-2" />
               <RouterLink
                 class="btn btn-light fw-semibold mt-auto align-self-start"
                 :to="`/practice/${application.applicationId}`"

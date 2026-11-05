@@ -156,6 +156,26 @@ describe('InterviewView', () => {
     expect(third.getComponent(RouterLinkStub).text()).toBe('Retry');
   });
 
+  it('shows each role\'s score trend on its card', async () => {
+    mock.onGet('/interview/dashboard').reply(200, {
+      ...DASHBOARD,
+      trends: [
+        {
+          title: 'Frontend Intern',
+          points: [
+            { completedAt: '2026-11-01T09:00:00Z', score: 5 },
+            { completedAt: '2026-11-03T09:00:00Z', score: 8.5 },
+          ],
+        },
+      ],
+    });
+    const wrapper = await mountDashboard();
+    const cards = wrapper.findAll('article');
+
+    expect(cards[0].find('figcaption').text()).toBe('5 → 8.5 over 2 sessions');
+    expect(cards[1].text()).toContain('Finish a session to start your score trend.');
+  });
+
   it('filters the bank by search, role, type and difficulty and clears the filters', async () => {
     mock.onGet('/interview/dashboard').reply(200, DASHBOARD);
     const wrapper = await mountDashboard();

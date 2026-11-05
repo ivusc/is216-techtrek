@@ -26,6 +26,7 @@ async function createApplication(userId, opportunity, details) {
     deadline: details.deadline,
     interviewAt: details.interviewAt,
     contactName: details.contactName,
+    appliedAt: details.status === 'applied' ? new Date() : undefined,
   });
 
   return application.populate('opportunityId');
@@ -50,7 +51,7 @@ async function getApplications(userId, status) {
   return applications;
 }
 
-const EDITABLE_FIELDS = ['status', 'result', 'notes', 'deadline', 'interviewAt', 'contactName', 'checklist'];
+const EDITABLE_FIELDS = ['status', 'result', 'notes', 'deadline', 'interviewAt', 'contactName', 'checklist', 'followedUpAt'];
 
 // one read (with the listing) and one save. Each trip to the database costs about 0.2 s on Atlas,
 // so this no longer reads the card twice.
@@ -63,6 +64,8 @@ async function updateApplication(id, userId, changes) {
   if (changes.status !== undefined) {
     checkStatusFits(changes.status, application.opportunityId?.type);
     if (changes.status !== 'results') next.result = null;
+    // moving to Applied starts the follow-up clock again
+    if (changes.status === 'applied' && application.status !== 'applied') application.set('appliedAt', new Date());
   }
   for (const field of EDITABLE_FIELDS) {
     if (next[field] !== undefined) application.set(field, next[field]);
