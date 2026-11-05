@@ -132,6 +132,24 @@ describe('TeamDetailsModal', () => {
     expect(box.findAll('a[href^="https://t.me/"]').map((a) => a.attributes('href'))).toEqual(['https://t.me/ivus_c']);
   });
 
+  it("only asks me to add my Telegram when I haven't", () => {
+    const members = [{ user: { ...REQUESTER, userName: 'john.doe@smu.edu.sg' }, role: 'Designer' }];
+    const hint = 'Add your Telegram on your profile';
+
+    // I have Telegram, my teammate doesn't: no nudge for me, just say they haven't added theirs
+    useUserStore().user = { ...ME, skills: [], telegram: 'kellie_j' };
+    const mine = mountDetails({ canContact: true, members }).find('.contact-box').text();
+    expect(mine).not.toContain(hint);
+    expect(mine).toContain("Your teammates haven't added their Telegram yet");
+
+    // I don't have Telegram: nudge me, whether or not my teammates have it
+    useUserStore().user = { ...ME, skills: [] };
+    expect(mountDetails({ canContact: true, members }).find('.contact-box').text()).toContain(hint);
+    const withTheirs = mountDetails({ canContact: true, members: [{ user: { ...REQUESTER, telegram: 'ezekiel_n' }, role: 'Designer' }] });
+    expect(withTheirs.find('.contact-box').text()).toContain(hint);
+    expect(withTheirs.findAll('a[href^="https://t.me/"]')).toHaveLength(1);
+  });
+
   it('copies everyone\'s email', async () => {
     const writeText = vi.fn().mockResolvedValue();
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });

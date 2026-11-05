@@ -153,4 +153,23 @@ describe('IdentityCard details', () => {
     expect(wrapper.emitted('update:year')).toEqual([[3]]);
     expect(wrapper.emitted('update:course')).toEqual([['Computer Science']]);
   });
+
+  it('picks a character as the profile picture, and offers to remove it', async () => {
+    mock.onGet('/avatars').reply(200, { presets: [{ key: 'f2', label: 'Bun and glasses', group: 'female' }] });
+    mock.onPut('/me/avatar/preset').reply((config) => [
+      200,
+      { user: { ...USER, avatar: { preset: JSON.parse(config.data).preset, updatedAt: UPDATED_AT } } },
+    ]);
+    const wrapper = mountCard();
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Choose a character').trigger('click');
+    await flushPromises();
+    await wrapper.find('[role="radio"]').trigger('click');
+    await flushPromises();
+
+    expect(useUserStore().avatarPreset).toBe('f2');
+    expect(wrapper.find('[role="radio"]').attributes('aria-checked')).toBe('true');
+    expect(wrapper.findAll('button').some((button) => button.text() === 'Remove picture')).toBe(true);
+  });
 });
+

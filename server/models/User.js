@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { PRESET_KEYS } = require('../service/avatar-presets');
 
 // SMU schools a user can pick during onboarding (the client shows the full names)
 const FACULTIES = ['SOA', 'LKCSB', 'SCIS', 'SOE', 'YPHSL', 'SOSS', 'CIS'];
@@ -85,9 +86,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^[A-Za-z][A-Za-z0-9_]{4,31}$/, 'Use your Telegram username: 5 to 32 letters, numbers or _'],
     },
+    // a profile picture: an uploaded photo (data + contentType), or one of the illustrated
+    // characters (preset, e.g. 'f2', see service/avatar-presets.js). Never both.
     avatar: {
       data: { type: Buffer, select: false },
       contentType: { type: String, select: false },
+      preset: { type: String, enum: PRESET_KEYS },
       updatedAt: Date,
     },
   },

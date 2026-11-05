@@ -62,6 +62,8 @@ async function copyEmails() {
   setTimeout(() => (emailsCopied.value = false), 2000)
 }
 const onTelegram = computed(() => teammates.value.filter((user) => user.telegram))
+// my own Telegram: only nudge me to add one when I haven't
+const iHaveTelegram = computed(() => Boolean(auth.user?.telegram))
 
 // "Request to join" opens the request form right here, under the team, instead of a new window
 const requesting = ref(false)
@@ -173,7 +175,10 @@ function teamLink() {
           <i class="bi bi-telegram me-1" aria-hidden="true"></i>{{ getDisplayName(user).split('@')[0] }}
         </a>
       </div>
-      <p v-else class="text-caption text-body-secondary mt-2 mb-0">
+      <p v-else-if="iHaveTelegram" class="text-caption text-body-secondary mt-2 mb-0">
+        Your teammates haven't added their Telegram yet, so email is the way to reach them for now.
+      </p>
+      <p v-if="!iHaveTelegram" class="text-caption text-body-secondary mt-2 mb-0">
         Add your Telegram on your profile so teammates can message you.
       </p>
       <p class="text-caption text-body-tertiary mt-2 mb-0">Only people in this team can see these.</p>

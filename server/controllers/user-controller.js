@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { PRESETS, PRESET_KEYS, presetList } = require('../service/avatar-presets');
 const userService = require('../service/user/user-service');
 const {
   DatabaseError,
@@ -147,6 +148,39 @@ async function uploadAvatar(req, res) {
   }
 }
 
+// PUT /me/avatar/preset  body: { preset: 'f2' } - use one of the illustrated characters as my picture
+async function setAvatarPreset(req, res) {
+  const { preset } = req.body ?? {};
+  if (!PRESET_KEYS.includes(preset)) {
+    return res.status(400).json({ error: 'Pick one of the characters.' });
+  }
+  try {
+    const profile = await userService.setAvatarPreset(req.session.user._id, preset);
+    return res.json({ user: profile });
+  } catch (err) {
+    return handleUserError(res, err);
+  }
+}
+
+// GET /avatars - the characters to pick from (key, label, group)
+function listAvatarPresets(req, res) {
+  res.set('Cache-Control', 'public, max-age=86400');
+  return res.json({ presets: presetList() });
+}
+
+// GET /avatars/:key - one character's picture, for the picker
+function getAvatarPreset(req, res) {
+  const preset = PRESETS[req.params.key];
+  if (!preset) return res.status(404).json({ error: 'No such character.' });
+  res.set({
+    'Content-Type': 'image/svg+xml',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'Cache-Control': 'public, max-age=86400',
+  });
+  return res.send(preset.svg);
+}
+
 async function removeAvatar(req, res) {
   try {
     const profile = await userService.removeAvatar(req.session.user._id);
@@ -171,7 +205,7 @@ async function getAvatar(req, res) {
     'Content-Type': avatar.contentType,
     'X-Content-Type-Options': 'nosniff',
     'Content-Security-Policy': "default-src 'none'; sandbox",
-    'Content-Disposition': `inline; filename="avatar.${extensionOf(avatar.contentType)}"`,
+    'Content-Disposition': `inline; filename="avatar.${avatar.contentType === 'image/svg+xml' ? 'svg' : extensionOf(avatar.contentType)}"`,
     'Cache-Control': 'private, max-age=86400',
   });
   return res.send(avatar.data);
@@ -218,6 +252,9 @@ async function destroySession(req, res) {
 }
 
 module.exports = {
+  setAvatarPreset,
+  listAvatarPresets,
+  getAvatarPreset,
   createUser,
   login,
   me,

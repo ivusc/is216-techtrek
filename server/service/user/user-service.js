@@ -1,4 +1,5 @@
 const { IllegalArguementError, DatabaseError, WrongPasswordError } = require('./user-service-errors');
+const { PRESETS } = require('../avatar-presets');
 const User = require('../../models/User');
 const Application = require('../../models/Application');
 const InterviewAttempt = require('../../models/interviewAttempt');
@@ -186,6 +187,19 @@ async function setAvatar(userId, data, contentType) {
   }
 }
 
+// picks one of the illustrated characters as the profile picture (replaces any uploaded photo)
+async function setAvatarPreset(userId, preset) {
+  try {
+    return await User.findByIdAndUpdate(
+      userId,
+      { avatar: { preset, updatedAt: new Date() } },
+      { returnDocument: 'after', runValidators: true },
+    );
+  } catch (err) {
+    throw new DatabaseError('Database could not save the picture.');
+  }
+}
+
 async function removeAvatar(userId) {
   try {
     return await User.findByIdAndUpdate(
@@ -201,6 +215,9 @@ async function removeAvatar(userId) {
 async function findAvatar(userId) {
   try {
     const user = await User.findById(userId).select('+avatar.data +avatar.contentType');
+    if (user?.avatar?.preset && PRESETS[user.avatar.preset]) {
+      return { data: Buffer.from(PRESETS[user.avatar.preset].svg), contentType: 'image/svg+xml' };
+    }
     return user?.avatar?.data ? user.avatar : null;
   } catch (err) {
     throw new DatabaseError('Database could not find the photo.');
@@ -258,6 +275,7 @@ module.exports = {
   updateUser,
   changePassword,
   setAvatar,
+  setAvatarPreset,
   removeAvatar,
   findAvatar,
   findPublicProfile,

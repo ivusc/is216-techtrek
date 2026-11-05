@@ -160,4 +160,22 @@ describe('OnboardingView', () => {
 
     expect(wrapper.text()).toContain('Could not save your profile. Please try again.');
   });
+
+  it('lets me pick a character as my profile picture on the first step', async () => {
+    mock.onGet('/avatars').reply(200, { presets: [{ key: 'm1', label: 'Short neat hair', group: 'male' }] });
+    mock.onPut('/me/avatar/preset').reply(200, {
+      user: { _id: 'u1', userName: 'kellie.jubela@smu.edu.sg', skills: [], avatar: { preset: 'm1', updatedAt: '2026-11-05T00:00:00.000Z' } },
+    });
+    const wrapper = mountView();
+    await flushPromises();
+
+    await wrapper.find('[role="radio"]').trigger('click');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.put[0].data)).toEqual({ preset: 'm1' });
+    expect(wrapper.find('[role="radio"]').attributes('aria-checked')).toBe('true');
+    // picking a picture doesn't move on: the name is still needed
+    expect(wrapper.find('#onboarding-name').exists()).toBe(true);
+  });
 });
+
