@@ -30,6 +30,7 @@ function copyProfile() {
     skills: [...(user.skills ?? [])],
     linkedinUrl: user.linkedinUrl ?? '',
     githubUrl: user.githubUrl ?? '',
+    telegram: user.telegram ?? '',
     openToTeams: user.openToTeams ?? true,
   };
 }
@@ -103,6 +104,7 @@ async function save() {
         <LinksCard
           v-model:github="draft.githubUrl"
           v-model:linkedin="draft.linkedinUrl"
+          v-model:telegram="draft.telegram"
           :editing="editing"
         />
         <div class="card profile-card p-4 d-flex flex-row align-items-center gap-3">

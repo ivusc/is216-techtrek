@@ -4,6 +4,8 @@ import { safeHttpUrl } from '@/utils/url';
 
 const github = defineModel('github', { type: String, default: '' });
 const linkedin = defineModel('linkedin', { type: String, default: '' });
+// Telegram username (no @). Only people in your teams see it, so they can message you.
+const telegram = defineModel('telegram', { type: String, default: '' });
 
 defineProps({
   editing: { type: Boolean, default: false },
@@ -12,6 +14,12 @@ defineProps({
 const links = computed(() => [
   { key: 'github', label: 'GitHub', icon: 'bi-github', href: safeHttpUrl(github.value) },
   { key: 'linkedin', label: 'LinkedIn', icon: 'bi-linkedin', href: safeHttpUrl(linkedin.value) },
+  {
+    key: 'telegram',
+    label: 'Telegram · only your teammates see this',
+    icon: 'bi-telegram',
+    href: telegram.value ? 'https://t.me/' + encodeURIComponent(telegram.value.replace(/^@/, '')) : '',
+  },
 ]);
 
 function shortUrl(url) {
@@ -45,6 +53,24 @@ function shortUrl(url) {
           class="form-control"
           placeholder="https://www.linkedin.com/in/your-name"
         />
+      </div>
+      <div>
+        <label for="profile-telegram" class="form-label small fw-semibold">Telegram</label>
+        <div class="input-group">
+          <span class="input-group-text">@</span>
+          <input
+            id="profile-telegram"
+            v-model.trim="telegram"
+            type="text"
+            class="form-control"
+            placeholder="your_username"
+            autocomplete="off"
+            aria-describedby="profile-telegram-hint"
+          />
+        </div>
+        <p id="profile-telegram-hint" class="text-caption text-body-tertiary mt-1 mb-0">
+          Only people in your teams see this, so they can message you.
+        </p>
       </div>
     </div>
 

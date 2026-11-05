@@ -74,6 +74,13 @@ const userSchema = new mongoose.Schema(
         'Use a GitHub profile link like https://github.com/your-username',
       ],
     },
+    // Telegram username (without the @), so teammates can message each other. Only people in the
+    // same team see it.
+    telegram: {
+      type: String,
+      trim: true,
+      match: [/^[A-Za-z][A-Za-z0-9_]{4,31}$/, 'Use your Telegram username: 5 to 32 letters, numbers or _'],
+    },
     avatar: {
       data: { type: Buffer, select: false },
       contentType: { type: String, select: false },

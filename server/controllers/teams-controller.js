@@ -10,6 +10,10 @@ const notificationService = require('../service/notification-service');
 const teamRequestService = require('../service/team-request-service');
 
 const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
+// a team also loads how to contact each person (SMU email, Telegram); formatTeam only passes these on
+// to people in that team
+const CONTACT_FIELDS = 'userName telegram';
+const TEAM_PERSON_FIELDS = PROFILE_FIELDS + ' ' + CONTACT_FIELDS;
 const ANSWER_STATUSES = ['accepted', 'declined'];
 const EVENT_FIELDS = ['opportunity', 'opportunityId', 'eventName', 'eventLocation', 'closesAt'];
 const MAX_MATCHES = 20;
@@ -104,11 +108,23 @@ async function resolveEvent(data) {
 
 function populateTeam(query) {
   return query
-    .populate({ path: 'leaderId', select: PROFILE_FIELDS })
-    .populate({ path: 'members.userId', select: PROFILE_FIELDS });
+    .populate({ path: 'leaderId', select: TEAM_PERSON_FIELDS })
+    .populate({ path: 'members.userId', select: TEAM_PERSON_FIELDS });
+}
+
+// a person in a team: their contact details only go to people in the same team
+function teamPerson(user, canContact) {
+  if (!user || typeof user.toObject !== 'function') return user;
+  const person = user.toObject();
+  if (!canContact) {
+    delete person.userName;
+    delete person.telegram;
+  }
+  return person;
 }
 
 function formatTeam(team, userId, requestStatus = null) {
+  const inTeam = Boolean(userId) && (isLeader(team, userId) || isMember(team, userId));
   return {
     _id: team._id,
     name: team.name,
@@ -122,10 +138,11 @@ function formatTeam(team, userId, requestStatus = null) {
     openRoles: team.openRoles ?? [],
     autoAccept: team.autoAccept,
     status: team.status,
-    leader: team.leaderId,
+    leader: teamPerson(team.leaderId, inTeam),
     members: (team.members || [])
       .filter((member) => member.userId)
-      .map((member) => ({ user: member.userId, role: member.role })),
+      .map((member) => ({ user: teamPerson(member.userId, inTeam), role: member.role })),
+    canContact: inTeam, // people in the team can see each other's email and Telegram
     isLeader: userId ? isLeader(team, userId) : false,
     requestStatus,
   };

@@ -10,7 +10,7 @@ const { MAX_SKILLS, cleanSkills } = require('../skills');
 
 const SALT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
-const OPTIONAL_FIELDS = ['year', 'course', 'about', 'linkedinUrl', 'githubUrl'];
+const OPTIONAL_FIELDS = ['year', 'course', 'about', 'linkedinUrl', 'githubUrl', 'telegram'];
 
 /**
  *
@@ -128,7 +128,10 @@ async function updateUser(userId, changes) {
   const unset = {};
   for (const [field, value] of Object.entries(changes)) {
     if (OPTIONAL_FIELDS.includes(field) && isBlank(value)) unset[field] = 1;
-    else set[field] = field === 'skills' ? cleanSkills(value) : value;
+    else if (field === 'skills') set[field] = cleanSkills(value);
+    // "@kellie_j" and "kellie_j" are the same Telegram username
+    else if (field === 'telegram') set[field] = String(value).trim().replace(/^@/, '');
+    else set[field] = value;
   }
 
   try {

@@ -43,6 +43,16 @@ async function saveRole({ userId, role }) {
 // wanted skills I have (from my profile) get a tick
 const auth = useUserStore()
 
+// people in the team can reach each other: email everyone at once, or message someone on Telegram
+const teammates = computed(() =>
+  props.team.canContact ? props.team.members.map((member) => member.user).filter((user) => user._id !== auth._id) : []
+)
+const emailEveryone = computed(() => {
+  const emails = teammates.value.map((user) => user.userName).filter(Boolean)
+  return emails.length > 0 ? 'mailto:' + emails.join(',') + '?subject=' + encodeURIComponent(props.team.name) : ''
+})
+const onTelegram = computed(() => teammates.value.filter((user) => user.telegram))
+
 // "Request to join" opens the request form right here, under the team, instead of a new window
 const requesting = ref(false)
 const role = ref('')
@@ -117,6 +127,34 @@ function isMine(skill) {
       @pick-role="role = $event"
     />
 
+    <!-- people in the team: how to reach the others -->
+    <section v-if="teammates.length > 0" class="contact-box rounded-3 p-3 mb-4" aria-labelledby="contact-title">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <h3 id="contact-title" class="h6 fw-semibold mb-0 me-auto">
+          <i class="bi bi-chat-dots me-1 text-primary" aria-hidden="true"></i>Contact your team
+        </h3>
+        <a v-if="emailEveryone" :href="emailEveryone" class="btn btn-sm btn-primary fw-semibold">
+          <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email everyone
+        </a>
+      </div>
+      <div v-if="onTelegram.length > 0" class="d-flex flex-wrap gap-2 mt-2">
+        <a
+          v-for="user in onTelegram"
+          :key="user._id"
+          :href="'https://t.me/' + encodeURIComponent(user.telegram)"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-sm btn-light fw-semibold"
+        >
+          <i class="bi bi-telegram me-1" aria-hidden="true"></i>{{ getDisplayName(user).split('@')[0] }}
+        </a>
+      </div>
+      <p v-else class="text-caption text-body-secondary mt-2 mb-0">
+        Add your Telegram on your profile so teammates can message you.
+      </p>
+      <p class="text-caption text-body-tertiary mt-2 mb-0">Only people in this team can see these.</p>
+    </section>
+
     <!-- the request form slides open here when "Request to join" is pressed -->
     <Transition name="drop">
       <section v-if="requesting" ref="requestForm" class="request-form rounded-3 p-3 mb-4" aria-labelledby="request-form-title">
@@ -158,6 +196,11 @@ function isMine(skill) {
 </template>
 
 <style scoped>
+.contact-box {
+  background-color: var(--bs-primary-bg-subtle);
+  border: 1px solid var(--bs-primary-border-subtle);
+}
+
 .request-form {
   background-color: var(--bs-primary-bg-subtle);
   border: 1px solid var(--bs-primary-border-subtle);

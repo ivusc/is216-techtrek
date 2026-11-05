@@ -109,4 +109,23 @@ describe('TeamDetailsModal', () => {
     expect(JSON.parse(mock.history.post[1].data)).toEqual({ role: 'Frontend developer', message: 'Keen!', shareProfile: true });
     expect(wrapper.emitted('sent')).toEqual([[{ _id: 'r9', status: 'pending' }]]);
   });
+
+  it('lets people in the team email everyone and message on Telegram', () => {
+    const wrapper = mountDetails({
+      canContact: true,
+      members: [
+        { user: { ...LEADER, userName: 'ivus.chua@smu.edu.sg', telegram: 'ivus_c' }, role: 'Team lead' },
+        { user: { ...REQUESTER, userName: 'ezekiel.ng@smu.edu.sg' }, role: 'Designer' },
+      ],
+    });
+    const box = wrapper.find('.contact-box');
+
+    expect(box.find('a.btn-primary').attributes('href')).toBe('mailto:ivus.chua@smu.edu.sg,ezekiel.ng@smu.edu.sg?subject=' + encodeURIComponent(wrapper.props('team').name));
+    expect(box.findAll('a[href^="https://t.me/"]').map((a) => a.attributes('href'))).toEqual(['https://t.me/ivus_c']);
+  });
+
+  it('shows no contacts to people outside the team', () => {
+    expect(mountDetails().find('.contact-box').exists()).toBe(false);
+  });
 });
+

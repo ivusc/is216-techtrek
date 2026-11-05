@@ -263,6 +263,21 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
         <span v-for="skill in openMember.user.skills" :key="skill" class="badge rounded-pill fw-medium bg-white border text-body">{{ skill }}</span>
       </div>
       <p v-else class="small text-body-secondary mb-2">No skills added yet.</p>
+      <!-- how to reach them: only sent to people in the same team -->
+      <div v-if="openMember.user.userName || openMember.user.telegram" class="d-flex flex-wrap gap-2 mb-2">
+        <a v-if="openMember.user.userName" :href="'mailto:' + openMember.user.userName" class="btn btn-sm btn-light fw-semibold">
+          <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email
+        </a>
+        <a
+          v-if="openMember.user.telegram"
+          :href="'https://t.me/' + encodeURIComponent(openMember.user.telegram)"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-sm btn-light fw-semibold"
+        >
+          <i class="bi bi-telegram me-1" aria-hidden="true"></i>@{{ openMember.user.telegram }}
+        </a>
+      </div>
       <div v-if="safeHttpUrl(openMember.user.githubUrl) || safeHttpUrl(openMember.user.linkedinUrl)" class="d-flex gap-3 small">
         <a v-if="safeHttpUrl(openMember.user.githubUrl)" :href="safeHttpUrl(openMember.user.githubUrl)" target="_blank" rel="noopener noreferrer" class="fw-semibold text-decoration-none">
           <i class="bi bi-github me-1" aria-hidden="true"></i>GitHub

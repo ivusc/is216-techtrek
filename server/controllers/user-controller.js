@@ -19,6 +19,7 @@ const EDITABLE_FIELDS = [
   'skills',
   'linkedinUrl',
   'githubUrl',
+  'telegram',
   'openToTeams',
 ];
 
