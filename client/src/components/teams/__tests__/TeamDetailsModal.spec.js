@@ -52,7 +52,8 @@ describe('TeamDetailsModal', () => {
     await wrapper.find('[aria-label="See Ezekiel Ng\'s profile"]').trigger('click');
 
     const panel = wrapper.find('.people-panel');
-    expect(panel.text()).toContain('Designer · Y1 Information Systems');
+    expect(panel.find('.member-role').text()).toBe('Designer');
+    expect(panel.text()).toContain('Y1 Information Systems');
     expect(panel.text()).toContain('Figma');
     expect(panel.find('a[href="https://github.com/ezekiel"]').exists()).toBe(true);
 

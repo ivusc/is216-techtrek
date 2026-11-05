@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { mount, RouterLinkStub } from '@vue/test-utils';
 import TeamPeople from '@/components/teams/TeamPeople.vue';
 import { team, LEADER, REQUESTER } from '@/__tests__/fixtures/teams';
@@ -9,6 +10,8 @@ function mountPeople(overrides = {}) {
     global: { stubs: { RouterLink: RouterLinkStub } },
   });
 }
+
+beforeEach(() => setActivePinia(createPinia()));
 
 const openSpot = (wrapper) => wrapper.find('[aria-label="Invite someone to this open spot"]');
 
@@ -81,6 +84,19 @@ describe('TeamPeople', () => {
     expect(card.text()).toContain('I love building with Vue.');
     expect(card.text()).toContain('Vue.js');
     expect(card.findComponent(RouterLinkStub).props('to')).toBe('/people/' + LEADER._id);
+
+    // a long description starts folded, with Read more
+    await wrapper.setProps({
+      team: {
+        ...wrapper.props('team'),
+        members: [{ user: { ...LEADER, about: 'x'.repeat(200) }, role: 'Team lead' }, { user: REQUESTER, role: 'Backend' }],
+      },
+    });
+    expect(wrapper.find('.member-about').classes()).toContain('is-clamped');
+    const more = wrapper.findAll('.member-card button').find((b) => b.text() === 'Read more');
+    await more.trigger('click');
+    expect(wrapper.find('.member-about').classes()).not.toContain('is-clamped');
+    expect(more.text()).toBe('Show less');
 
     // someone with no description yet
     await wrapper.find('[aria-label="See Ezekiel Ng\'s profile"]').trigger('click');

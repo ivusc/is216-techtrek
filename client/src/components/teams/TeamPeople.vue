@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import { useUserStore } from '@/store/user'
 import { safeHttpUrl } from '@/utils/url'
 import { emailLink, getDisplayName, getSchoolLine, uniqueRoles } from '@/utils/team'
 
@@ -67,6 +68,15 @@ const openMember = computed(() => members.value.find((member) => member.user._id
 const sharing = computed(() => String(openId.value).startsWith('share'))
 const sharingRole = computed(() => (sharing.value ? openSpots.value.find((spot) => 'share' + spot.index === openId.value)?.role ?? null : null))
 
+const auth = useUserStore()
+function isMe(member) {
+  return String(member.user._id) === String(auth._id)
+}
+
+// descriptions longer than this start folded to a few lines
+const ABOUT_PREVIEW = 160
+const aboutOpen = ref(false)
+
 // where the card's little arrow points: the middle of the circle that was clicked
 const arrowX = ref(48)
 
@@ -74,6 +84,7 @@ function toggle(id, event) {
   const button = event?.currentTarget
   if (button?.offsetWidth) arrowX.value = button.offsetLeft + button.offsetWidth / 2
   openId.value = openId.value === id ? null : id
+  aboutOpen.value = false
   copied.value = false
   roleSaved.value = false
   const member = members.value.find((candidate) => candidate.user._id === id)
@@ -239,40 +250,64 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
         </div>
         <button type="button" class="member-close btn-close btn-close-white" aria-label="Close profile" @click="openId = null"></button>
         <div class="px-3 pb-3">
-          <div class="member-head d-flex align-items-end gap-3 mb-2">
-            <UserAvatar :user-id="openMember.user._id" :name="getDisplayName(openMember.user)" :avatar-updated-at="openMember.user.avatar?.updatedAt ?? ''" :size="68" class="member-avatar" />
-            <div class="min-w-0 me-auto">
-              <p class="h5 fw-semibold mb-0 text-truncate">{{ getDisplayName(openMember.user) }}</p>
-              <p class="small text-body-secondary mb-0">
-                <span :class="openMember.isLead ? 'text-primary fw-semibold' : ''">{{ roleOf(openMember) }}</span><template v-if="getSchoolLine(openMember.user) !== ''"> · {{ getSchoolLine(openMember.user) }}</template>
+          <!-- photo over the banner, name and role just below the banner's edge -->
+          <div class="member-head d-flex align-items-start gap-3 mb-3">
+            <UserAvatar :user-id="openMember.user._id" :name="getDisplayName(openMember.user)" :avatar-updated-at="openMember.user.avatar?.updatedAt ?? ''" :size="72" class="member-avatar flex-shrink-0" />
+            <div class="member-title min-w-0">
+              <p class="member-name fw-bold mb-1 text-truncate">
+                {{ getDisplayName(openMember.user) }}<span v-if="isMe(openMember)" class="text-body-tertiary fw-normal"> (you)</span>
               </p>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="member-role badge rounded-pill fw-semibold" :class="openMember.isLead ? 'is-lead' : ''">
+                  <i v-if="openMember.isLead" class="bi bi-star-fill me-1" aria-hidden="true"></i>{{ roleOf(openMember) }}
+                </span>
+                <span v-if="getSchoolLine(openMember.user) !== ''" class="small text-body-secondary">{{ getSchoolLine(openMember.user) }}</span>
+              </div>
             </div>
           </div>
 
-          <p v-if="openMember.user.about" class="member-about mb-3">{{ openMember.user.about }}</p>
-          <p v-else class="small text-body-tertiary mb-3">{{ getDisplayName(openMember.user).split(/[\s@]/)[0] }} hasn't written a description yet.</p>
+          <!-- a long description shows its first few lines, with "Read more" -->
+          <template v-if="openMember.user.about">
+            <p :id="'about-' + openMember.user._id" class="member-about mb-1" :class="{ 'is-clamped': !aboutOpen }">{{ openMember.user.about }}</p>
+            <button
+              v-if="openMember.user.about.length > ABOUT_PREVIEW"
+              type="button"
+              class="btn btn-link btn-sm p-0 fw-semibold text-decoration-none mb-3"
+              :aria-expanded="aboutOpen"
+              :aria-controls="'about-' + openMember.user._id"
+              @click="aboutOpen = !aboutOpen"
+            >
+              {{ aboutOpen ? 'Show less' : 'Read more' }}
+            </button>
+            <div v-else class="mb-3"></div>
+          </template>
+          <p v-else class="small text-body-tertiary fst-italic mb-3">{{ getDisplayName(openMember.user).split(/[\s@]/)[0] }} hasn't written a description yet.</p>
 
-          <div v-if="openMember.user.skills?.length" class="d-flex flex-wrap gap-1 mb-3">
-            <span class="visually-hidden">Skills:</span>
-            <span v-for="skill in openMember.user.skills" :key="skill" class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis border border-primary-subtle">{{ skill }}</span>
+          <div v-if="openMember.user.skills?.length" class="mb-3">
+            <p class="text-overline text-body-tertiary mb-1">SKILLS</p>
+            <div class="d-flex flex-wrap gap-1">
+              <span v-for="skill in openMember.user.skills" :key="skill" class="badge rounded-pill fw-medium bg-primary-subtle text-primary-emphasis border border-primary-subtle">{{ skill }}</span>
+            </div>
           </div>
 
-          <!-- how to reach them (email and Telegram only reach people in the same team) -->
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <a v-if="openMember.user.userName" :href="emailLink(openMember.user.userName, team.name)" target="_blank" rel="noopener noreferrer" class="member-link" :aria-label="'Email ' + getDisplayName(openMember.user)" :title="openMember.user.userName">
-              <i class="bi bi-envelope" aria-hidden="true"></i>
+          <!-- how to reach them, each with a label (email and Telegram only reach people in the same team) -->
+          <div class="member-actions d-flex flex-wrap align-items-center gap-2 pt-3 border-top">
+            <template v-if="!isMe(openMember)">
+              <a v-if="openMember.user.userName" :href="emailLink(openMember.user.userName, team.name)" target="_blank" rel="noopener noreferrer" class="member-link" :title="openMember.user.userName">
+                <i class="bi bi-envelope" aria-hidden="true"></i>Email
+              </a>
+              <a v-if="openMember.user.telegram" :href="'https://t.me/' + encodeURIComponent(openMember.user.telegram)" target="_blank" rel="noopener noreferrer" class="member-link" :title="'@' + openMember.user.telegram">
+                <i class="bi bi-telegram" aria-hidden="true"></i>Telegram
+              </a>
+            </template>
+            <a v-if="safeHttpUrl(openMember.user.githubUrl)" :href="safeHttpUrl(openMember.user.githubUrl)" target="_blank" rel="noopener noreferrer" class="member-link">
+              <i class="bi bi-github" aria-hidden="true"></i>GitHub
             </a>
-            <a v-if="openMember.user.telegram" :href="'https://t.me/' + encodeURIComponent(openMember.user.telegram)" target="_blank" rel="noopener noreferrer" class="member-link" :aria-label="'Message ' + getDisplayName(openMember.user) + ' on Telegram'" :title="'@' + openMember.user.telegram">
-              <i class="bi bi-telegram" aria-hidden="true"></i>
+            <a v-if="safeHttpUrl(openMember.user.linkedinUrl)" :href="safeHttpUrl(openMember.user.linkedinUrl)" target="_blank" rel="noopener noreferrer" class="member-link">
+              <i class="bi bi-linkedin" aria-hidden="true"></i>LinkedIn
             </a>
-            <a v-if="safeHttpUrl(openMember.user.githubUrl)" :href="safeHttpUrl(openMember.user.githubUrl)" target="_blank" rel="noopener noreferrer" class="member-link" :aria-label="getDisplayName(openMember.user) + ' on GitHub'" title="GitHub">
-              <i class="bi bi-github" aria-hidden="true"></i>
-            </a>
-            <a v-if="safeHttpUrl(openMember.user.linkedinUrl)" :href="safeHttpUrl(openMember.user.linkedinUrl)" target="_blank" rel="noopener noreferrer" class="member-link" :aria-label="getDisplayName(openMember.user) + ' on LinkedIn'" title="LinkedIn">
-              <i class="bi bi-linkedin" aria-hidden="true"></i>
-            </a>
-            <RouterLink :to="'/people/' + openMember.user._id" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold ms-auto">
-              View profile<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+            <RouterLink :to="'/people/' + openMember.user._id" class="btn btn-sm btn-primary rounded-pill fw-semibold ms-auto px-3">
+              {{ isMe(openMember) ? 'Your profile' : 'View profile' }}<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
             </RouterLink>
           </div>
 
@@ -481,7 +516,7 @@ button.person:hover .spot-open {
   z-index: 1;
 }
 .member-banner {
-  height: 56px;
+  height: 48px;
   border-radius: var(--bs-border-radius-xl) var(--bs-border-radius-xl) 0 0;
 }
 .banner-dot {
@@ -501,27 +536,52 @@ button.person:hover .spot-open {
   right: 30%;
   background-color: var(--tt-accent);
 }
-/* the photo sits half over the banner */
+/* the photo sits half over the banner; the name starts just below the banner's edge */
 .member-head {
-  margin-top: -30px;
+  margin-top: -36px;
   position: relative;
+}
+.member-title {
+  padding-top: 42px;
+}
+.member-name {
+  font-size: 1.125rem;
+  line-height: 1.2;
+}
+.member-role {
+  color: var(--bs-body-color);
+  background-color: var(--bs-secondary-bg);
+}
+.member-role.is-lead {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-primary-bg-subtle);
 }
 .member-avatar {
   border-width: 3px !important;
   box-shadow: 0 6px 16px -8px rgba(28, 26, 61, 0.4);
 }
 .member-about {
+  max-width: 62ch;
+  font-size: 0.9375rem;
   line-height: 1.6;
   white-space: pre-line;
   color: var(--bs-secondary-color);
 }
+.member-about.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
 .member-link {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--bs-body-color);
   background-color: var(--bs-secondary-bg);
   text-decoration: none;
