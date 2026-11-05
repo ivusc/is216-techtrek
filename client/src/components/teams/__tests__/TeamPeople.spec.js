@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import MockAdapter from 'axios-mock-adapter';
+import serverAPI from '@/services/serverAPI';
 import { createPinia, setActivePinia } from 'pinia';
-import { mount, RouterLinkStub } from '@vue/test-utils';
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
 import TeamPeople from '@/components/teams/TeamPeople.vue';
 import { team, LEADER, REQUESTER } from '@/__tests__/fixtures/teams';
 
@@ -11,7 +13,9 @@ function mountPeople(overrides = {}) {
   });
 }
 
+const mock = new MockAdapter(serverAPI);
 beforeEach(() => setActivePinia(createPinia()));
+afterEach(() => mock.reset());
 
 const openSpot = (wrapper) => wrapper.find('[aria-label="Invite someone to this open spot"]');
 
@@ -38,8 +42,25 @@ describe('TeamPeople', () => {
     await openSpot(wrapper).trigger('click');
     expect(wrapper.find('.share-panel').text()).toContain('Fill this spot');
 
-    await wrapper.findAll('.share-panel button').find((button) => button.text() === 'Invite by SMU email').trigger('click');
-    expect(wrapper.emitted('invite')).toEqual([['']]);
+    // the email form drops down right in the box, no new window
+    const toggle = wrapper.findAll('.share-panel button').find((button) => button.text() === 'Invite by SMU email');
+    expect(wrapper.find('.email-invite').exists()).toBe(false);
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+
+    await wrapper.find('#invite-email').setValue('not-an-email');
+    await wrapper.find('.email-invite').trigger('submit');
+    expect(wrapper.find('.email-invite [role="alert"]').text()).toBe("Type your friend's @smu.edu.sg email.");
+
+    mock.onPost('/teams/' + wrapper.props('team')._id + '/invites').reply(201, { _id: 'i1', status: 'pending', user: { _id: 'u7', displayName: 'Chloe Teo' } });
+    await wrapper.find('#invite-email').setValue('Chloe.Teo@smu.edu.sg');
+    await wrapper.find('.email-invite').trigger('submit');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.post[0].data)).toEqual({ userName: 'chloe.teo@smu.edu.sg' });
+    expect(wrapper.find('.email-invite [role="status"]').text()).toContain('Invite sent to Chloe Teo!');
+    expect(wrapper.find('#invite-email').element.value).toBe('');
+    expect(wrapper.emitted('invited')).toEqual([[{ role: null, user: { _id: 'u7', displayName: 'Chloe Teo' } }]]);
   });
 
   it('names the open spots after the open roles', () => {
@@ -107,6 +128,60 @@ describe('TeamPeople', () => {
     expect(wrapper.find('.member-card').exists()).toBe(false);
   });
 
+  it('shows who was invited on their open role, and the spot stays open', async () => {
+    const wrapper = mountPeople({
+      openRoles: ['Frontend developer', 'Designer'],
+      pendingInvites: [{ role: 'Designer', user: { _id: 'u9', displayName: 'Alicia Tan' } }, { role: null, user: null }],
+    });
+    const designer = wrapper.find('[aria-label="Invite someone to be the Designer"]');
+    expect(designer.text()).toContain('Invited Alicia');
+    expect(designer.find('.invite-badge').exists()).toBe(true);
+    // an invite without a role (or that the viewer can't see) takes the other free spot
+    expect(wrapper.find('[aria-label="Invite someone to be the Frontend developer"]').text()).toContain('Invite sent');
+
+    await designer.trigger('click');
+    expect(wrapper.find('.waiting-list').text()).toContain('Alicia Tan');
+    expect(wrapper.find('.share-panel input').element.value).toContain('&role=Designer');
+  });
+
+  it('shows everyone invited for the same role on that role\'s circle', async () => {
+    const wrapper = mountPeople({
+      slotsOpen: 3,
+      openRoles: ['Frontend developer', 'Backend developer', 'Designer'],
+      pendingInvites: [
+        { role: 'Frontend developer', user: { _id: 'a', displayName: 'Alicia Tan' } },
+        { role: 'Frontend developer', user: { _id: 'c', displayName: 'Chloe Teo' } },
+      ],
+    });
+    const frontend = wrapper.find('[aria-label="Invite someone to be the Frontend developer"]');
+    expect(frontend.text()).toContain('Invited Alicia +1');
+    expect(frontend.find('.invite-badge').text()).toBe('2');
+    expect(wrapper.find('[aria-label="Invite someone to be the Backend developer"]').text()).toContain('Open role');
+
+    await frontend.trigger('click');
+    const rows = wrapper.findAll('.waiting-list li').map((row) => row.text().replace(/\s+/g, ' '));
+    expect(rows).toEqual(['ATAlicia TanInvited', 'CTChloe TeoInvited']);
+  });
+
+  it('lists who was invited and who asked for the role, with a way to answer the requests', async () => {
+    const wrapper = mountPeople({
+      isLeader: true,
+      openRoles: ['Frontend developer', 'Designer'],
+      pendingInvites: [{ role: 'Frontend developer', user: { _id: 'a', displayName: 'Alicia Tan' } }],
+      pendingRequests: [
+        { _id: 'r1', role: 'frontend developer', user: { _id: 'm', displayName: 'Marcus Lee' } },
+        { _id: 'r2', role: 'Designer', user: { _id: 's', displayName: 'Sarah Lim' } },
+      ],
+    });
+
+    await wrapper.find('[aria-label="Invite someone to be the Frontend developer"]').trigger('click');
+    const list = wrapper.find('.waiting-list');
+    expect(list.text()).toContain('WAITING FOR THIS ROLE · 2');
+    expect(list.findAll('li').map((row) => row.text().replace(/\s+/g, ' '))).toEqual(['ATAlicia TanInvited', 'MLMarcus LeeAsked to join Answer']);
+    const links = list.findAllComponents(RouterLinkStub).map((link) => link.props('to'));
+    expect(links).toEqual(['/people/a', '/people/m', { path: '/teams', query: { tab: 'requests' } }]);
+  });
+
   it('shows no role editor to members who are not the lead', async () => {
     const wrapper = mountPeople();
 
@@ -132,7 +207,14 @@ describe('TeamPeople', () => {
 
     await wrapper.find('[aria-label="Invite someone to be the Designer"]').trigger('click');
     await wrapper.findAll('.share-panel button').find((button) => button.text() === 'Invite by SMU email').trigger('click');
+    expect(wrapper.find('.email-invite').text()).toContain('for Designer');
 
-    expect(wrapper.emitted('invite')).toEqual([['Designer']]);
+    mock.onPost(/invites$/).reply(400, { error: 'No TechTrek account uses that email yet. Send them your invite link instead!' });
+    await wrapper.find('#invite-email').setValue('friend@smu.edu.sg');
+    await wrapper.find('.email-invite').trigger('submit');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.post[0].data)).toEqual({ userName: 'friend@smu.edu.sg', role: 'Designer' });
+    expect(wrapper.find('.email-invite [role="alert"]').text()).toContain('No TechTrek account uses that email yet');
   });
 });

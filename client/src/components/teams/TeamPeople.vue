@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { useUserStore } from '@/store/user'
 import { safeHttpUrl } from '@/utils/url'
+import { inviteToTeam, getErrorMessage } from '@/services/teamService'
 import { emailLink, getDisplayName, getSchoolLine, uniqueRoles } from '@/utils/team'
 
 // the team as a row of profile circles: the lead (starred), the members with their roles, teammates
@@ -17,7 +18,8 @@ const props = defineProps({
   roleError: { type: String, default: '' }
 })
 
-const emit = defineEmits(['invite', 'assign-role', 'pick-role'])
+// invited: the lead sent an email invite from an open spot ({ role, user }), so the team can show it
+const emit = defineEmits(['invited', 'assign-role', 'pick-role'])
 
 const leaderId = computed(() => String(props.team.leader?._id ?? props.team.leader ?? ''))
 
@@ -48,6 +50,18 @@ const spots = computed(() => {
     index,
     role: roles[index] ?? null
   }))
+  // invites still waiting for an answer sit on the spot of their role. Several people can be invited
+  // for the same role; an invite with no role (or for a role no longer open) goes on the spot with
+  // the fewest invites. The spots stay open, so people can still ask for them.
+  for (const spot of list) spot.invites = []
+  const fewest = (spots) => spots.reduce((best, spot) => (best === null || spot.invites.length < best.invites.length ? spot : best), null)
+  for (const invite of props.team.pendingInvites ?? []) {
+    const role = String(invite.role ?? '').toLowerCase()
+    const sameRole = role ? list.filter((spot) => String(spot.role ?? '').toLowerCase() === role) : []
+    const spot = fewest(sameRole.length > 0 ? sameRole : list)
+    if (spot) spot.invites.push(invite)
+  }
+  for (const spot of list) spot.invite = spot.invites[0] ?? null
   if (shownYou.value && list.length > 0) {
     const mine = String(shownYou.value.role ?? '').toLowerCase()
     const match = list.findIndex((spot) => spot.role !== null && spot.role.toLowerCase() === mine)
@@ -66,7 +80,30 @@ function roleOf(member) {
 const openId = ref(null)
 const openMember = computed(() => members.value.find((member) => member.user._id === openId.value) ?? null)
 const sharing = computed(() => String(openId.value).startsWith('share'))
-const sharingRole = computed(() => (sharing.value ? openSpots.value.find((spot) => 'share' + spot.index === openId.value)?.role ?? null : null))
+const sharingSpot = computed(() => (sharing.value ? openSpots.value.find((spot) => 'share' + spot.index === openId.value) ?? null : null))
+// "Invited Alicia", "Invited Alicia +1", or "2 invites sent" when the names aren't shown to me
+function firstName(user) {
+  return getDisplayName(user).split(/[\s@]/)[0]
+}
+function invitedLabel(spot) {
+  const named = spot.invites.filter((invite) => invite.user)
+  if (named.length === 0) return spot.invites.length === 1 ? 'Invite sent' : spot.invites.length + ' invites sent'
+  const more = spot.invites.length - 1
+  return 'Invited ' + firstName(named[0].user) + (more > 0 ? ' +' + more : '')
+}
+// the people waiting on the open spot I clicked: invited first, then (lead only) who asked for its role
+const waitingList = computed(() => {
+  const spot = sharingSpot.value
+  if (!spot) return []
+  const role = String(spot.role ?? '').toLowerCase()
+  const invited = (spot.invites ?? []).map((invite, index) => ({ key: 'i' + index, kind: 'invited', user: invite.user }))
+  const asked = (props.team.pendingRequests ?? [])
+    .filter((request) => String(request.role ?? '').toLowerCase() === role || (!spot.role && !request.role))
+    .map((request) => ({ key: 'r' + request._id, kind: 'requested', user: request.user }))
+  return [...invited, ...asked]
+})
+
+const sharingRole = computed(() => sharingSpot.value?.role ?? null)
 
 const auth = useUserStore()
 function isMe(member) {
@@ -80,7 +117,56 @@ const aboutOpen = ref(false)
 // where the card's little arrow points: the middle of the circle that was clicked
 const arrowX = ref(48)
 
+// the lead invites someone by SMU email for the open spot's role, right in the spot's box
+const emailOpen = ref(false)
+const emailAddress = ref('')
+const emailRole = ref('')
+const emailSending = ref(false)
+const emailError = ref('')
+const emailSentTo = ref('')
+const emailInput = ref(null)
+const openRoleChoices = computed(() => uniqueRoles(props.team.openRoles ?? []))
+
+async function toggleEmail() {
+  emailOpen.value = !emailOpen.value
+  emailError.value = ''
+  emailSentTo.value = ''
+  if (emailOpen.value) {
+    await nextTick()
+    emailInput.value?.focus()
+  }
+}
+
+async function sendEmailInvite() {
+  const address = emailAddress.value.trim().toLowerCase()
+  emailError.value = ''
+  emailSentTo.value = ''
+  if (!/^[^@\s]+@smu\.edu\.sg$/.test(address)) {
+    emailError.value = "Type your friend's @smu.edu.sg email."
+    return
+  }
+  const role = sharingRole.value ?? emailRole.value
+  if (!role && openRoleChoices.value.length > 0) {
+    emailError.value = 'Pick which role you are inviting them for.'
+    return
+  }
+  emailSending.value = true
+  try {
+    const created = await inviteToTeam(props.team._id, role ? { userName: address, role } : { userName: address })
+    emailSentTo.value = getDisplayName(created.user)
+    emailAddress.value = ''
+    emit('invited', { role: role || null, user: created.user })
+  } catch (error) {
+    emailError.value = getErrorMessage(error)
+  }
+  emailSending.value = false
+}
+
 function toggle(id, event) {
+  emailOpen.value = false
+  emailAddress.value = ''
+  emailError.value = ''
+  emailSentTo.value = ''
   const button = event?.currentTarget
   if (button?.offsetWidth) arrowX.value = button.offsetLeft + button.offsetWidth / 2
   openId.value = openId.value === id ? null : id
@@ -225,12 +311,23 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
           @click="openSpotClicked(spot)"
         >
           <span class="person-ring">
-            <span class="spot spot-open rounded-circle d-flex align-items-center justify-content-center">
+            <!-- someone was invited: their photo, faded, until they answer -->
+            <span v-if="spot.invite?.user" class="invited-photo">
+              <UserAvatar :user-id="spot.invite.user._id" :name="getDisplayName(spot.invite.user)" :avatar-updated-at="spot.invite.user.avatar?.updatedAt ?? ''" :size="76" />
+            </span>
+            <span v-else class="spot spot-open rounded-circle d-flex align-items-center justify-content-center" :class="{ 'is-invited': spot.invite }">
               <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </span>
+            <span v-if="spot.invite" class="invite-badge rounded-circle d-flex align-items-center justify-content-center" :title="spot.invites.length + (spot.invites.length === 1 ? ' invite sent' : ' invites sent')">
+              <template v-if="spot.invites.length > 1">{{ spot.invites.length }}</template>
+              <i v-else class="bi bi-envelope-fill" aria-hidden="true"></i>
             </span>
           </span>
           <span class="person-name spot-name fw-semibold text-primary">{{ spot.role ?? 'Open spot' }}</span>
-          <span class="person-role text-caption text-body-secondary">{{ you && spot.role ? 'Tap to pick' : spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
+          <span v-if="spot.invite" class="person-role text-caption text-body-secondary text-truncate">
+            {{ invitedLabel(spot) }}
+          </span>
+          <span v-else class="person-role text-caption text-body-secondary">{{ you && spot.role ? 'Tap to pick' : spot.role ? 'Open role' : canInvite ? 'Invite someone' : you ? 'Invite a friend' : 'Could be you' }}</span>
         </button>
       </template>
     </TransitionGroup>
@@ -353,6 +450,36 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
           <template v-if="sharingRole">{{ canInvite ? 'Fill the ' + sharingRole + ' role' : 'Know someone for ' + sharingRole + '?' }}</template>
           <template v-else>{{ canInvite ? 'Fill this spot' : 'Know someone for this spot?' }}</template>
         </p>
+        <!-- everyone waiting on this role: people invited, and (for the lead) people who asked for it -->
+        <div v-if="waitingList.length > 0" class="waiting-list rounded-3 p-2 mb-3">
+          <p class="text-overline text-body-tertiary px-1 mb-1">WAITING FOR THIS ROLE · {{ waitingList.length }}</p>
+          <ul class="list-unstyled mb-1">
+            <li v-for="person in waitingList" :key="person.key" class="d-flex align-items-center gap-2 px-1 py-1">
+              <UserAvatar v-if="person.user" :user-id="person.user._id" :name="getDisplayName(person.user)" :avatar-updated-at="person.user.avatar?.updatedAt ?? ''" :size="30" />
+              <span v-else class="waiting-unknown rounded-circle d-flex align-items-center justify-content-center flex-shrink-0">
+                <i class="bi bi-person" aria-hidden="true"></i>
+              </span>
+              <RouterLink
+                v-if="person.user"
+                :to="'/people/' + person.user._id"
+                class="small fw-semibold text-truncate me-auto link-body-emphasis link-offset-2 link-underline-opacity-0 link-underline-opacity-75-hover"
+              >
+                {{ getDisplayName(person.user) }}
+              </RouterLink>
+              <span v-else class="small text-body-secondary me-auto">Someone</span>
+              <span v-if="person.kind === 'invited'" class="waiting-pill badge rounded-pill fw-semibold bg-primary-subtle text-primary-emphasis">
+                <i class="bi bi-envelope-fill me-1" aria-hidden="true"></i>Invited
+              </span>
+              <template v-else>
+                <span class="waiting-pill badge rounded-pill fw-semibold bg-warning-subtle text-warning-emphasis">
+                  <i class="bi bi-person-raised-hand me-1" aria-hidden="true"></i>Asked to join
+                </span>
+                <RouterLink :to="{ path: '/teams', query: { tab: 'requests' } }" class="small fw-semibold text-decoration-none text-nowrap">Answer</RouterLink>
+              </template>
+            </li>
+          </ul>
+          <p class="text-caption text-body-tertiary px-1 mb-0">The spot stays open, so whoever says yes first (or you accept first) gets it.</p>
+        </div>
         <p class="small text-body-secondary mb-3">
           <template v-if="sharingRole">This link opens {{ team.name }} on TechTrek with {{ sharingRole }} already picked, so they can ask to join for it.</template>
           <template v-else>Send them the team link. It opens {{ team.name }} on TechTrek so they can ask to join.</template>
@@ -365,9 +492,54 @@ const canInvite = computed(() => props.team.isLeader === true && props.team.stat
             {{ copied ? 'Copied!' : 'Copy link' }}
           </button>
         </div>
-        <button v-if="canInvite" type="button" class="btn btn-outline-primary fw-semibold w-100 mt-2" @click="emit('invite', sharingRole ?? '')">
-          <i class="bi bi-envelope" aria-hidden="true"></i> Invite by SMU email
-        </button>
+        <template v-if="canInvite">
+          <button
+            type="button"
+            class="btn fw-semibold w-100 mt-2"
+            :class="emailOpen ? 'btn-light' : 'btn-outline-primary'"
+            :aria-expanded="emailOpen"
+            aria-controls="invite-email-form"
+            @click="toggleEmail"
+          >
+            <i class="bi bi-envelope" aria-hidden="true"></i> Invite by SMU email
+            <i class="bi ms-1" :class="emailOpen ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
+          </button>
+          <!-- the email form drops down right here, no new window -->
+          <Transition name="drop">
+            <form v-if="emailOpen" id="invite-email-form" class="email-invite rounded-3 p-2 mt-2" novalidate @submit.prevent="sendEmailInvite">
+              <div v-if="!sharingRole && openRoleChoices.length > 0" class="mb-2">
+                <label for="invite-email-role" class="small fw-semibold mb-1">Role</label>
+                <select id="invite-email-role" v-model="emailRole" class="form-select form-select-sm">
+                  <option value="" disabled>Pick an open role</option>
+                  <option v-for="role in openRoleChoices" :key="role" :value="role">{{ role }}</option>
+                </select>
+              </div>
+              <label for="invite-email" class="small fw-semibold mb-1">
+                Their SMU email<template v-if="sharingRole"> · for {{ sharingRole }}</template>
+              </label>
+              <div class="input-group input-group-sm">
+                <input
+                  id="invite-email"
+                  ref="emailInput"
+                  v-model="emailAddress"
+                  type="email"
+                  class="form-control"
+                  placeholder="name@smu.edu.sg"
+                  autocomplete="off"
+                  :disabled="emailSending"
+                  @input="emailError = ''"
+                />
+                <button class="btn btn-primary fw-semibold" type="submit" :disabled="emailSending || emailAddress.trim() === ''">
+                  <i class="bi bi-send me-1" aria-hidden="true"></i>{{ emailSending ? 'Sending…' : 'Send invite' }}
+                </button>
+              </div>
+              <p v-if="emailError" class="small text-tt-accent mt-2 mb-0" role="alert">{{ emailError }}</p>
+              <p v-else-if="emailSentTo" class="small text-success-emphasis fw-semibold mt-2 mb-0" role="status">
+                <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>Invite sent to {{ emailSentTo }}! Add another, or close this.
+              </p>
+            </form>
+          </Transition>
+        </template>
       </div>
 
       <p v-else-if="you && (team.openRoles ?? []).length > 0" key="hint-you" class="small text-body-secondary mb-0">Tap a role to ask for it, or tap someone to see their profile.</p>
@@ -477,6 +649,55 @@ button.person:hover .person-ring {
 }
 button.person:hover .spot-open {
   border-style: solid;
+}
+/* an open spot with an invite out: their faded photo (or a dotted ring) and a little envelope */
+.spot-open.is-invited {
+  border-style: dotted;
+}
+.invited-photo {
+  display: inline-flex;
+  padding: 3px;
+  border: 2px dashed var(--bs-primary);
+  border-radius: 50%;
+  margin: -5px 0 1px;
+}
+.invited-photo :deep(span.rounded-circle) {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+.invite-badge {
+  position: absolute;
+  font-weight: 700;
+  right: -2px;
+  bottom: 2px;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  color: #fff;
+  background-color: var(--bs-primary);
+  border: 2px solid var(--tt-surface);
+}
+.email-invite {
+  background-color: var(--tt-surface);
+}
+.drop-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.drop-enter-from {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.waiting-list {
+  background-color: var(--tt-surface);
+}
+.waiting-unknown {
+  width: 30px;
+  height: 30px;
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-secondary-bg);
+}
+.waiting-pill {
+  font-size: 0.75rem;
 }
 .spot-external {
   color: var(--bs-secondary-color);
@@ -629,6 +850,7 @@ button.person:hover .spot-open {
 @media (prefers-reduced-motion: reduce) {
   .spot-move,
   .spot-enter-active,
+  .drop-enter-active,
   .card-pop-enter-active,
   .card-pop-leave-active,
   .member-link {

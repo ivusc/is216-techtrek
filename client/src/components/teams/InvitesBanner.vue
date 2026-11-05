@@ -18,13 +18,22 @@ defineEmits(['answer'])
       class="invite-card d-flex flex-wrap align-items-center gap-3 rounded-3 p-3 bg-info-subtle"
     >
       <span class="size-40 bg-white rounded-3 d-flex justify-content-center align-items-center flex-shrink-0 text-primary">
-        <i class="bi bi-envelope-heart fs-5" aria-hidden="true"></i>
+        <i class="bi fs-5" :class="invite.askedRole ? 'bi-arrow-left-right' : 'bi-envelope-heart'" aria-hidden="true"></i>
       </span>
       <div class="flex-grow-1 min-w-0">
-        <p class="fw-semibold mb-0">
+        <!-- my request, accepted into a different role than I asked for: I decide if I still want in -->
+        <template v-if="invite.askedRole">
+          <p class="fw-semibold mb-0">
+            {{ getDisplayName(invite.team.leader) }} would take you into {{ invite.team.name }} as <span class="text-primary">{{ invite.role }}</span>
+          </p>
+          <p class="small text-body-secondary mb-0">
+            You asked to be {{ invite.askedRole }}. Join in the new role, or say no and stay out of the team.
+          </p>
+        </template>
+        <p v-else class="fw-semibold mb-0">
           {{ getDisplayName(invite.team.leader) }} invited you to join {{ invite.team.name }}<template v-if="invite.role"> as <span class="text-primary">{{ invite.role }}</span></template>
         </p>
-        <p class="small text-body-secondary mb-0">
+        <p v-if="!invite.askedRole" class="small text-body-secondary mb-0">
           {{ invite.team.event?.name }}<template v-if="invite.message"> · "{{ invite.message }}"</template>
         </p>
       </div>
@@ -33,7 +42,7 @@ defineEmits(['answer'])
           Decline
         </button>
         <button class="btn btn-sm btn-primary fw-semibold" :disabled="busyId === invite._id" @click="$emit('answer', invite, 'accepted')">
-          <i class="bi bi-check-lg" aria-hidden="true"></i> Join team
+          <i class="bi bi-check-lg" aria-hidden="true"></i> {{ invite.askedRole ? 'Join as ' + invite.role : 'Join team' }}
         </button>
       </div>
     </div>

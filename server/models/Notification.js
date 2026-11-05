@@ -12,6 +12,7 @@ const NOTIFICATION_TYPES = [
   'member-left', // someone left my team
   'team-deleted', // the leader deleted a team I was in
   'role-assigned', // the leader gave me a role in their team
+  'role-offered', // the leader would take me, but in a different role than I asked for: I need to OK it
   'team-full', // my pending request or invite was closed because the team filled up
   'team-closed', // my pending request or invite was closed because the team's closing date passed
 ];

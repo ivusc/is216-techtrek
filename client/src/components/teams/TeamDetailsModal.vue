@@ -131,7 +131,7 @@ function isMine(skill) {
       :saving-role="savingRole"
       :role-error="roleError"
       class="mb-4"
-      @invite="$emit('invite', $event)"
+      @invited="(invite) => $emit('updated', { ...team, pendingInvites: [...(team.pendingInvites ?? []), invite] })"
       @assign-role="saveRole"
       @pick-role="role = $event"
     />

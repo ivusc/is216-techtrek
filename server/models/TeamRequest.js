@@ -9,6 +9,9 @@ const teamRequestSchema = new mongoose.Schema(
     teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     role: { type: String, trim: true, maxlength: 100 },
+    // the lead accepted a request into a different role than the one asked for: the request becomes
+    // an invite for the new role (the person has to OK it), and this keeps the role they asked for
+    askedRole: { type: String, trim: true, maxlength: 100 },
     message: { type: String, trim: true, maxlength: 500 },
     shareProfile: { type: Boolean, default: true },
     status: { type: String, enum: STATUS_TYPES, required: true, default: 'pending' },

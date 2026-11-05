@@ -23,6 +23,8 @@ export function describeNotification(notification) {
       return { text: `${who} left ${team}`, icon: 'bi-box-arrow-left', tone: 'warning', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'team-deleted':
       return { text: `${team} was deleted by its team lead`, icon: 'bi-trash3', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } } }
+    case 'role-offered':
+      return { text: `${who} would take you into ${team} as ${notification.role || 'another role'}. Join in that role?`, icon: 'bi-arrow-left-right', tone: 'primary', to: { path: '/teams', query: { tab: 'browse' } } }
     case 'role-assigned':
       return { text: `${who} made you ${notification.role || 'a new role'} in ${team}`, icon: 'bi-person-badge', tone: 'primary', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'team-full':
