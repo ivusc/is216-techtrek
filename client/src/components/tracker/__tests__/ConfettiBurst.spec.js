@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import ConfettiBurst from '@/components/ConfettiBurst.vue';
+import ConfettiBurst from '@/components/tracker/ConfettiBurst.vue';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
