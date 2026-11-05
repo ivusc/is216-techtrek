@@ -5,6 +5,10 @@
 // Safe to run again: it removes the teams (and their join requests) led by the demo users and makes them fresh,
 // on whichever Devpost hackathons are open right now. Real users and their teams are never touched.
 // Demo users have a random password nobody knows, so they can't be logged into.
+//
+//   pnpm --filter @techtrek/server seed:teams --profiles
+//
+// only refreshes the demo users' profiles (course, about, skills, picture) and leaves every team alone.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -13,23 +17,86 @@ const User = require('../models/User');
 const Team = require('../models/Team');
 const TeamRequest = require('../models/TeamRequest');
 const opportunityService = require('../service/opportunity-service');
+const { drawAvatar } = require('./demo-avatars');
 
 const DEMO_EMAIL = (name) => `techtrek.demo.${name}@smu.edu.sg`;
 const DEMO_EMAIL_PATTERN = /^techtrek\.demo\..+@smu\.edu\.sg$/;
 
+// course and about: what shows on their profile page and profile card
+// look: how their illustrated profile picture is drawn (see demo-avatars.js)
 const demoUsers = [
-  { key: 'alicia', displayName: 'Alicia Tan', year: 2, faculty: 'SCIS', skills: ['Vue.js', 'Figma', 'UI/UX'] },
-  { key: 'marcus', displayName: 'Marcus Lee', year: 3, faculty: 'SCIS', skills: ['Python', 'Machine Learning', 'Data Analysis'] },
-  { key: 'priya', displayName: 'Priya Nair', year: 2, faculty: 'LKCSB', skills: ['Pitching', 'Project Management'] },
-  { key: 'daniel', displayName: 'Daniel Wong', year: 1, faculty: 'SCIS', skills: ['React', 'Node.js', 'JavaScript'] },
-  { key: 'sarah', displayName: 'Sarah Lim', year: 3, faculty: 'SOE', skills: ['Data Analysis', 'SQL', 'Python'] },
-  { key: 'junhao', displayName: 'Jun Hao Chua', year: 4, faculty: 'SCIS', skills: ['Cloud', 'Cybersecurity', 'Java'] },
-  { key: 'ethan', displayName: 'Ethan Ng', year: 2, faculty: 'SCIS', skills: ['Java', 'SQL'] },
-  { key: 'meiling', displayName: 'Mei Ling Goh', year: 1, faculty: 'SOSS', skills: ['UI/UX', 'Pitching'] },
-  { key: 'ravi', displayName: 'Ravi Kumar', year: 3, faculty: 'SCIS', skills: ['Mobile', 'React', 'Cloud'] },
-  { key: 'chloe', displayName: 'Chloe Teo', year: 2, faculty: 'LKCSB', skills: ['Data Analysis', 'Pitching', 'Figma'] },
-  { key: 'bryan', displayName: 'Bryan Ho', year: 4, faculty: 'SCIS', skills: ['Machine Learning', 'Python', 'SQL'] },
-  { key: 'nadia', displayName: 'Nadia Rahman', year: 1, faculty: 'YPHSL', skills: ['Project Management', 'Pitching'] },
+  {
+    key: 'alicia', displayName: 'Alicia Tan', year: 2, faculty: 'SCIS', course: 'Information Systems',
+    skills: ['Vue.js', 'Figma', 'UI/UX'],
+    about: "Year 2 IS student who sketches every app idea in Figma before writing a line of code. I've done two hackathons and loved making the demo look polished. Happy to lead, and I'm trying to get better at backend.",
+    look: { background: '#ffe3d3', skin: '#f6d2b8', hair: '#1f1a1c', hairStyle: 'long', shirt: '#7662da' },
+  },
+  {
+    key: 'marcus', displayName: 'Marcus Lee', year: 3, faculty: 'SCIS', course: 'Computer Science',
+    skills: ['Python', 'Machine Learning', 'Data Analysis'],
+    about: 'CS year 3, AI track. I like turning messy datasets into something you can actually use. Interned at a fintech last summer doing fraud models. Coffee-powered, will happily pair-program at 2am.',
+    look: { background: '#dbe8ff', skin: '#efc9a8', hair: '#26211f', hairStyle: 'short', shirt: '#2f4d7a', glasses: '#2b2340' },
+  },
+  {
+    key: 'priya', displayName: 'Priya Nair', year: 2, faculty: 'LKCSB', course: 'Business Management',
+    skills: ['Pitching', 'Project Management'],
+    about: "Business student who loves tech teams. I keep projects on track, write the pitch deck and do the talking on demo day. Won 2nd at a case competition last term. I can't code (yet) but I learn fast.",
+    look: { background: '#ffeccc', skin: '#b98260', hair: '#1a1214', hairStyle: 'ponytail', shirt: '#d1495b' },
+  },
+  {
+    key: 'daniel', displayName: 'Daniel Wong', year: 1, faculty: 'SCIS', course: 'Software Engineering',
+    skills: ['React', 'Node.js', 'JavaScript'],
+    about: 'Freshie in SE. Been building websites since secondary school, mostly React and Node. Looking for my first proper hackathon team. Beginners welcome, I like explaining things.',
+    look: { background: '#e2f7ea', skin: '#f3d0b2', hair: '#2b2222', hairStyle: 'fringe', shirt: '#3d7dd8' },
+  },
+  {
+    key: 'sarah', displayName: 'Sarah Lim', year: 3, faculty: 'SOE', course: 'Economics',
+    skills: ['Data Analysis', 'SQL', 'Python'],
+    about: 'Economics major with a soft spot for data viz. I do the analysis, find the story in the numbers and make charts that judges understand. Interested in transport and urban planning.',
+    look: { background: '#f3e0ff', skin: '#f2cfb3', hair: '#4a2f22', hairStyle: 'bob', shirt: '#e0835b', glasses: '#8a5a44' },
+  },
+  {
+    key: 'junhao', displayName: 'Jun Hao Chua', year: 4, faculty: 'SCIS', course: 'Information Systems',
+    skills: ['Cloud', 'Cybersecurity', 'Java'],
+    about: 'Final year IS, cybersecurity track. AWS certified and a regular at CTFs. I set up the cloud side and make sure nothing leaks. Looking for teammates who care about building things properly.',
+    look: { background: '#dff3f5', skin: '#eac5a5', hair: '#1c1a1d', hairStyle: 'short', shirt: '#26324a' },
+  },
+  {
+    key: 'ethan', displayName: 'Ethan Ng', year: 2, faculty: 'SCIS', course: 'Computer Science',
+    skills: ['Java', 'SQL'],
+    about: 'Backend person. Java, Spring and databases are my comfort zone. Quiet in meetings, loud in the commit history. Want to try mobile dev next.',
+    look: { background: '#e8e4ff', skin: '#f0cdb0', hair: '#1d1a1b', hairStyle: 'fringe', shirt: '#383b4a' },
+  },
+  {
+    key: 'meiling', displayName: 'Mei Ling Goh', year: 1, faculty: 'SOSS', course: 'Psychology',
+    skills: ['UI/UX', 'Pitching'],
+    about: 'Psychology student interested in why people tap what they tap. I run user interviews and turn them into designs. First hackathon this semester and very excited!',
+    look: { background: '#e2f4ff', skin: '#f7d8c0', hair: '#2a2024', hairStyle: 'bun', shirt: '#5aa9a0' },
+  },
+  {
+    key: 'ravi', displayName: 'Ravi Kumar', year: 3, faculty: 'SCIS', course: 'Software Engineering',
+    skills: ['Mobile', 'React', 'Cloud'],
+    about: 'I build mobile apps with React Native and Flutter, and have two small apps on the Play Store. Into anything that helps students save time. Always up for a weekend build.',
+    look: { background: '#fff1c9', skin: '#a8714f', hair: '#17110f', hairStyle: 'curly', shirt: '#3c8c6e' },
+  },
+  {
+    key: 'chloe', displayName: 'Chloe Teo', year: 2, faculty: 'LKCSB', course: 'Business Analytics',
+    skills: ['Data Analysis', 'Pitching', 'Figma'],
+    about: 'Business Analytics student who sits between the data people and the design people. Tableau, Excel wizardry and clean slides. I like ideas with a real business case behind them.',
+    look: { background: '#ffe0ea', skin: '#f5d3bd', hair: '#3a2520', hairStyle: 'long', shirt: '#2f8f9d' },
+  },
+  {
+    key: 'bryan', displayName: 'Bryan Ho', year: 4, faculty: 'SCIS', course: 'Computer Science',
+    skills: ['Machine Learning', 'Python', 'SQL'],
+    about: 'Year 4 CS doing my FYP on LLMs for education. I can fine-tune models and build the API around them. Looking for frontend and design teammates to make my models usable.',
+    look: { background: '#e6ecf5', skin: '#e8c3a2', hair: '#121012', hairStyle: 'short', shirt: '#6b4fa0', glasses: '#1e1e24' },
+  },
+  {
+    key: 'nadia', displayName: 'Nadia Rahman', year: 1, faculty: 'YPHSL', course: 'Law',
+    skills: ['Project Management', 'Pitching'],
+    about: 'Law freshie curious about legal tech. Debater, so pitching is my thing. I want to work on ideas that make legal help easier to get. Happy to handle research and the presentation.',
+    look: { background: '#d9f0e6', skin: '#d9a77f', hair: '#1f1a1c', hairStyle: 'hijab', scarf: '#c9637a', shirt: '#c9637a' },
+  },
 ];
 
 // event: a number = that open Devpost hackathon (0 = closing soonest of those open for at least 12 more hours),
@@ -213,23 +280,24 @@ function generatedTeam(index, extra, themes) {
 
 async function upsertDemoUser(person) {
   const userName = DEMO_EMAIL(person.key);
+  const profile = {
+    displayName: person.displayName,
+    year: person.year,
+    faculty: person.faculty,
+    course: person.course,
+    about: person.about,
+    skills: person.skills,
+    // a freshly drawn picture each run (updatedAt changes, so browsers fetch the new one)
+    avatar: { data: drawAvatar(person.look), contentType: 'image/png', updatedAt: new Date() },
+  };
   const existing = await User.findOne({ userName });
   if (existing) {
-    Object.assign(existing, { displayName: person.displayName, year: person.year, faculty: person.faculty, skills: person.skills });
+    Object.assign(existing, profile);
     await existing.save();
     return existing;
   }
   const password = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 12);
-  return User.create({
-    userName,
-    password,
-    displayName: person.displayName,
-    year: person.year,
-    faculty: person.faculty,
-    skills: person.skills,
-    onboarded: true,
-    openToTeams: true,
-  });
+  return User.create({ userName, password, ...profile, onboarded: true, openToTeams: true });
 }
 
 // open Devpost hackathons, closing soonest first, saved as Opportunities so teams can link to them
@@ -252,6 +320,10 @@ async function main() {
   const users = {};
   for (const person of demoUsers) {
     users[person.key] = await upsertDemoUser(person);
+  }
+  if (process.argv.includes('--profiles')) {
+    console.log(`Updated ${demoUsers.length} demo profiles. Teams were left as they are.`);
+    return;
   }
 
   const hackathons = await getOpenHackathons(60);
