@@ -14,6 +14,7 @@ const questionTypes = ['Behavioural', 'Technical', 'System Design', 'Case'];
 const selectedTitle = ref('');
 const selectedDifficulty = ref('');
 const selectedTypes = ref([]);
+const showFilters = ref(false); // below xl the filters are folded away until opened
 const averageScore = ref(0);
 const highestScore = ref(0);
 const applicationCards = ref([]);
@@ -217,9 +218,20 @@ function shortDate(value) {
     </section>
     <div v-else-if="!errorMessage" class="row g-4 align-items-start">
       <div class="col-12 col-xl-3">
-        <div class="card interview-card p-4 d-flex flex-column gap-3">
+        <div class="card interview-card p-3 p-xl-4 d-flex flex-column gap-3">
           <div class="d-flex align-items-center justify-content-between">
-            <h2 class="h4 mb-0">Filters</h2>
+            <h2 class="h4 mb-0 d-none d-xl-block">Filters</h2>
+            <!-- below xl the filters fold away behind this button -->
+            <button
+              type="button"
+              class="btn p-0 border-0 h4 mb-0 fw-semibold d-flex align-items-center gap-2 d-xl-none"
+              :aria-expanded="showFilters"
+              aria-controls="interview-filters"
+              @click="showFilters = !showFilters"
+            >
+              Filters
+              <i class="bi fs-6" :class="showFilters ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
+            </button>
             <button
               v-if="hasFilters"
               type="button"
@@ -229,6 +241,7 @@ function shortDate(value) {
               Clear
             </button>
           </div>
+          <div id="interview-filters" class="flex-column gap-3" :class="showFilters ? 'd-flex' : 'd-none d-xl-flex'">
           <fieldset v-if="titles.length">
             <legend class="text-overline text-uppercase text-body-tertiary mb-2">Role</legend>
             <div class="d-flex flex-wrap flex-xl-column column-gap-4 row-gap-2">
@@ -288,6 +301,7 @@ function shortDate(value) {
               </div>
             </div>
           </fieldset>
+          </div>
         </div>
       </div>
 
@@ -300,7 +314,7 @@ function shortDate(value) {
             class="col-12 col-md-6"
           >
             <article
-              class="card interview-card h-100 bg-primary text-white border-0 p-4 d-flex flex-column gap-2"
+              class="card interview-card h-100 bg-primary text-white border-0 p-3 p-md-4 d-flex flex-column gap-2"
             >
               <p class="text-overline text-uppercase mb-0">
                 {{
@@ -336,12 +350,12 @@ function shortDate(value) {
         </div>
 
         <div class="row g-3">
-          <div v-for="stat in stats" :key="stat.label" class="col-12 col-sm-4">
+          <div v-for="stat in stats" :key="stat.label" class="col-4">
             <div
               class="card interview-card interview-stat h-100 p-3 d-flex flex-row align-items-center gap-3"
             >
               <span
-                class="interview-icon rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                class="interview-icon rounded-3 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0"
                 :class="stat.tile"
               >
                 <i :class="`bi ${stat.icon}`" aria-hidden="true"></i>

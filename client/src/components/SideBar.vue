@@ -60,7 +60,7 @@ const collapsed = ref(window.matchMedia('(max-width: 991.98px)').matches)
       v-for="route in appRoutes"
       :key="route.location"
       :to="route.location"
-      class="bottom-nav-link d-flex flex-column align-items-center flex-fill text-decoration-none small fw-medium"
+      class="bottom-nav-link d-flex flex-column align-items-center text-decoration-none small fw-medium"
       :class="location.path === route.location ? 'text-primary' : 'text-body-secondary'"
       :aria-current="location.path === route.location ? 'page' : null"
     >
@@ -134,12 +134,21 @@ const collapsed = ref(window.matchMedia('(max-width: 991.98px)').matches)
 }
 
 .bottom-nav-link {
+  flex: 1 1 0; /* equal tabs, so a long label can't squeeze its neighbours */
+  min-width: 0;
   gap: 2px;
+  white-space: nowrap;
 }
 
 .bottom-nav-icon {
   padding: 2px 16px;
   font-size: 20px;
   line-height: 28px;
+}
+
+/* 320px phones: five tabs only fit with smaller labels and pills */
+@media (max-width: 359.98px) {
+  .bottom-nav-link { font-size: .75rem; }
+  .bottom-nav-icon { padding: 2px 12px; }
 }
 </style>

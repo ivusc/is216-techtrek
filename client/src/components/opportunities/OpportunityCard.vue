@@ -170,4 +170,10 @@ function openDetails(event) {
   flex: 1 1 0;
   min-width: 3.5rem;
 }
+/* phones: a little tighter, so more than one card fits on screen */
+@media (max-width: 575.98px) {
+  .opp-card { padding: 16px; gap: 10px; }
+  .opp-logo { width: 36px; height: 36px; font-size: .875rem; }
+  .opp-title { font-size: 17px; line-height: 24px; }
+}
 </style>
