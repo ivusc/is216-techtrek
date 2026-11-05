@@ -207,6 +207,19 @@ async function findAvatar(userId) {
   }
 }
 
+// what other students see on someone's profile page: everything on their profile and their SMU
+// email, but never their Telegram (that stays inside their teams)
+const PUBLIC_PROFILE_FIELDS =
+  'userName displayName faculty year course about skills openToTeams githubUrl linkedinUrl avatar.updatedAt';
+
+async function findPublicProfile(userId) {
+  try {
+    return await User.findById(userId).select(PUBLIC_PROFILE_FIELDS);
+  } catch (err) {
+    throw new DatabaseError('Database could not find the profile.');
+  }
+}
+
 /**
  * Deletes the user with their applications and interview attempts.
  * @param {Schema.Types.ObjectId} userId
@@ -247,5 +260,6 @@ module.exports = {
   setAvatar,
   removeAvatar,
   findAvatar,
+  findPublicProfile,
   deleteUserById,
 };

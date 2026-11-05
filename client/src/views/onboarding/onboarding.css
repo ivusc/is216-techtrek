@@ -49,3 +49,8 @@
 .onboarding-card .icon-input .form-control {
   padding-left: 40px;
 }
+
+/* last step: the "Show me in Teammate Finder" choice */
+.open-choice {
+  background-color: var(--bs-secondary-bg);
+}

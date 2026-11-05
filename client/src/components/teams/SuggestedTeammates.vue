@@ -56,7 +56,9 @@ function profileLinks(person) {
             :size="32"
           />
           <div class="flex-grow-1 min-w-0">
-            <p class="small fw-semibold mb-0 text-truncate">{{ getDisplayName(person) }}</p>
+            <p class="small fw-semibold mb-0 text-truncate">
+              <RouterLink :to="'/people/' + person._id" class="link-body-emphasis link-offset-2 link-underline-opacity-0 link-underline-opacity-75-hover">{{ getDisplayName(person) }}</RouterLink>
+            </p>
             <p v-if="getSchoolLine(person) !== ''" class="text-caption text-body-tertiary mb-1">
               {{ getSchoolLine(person) }}
             </p>

@@ -11,7 +11,7 @@ const router = useRouter()
 const auth = useUserStore()
 
 const steps = [
-  { title: 'Your name', text: 'So teammates know who they are working with', icon: 'bi-person' },
+  { title: 'Your name', text: 'So teammates know who they are working with and what you are into', icon: 'bi-person' },
   { title: 'Your school', text: 'Shown on your team profile', icon: 'bi-building' },
   { title: 'Your skills', text: 'Matches you with teams looking for them', icon: 'bi-stars' },
 ]
@@ -19,8 +19,12 @@ const step = ref(0) // 0, 1 or 2
 
 // start with what we already know, so people who come back do not retype it
 const name = ref(auth.displayName ?? '')
+// a short intro shown on your profile page (optional, editable on your profile)
+const about = ref(auth.user?.about ?? '')
 const faculty = ref(auth.faculty ?? '')
 const skills = ref([...(auth.skills ?? [])])
+// show me in Teammate Finder, so team leads can find and invite me (on unless they turned it off)
+const openToTeams = ref(auth.user?.openToTeams ?? true)
 
 const errorMessage = ref('')
 const isSaving = ref(false)
@@ -50,8 +54,10 @@ async function next() {
   try {
     await auth.updateMe({
       displayName: name.value.trim(),
+      about: about.value.trim(),
       faculty: faculty.value,
       skills: skills.value,
+      openToTeams: openToTeams.value,
       onboarded: true,
     })
     router.push('/home')
@@ -124,6 +130,21 @@ async function next() {
               />
             </div>
           </div>
+          <div>
+            <div class="d-flex justify-content-between align-items-baseline">
+              <label for="onboarding-about" class="form-label small fw-semibold">About you <span class="fw-normal text-body-tertiary">(optional)</span></label>
+              <span class="text-caption text-body-tertiary">{{ about.length }} / 500</span>
+            </div>
+            <textarea
+              id="onboarding-about"
+              v-model="about"
+              class="form-control"
+              rows="3"
+              maxlength="500"
+              placeholder="What you study, what you like building and what you're looking for."
+            ></textarea>
+            <p class="text-caption text-body-tertiary mt-1 mb-0">Shown on your profile. You can change it any time.</p>
+          </div>
         </template>
 
         <!-- step 2: school -->
@@ -157,6 +178,19 @@ async function next() {
             </p>
           </div>
           <SkillPicker v-model="skills" />
+
+          <!-- can be changed any time on the profile page -->
+          <div class="open-choice d-flex align-items-center gap-3 rounded-3 p-3">
+            <div class="flex-grow-1">
+              <label for="onboarding-open" class="d-block small fw-semibold">Show me in Teammate Finder</label>
+              <span class="text-caption text-body-tertiary">
+                Team leads looking for your skills can find and invite you. You can change this on your profile.
+              </span>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input id="onboarding-open" v-model="openToTeams" class="form-check-input" type="checkbox" role="switch" />
+            </div>
+          </div>
         </template>
 
         <p v-if="errorMessage" class="small text-tt-accent mb-0">{{ errorMessage }}</p>

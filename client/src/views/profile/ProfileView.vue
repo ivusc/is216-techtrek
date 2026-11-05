@@ -66,6 +66,22 @@ function discard() {
   finishEditing('');
 }
 
+// "Open to teams" saves the moment it's switched (from the badge or the switch), no Save needed
+const openSaving = ref(false);
+const openMessage = ref('');
+async function setOpenToTeams(value) {
+  openSaving.value = true;
+  openMessage.value = '';
+  try {
+    await auth.updateMe({ openToTeams: value });
+    draft.value.openToTeams = value;
+    openMessage.value = value ? 'You show up in Teammate Finder.' : 'You are hidden from Teammate Finder.';
+  } catch (error) {
+    openMessage.value = 'Could not save: ' + getErrorMessage(error);
+  }
+  openSaving.value = false;
+}
+
 async function save() {
   isSaving.value = true;
   saveError.value = '';
@@ -100,6 +116,7 @@ async function save() {
           :open-to-teams="draft.openToTeams"
           :editing="editing"
           @edit="startEditing"
+          @toggle-open="setOpenToTeams(!draft.openToTeams)"
         />
         <LinksCard
           v-model:github="draft.githubUrl"
@@ -115,14 +132,19 @@ async function save() {
             <span class="text-caption text-body-tertiary">
               Team leaders can invite you based on your skills.
             </span>
+            <span v-if="openMessage" class="d-block text-caption fw-semibold text-primary mt-1" role="status">
+              {{ openMessage }}
+            </span>
           </div>
           <div class="form-check form-switch m-0">
             <input
               id="open-to-teams"
-              v-model="draft.openToTeams"
+              :checked="draft.openToTeams"
+              :disabled="openSaving"
               class="form-check-input profile-switch"
               type="checkbox"
               role="switch"
+              @change="setOpenToTeams($event.target.checked)"
             />
           </div>
         </div>

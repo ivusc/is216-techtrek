@@ -126,3 +126,12 @@ export function startingJoinRole(team, mySkills = [], initialRole = '') {
   if (hasOpenRoles && choices.length === 1) return choices[0]
   return choices.find((choice) => mySkills.some((mine) => sameSkill(mine, choice))) ?? ''
 }
+
+// SMU email runs on Outlook, so email links open a new Outlook message (in a new tab) with the
+// addresses already filled in. Works on any computer, even with no mail app set up.
+export function emailLink(emails, subject = '') {
+  const to = (Array.isArray(emails) ? emails : [emails]).filter(Boolean).map(encodeURIComponent).join(';')
+  if (to === '') return ''
+  const link = 'https://outlook.office.com/mail/deeplink/compose?to=' + to
+  return subject ? link + '&subject=' + encodeURIComponent(subject) : link
+}

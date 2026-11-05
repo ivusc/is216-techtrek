@@ -105,4 +105,27 @@ describe('ProfileView', () => {
     expect(useUserStore().isLoggedIn).toBe(false);
     expect(routing.push).toHaveBeenCalledWith('/login');
   });
+
+  it('switches Open to teams from the badge or the switch, saving straight away', async () => {
+    mock.onPatch('/me').reply((config) => [200, { user: { ...USER, ...JSON.parse(config.data) } }]);
+    const wrapper = mountProfile();
+    const badge = () => wrapper.find('.open-toggle');
+
+    expect(badge().text()).toBe('● Open to teams');
+    await badge().trigger('click');
+    await flushPromises();
+
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ openToTeams: false });
+    expect(badge().text()).toBe('○ Not open to teams');
+    expect(badge().attributes('aria-checked')).toBe('false');
+    expect(wrapper.find('#open-to-teams').element.checked).toBe(false);
+    expect(wrapper.text()).toContain('You are hidden from Teammate Finder.');
+    // no Save bar: it's already saved
+    expect(button(wrapper, 'Save changes')).toBeUndefined();
+
+    await wrapper.find('#open-to-teams').setValue(true);
+    await flushPromises();
+    expect(JSON.parse(mock.history.patch[1].data)).toEqual({ openToTeams: true });
+    expect(badge().text()).toBe('● Open to teams');
+  });
 });

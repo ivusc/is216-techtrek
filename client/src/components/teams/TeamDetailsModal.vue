@@ -5,7 +5,7 @@ import TeamPeople from './TeamPeople.vue'
 import JoinRequestFields from './JoinRequestFields.vue'
 import { useUserStore } from '@/store/user'
 import { formatDate } from '@/utils/date'
-import { getDisplayName, getEventBadgeClass, sameSkill, joinChoices, startingJoinRole } from '@/utils/team'
+import { emailLink, getDisplayName, getEventBadgeClass, sameSkill, joinChoices, startingJoinRole } from '@/utils/team'
 import { assignRole, sendRequest, getErrorMessage } from '@/services/teamService'
 
 // everything about one team: who is already in it (with their role and profile), how many more
@@ -47,10 +47,19 @@ const auth = useUserStore()
 const teammates = computed(() =>
   props.team.canContact ? props.team.members.map((member) => member.user).filter((user) => user._id !== auth._id) : []
 )
-const emailEveryone = computed(() => {
-  const emails = teammates.value.map((user) => user.userName).filter(Boolean)
-  return emails.length > 0 ? 'mailto:' + emails.join(',') + '?subject=' + encodeURIComponent(props.team.name) : ''
-})
+const teamEmails = computed(() => teammates.value.map((user) => user.userName).filter(Boolean))
+// a new Outlook message to all of them, with the team's name as the subject
+const emailEveryone = computed(() => emailLink(teamEmails.value, props.team.name))
+const emailsCopied = ref(false)
+async function copyEmails() {
+  try {
+    await navigator.clipboard.writeText(teamEmails.value.join('; '))
+  } catch {
+    return
+  }
+  emailsCopied.value = true
+  setTimeout(() => (emailsCopied.value = false), 2000)
+}
 const onTelegram = computed(() => teammates.value.filter((user) => user.telegram))
 
 // "Request to join" opens the request form right here, under the team, instead of a new window
@@ -133,10 +142,19 @@ function isMine(skill) {
         <h3 id="contact-title" class="h6 fw-semibold mb-0 me-auto">
           <i class="bi bi-chat-dots me-1 text-primary" aria-hidden="true"></i>Contact your team
         </h3>
-        <a v-if="emailEveryone" :href="emailEveryone" class="btn btn-sm btn-primary fw-semibold">
-          <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email everyone
-        </a>
+        <template v-if="emailEveryone">
+          <button type="button" class="btn btn-sm fw-semibold" :class="emailsCopied ? 'btn-success' : 'btn-light'" @click="copyEmails">
+            <i :class="emailsCopied ? 'bi bi-check-lg' : 'bi bi-copy'" class="me-1" aria-hidden="true"></i>{{ emailsCopied ? 'Copied!' : 'Copy emails' }}
+          </button>
+          <a :href="emailEveryone" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary fw-semibold">
+            <i class="bi bi-envelope me-1" aria-hidden="true"></i>Email everyone
+          </a>
+        </template>
       </div>
+      <!-- everyone's SMU email, so it's clear who the email goes to -->
+      <p v-if="teamEmails.length > 0" class="small text-body-secondary text-break mt-2 mb-0">
+        <span class="fw-semibold text-body">To:</span> {{ teamEmails.join(', ') }}
+      </p>
       <div v-if="onTelegram.length > 0" class="d-flex flex-wrap gap-2 mt-2">
         <a
           v-for="user in onTelegram"

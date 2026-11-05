@@ -177,6 +177,20 @@ async function getAvatar(req, res) {
   return res.send(avatar.data);
 }
 
+// GET /users/:id  someone's profile, for their profile page
+async function getProfile(req, res) {
+  let user = null;
+  if (mongoose.isValidObjectId(req.params.id)) {
+    try {
+      user = await userService.findPublicProfile(req.params.id);
+    } catch (err) {
+      return handleUserError(res, err);
+    }
+  }
+  if (!user) return res.status(404).json({ error: 'This person is not on TechTrek.' });
+  return res.json({ user });
+}
+
 // DELETE /me  deletes the logged-in user's account, then logs them out
 async function deleteUser(req, res) {
   const { password } = req.body ?? {};
@@ -212,6 +226,7 @@ module.exports = {
   uploadAvatar,
   removeAvatar,
   getAvatar,
+  getProfile,
   deleteUser,
   logout,
 };

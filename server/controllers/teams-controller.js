@@ -9,7 +9,7 @@ const applicationService = require('../service/application-service');
 const notificationService = require('../service/notification-service');
 const teamRequestService = require('../service/team-request-service');
 
-const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
+const PROFILE_FIELDS = 'displayName faculty year course about skills githubUrl linkedinUrl avatar.updatedAt';
 // a team also loads how to contact each person (SMU email, Telegram); formatTeam only passes these on
 // to people in that team
 const CONTACT_FIELDS = 'userName telegram';

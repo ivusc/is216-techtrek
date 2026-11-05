@@ -101,7 +101,8 @@ function badgeClass(request) {
           <div class="flex-grow-1 min-w-0">
             <div class="d-flex justify-content-between gap-2">
               <p class="mb-0">
-                <strong>{{ getDisplayName(request.user) }}</strong>
+                <RouterLink v-if="request.shareProfile" :to="'/people/' + request.user._id" class="fw-bold link-body-emphasis link-offset-2 link-underline-opacity-0 link-underline-opacity-75-hover">{{ getDisplayName(request.user) }}</RouterLink>
+                <strong v-else>{{ getDisplayName(request.user) }}</strong>
                 <span class="text-body-secondary"> wants to join </span>
                 <strong class="text-primary">{{ request.team.name }}</strong>
               </p>
@@ -215,7 +216,7 @@ function badgeClass(request) {
           <UserAvatar :user-id="member.user._id" :name="getDisplayName(member.user)" :avatar-updated-at="member.user.avatar?.updatedAt" :size="32" />
           <div class="min-w-0">
             <p class="small fw-semibold mb-0 text-truncate">
-              {{ getDisplayName(member.user) }}<template v-if="member.user._id === team.leader._id"> (you)</template>
+              <RouterLink :to="'/people/' + member.user._id" class="link-body-emphasis link-offset-2 link-underline-opacity-0 link-underline-opacity-75-hover">{{ getDisplayName(member.user) }}</RouterLink><template v-if="member.user._id === team.leader._id"> (you)</template>
             </p>
             <p class="text-caption text-body-tertiary mb-0">
               {{ member.role || 'Member' }}<template v-if="member.user._id === team.leader._id"> · Leader</template>

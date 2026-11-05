@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, RouterLinkStub } from '@vue/test-utils';
 import TeamPeople from '@/components/teams/TeamPeople.vue';
 import { team, LEADER, REQUESTER } from '@/__tests__/fixtures/teams';
 
 function mountPeople(overrides = {}) {
-  return mount(TeamPeople, { props: { team: team({ slotsOpen: 2, ...overrides }) } });
+  return mount(TeamPeople, {
+    props: { team: team({ slotsOpen: 2, ...overrides }) },
+    global: { stubs: { RouterLink: RouterLinkStub } },
+  });
 }
 
 const openSpot = (wrapper) => wrapper.find('[aria-label="Invite someone to this open spot"]');
@@ -62,6 +65,30 @@ describe('TeamPeople', () => {
     // once the page hands back the updated team, the button says Saved
     await wrapper.setProps({ team: { ...wrapper.props('team'), members: [{ user: LEADER, role: 'Team lead' }, { user: REQUESTER, role: 'Designer' }] } });
     expect(wrapper.find('.role-editor button[type="submit"]').text()).toBe('Saved');
+  });
+
+  it('pops up their profile card with their description when their circle is clicked', async () => {
+    const wrapper = mountPeople({
+      members: [
+        { user: { ...LEADER, about: 'I love building with Vue.', skills: ['Vue.js'] }, role: 'Team lead' },
+        { user: REQUESTER, role: 'Backend' },
+      ],
+    });
+    expect(wrapper.find('.member-card').exists()).toBe(false);
+
+    await wrapper.find(`[aria-label="See ${LEADER.displayName}'s profile"]`).trigger('click');
+    const card = wrapper.find('.member-card');
+    expect(card.text()).toContain('I love building with Vue.');
+    expect(card.text()).toContain('Vue.js');
+    expect(card.findComponent(RouterLinkStub).props('to')).toBe('/people/' + LEADER._id);
+
+    // someone with no description yet
+    await wrapper.find('[aria-label="See Ezekiel Ng\'s profile"]').trigger('click');
+    expect(wrapper.find('.member-card').text()).toContain("Ezekiel hasn't written a description yet.");
+
+    // the close button and clicking the circle again both close it
+    await wrapper.find('[aria-label="Close profile"]').trigger('click');
+    expect(wrapper.find('.member-card').exists()).toBe(false);
   });
 
   it('shows no role editor to members who are not the lead', async () => {

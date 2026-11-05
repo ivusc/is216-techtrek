@@ -107,11 +107,36 @@ describe('OnboardingView', () => {
 
     expect(JSON.parse(mock.history.patch[0].data)).toEqual({
       displayName: 'Kellie Jubela',
+      about: '',
       faculty: 'SCIS',
       skills: [],
+      openToTeams: true,
       onboarded: true,
     });
     expect(router.push).toHaveBeenCalledWith('/home');
+  });
+
+  it('saves a short intro about you from the first step', async () => {
+    mock.onPatch('/me').reply(200, { user: { _id: 'u1', displayName: 'Kellie Jubela', onboarded: true } });
+    const wrapper = mountView();
+    await wrapper.find('#onboarding-about').setValue('  I like building Vue apps.  ');
+    expect(wrapper.text()).toContain('29 / 500');
+    await toSkillsStep(wrapper);
+    await next(wrapper);
+
+    expect(JSON.parse(mock.history.patch[0].data).about).toBe('I like building Vue apps.');
+  });
+
+  it('lets you stay out of Teammate Finder from the last step', async () => {
+    mock.onPatch('/me').reply(200, { user: { _id: 'u1', displayName: 'Kellie Jubela', onboarded: true } });
+    const wrapper = mountView();
+    await toSkillsStep(wrapper);
+
+    expect(wrapper.find('#onboarding-open').element.checked).toBe(true);
+    await wrapper.find('#onboarding-open').setValue(false);
+    await next(wrapper);
+
+    expect(JSON.parse(mock.history.patch[0].data).openToTeams).toBe(false);
   });
 
   it('stays on the page and shows the server error when saving fails', async () => {
