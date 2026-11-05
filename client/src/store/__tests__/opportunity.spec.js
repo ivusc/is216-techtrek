@@ -177,4 +177,44 @@ describe('useOpportunityStore', () => {
     expect(mock.history.post).toHaveLength(1);
     expect(store.isSaved(item)).toBe(true);
   });
+
+  it('asks for a deadline after tracking a job without one, but not a hackathon', async () => {
+    const [job] = jobs(1);
+    mock.onPost('/application').reply(201, { _id: 'a9', status: 'saved' });
+    const store = useOpportunityStore();
+
+    await store.toggleSave(job);
+    expect(store.deadlinePrompt).toEqual({ applicationId: 'a9', item: job });
+
+    store.skipDeadline();
+    await store.toggleSave(HACKATHONS[0]);
+    expect(store.deadlinePrompt).toBeNull();
+  });
+
+  it('saves the deadline on the tracked application and closes the question', async () => {
+    const [job] = jobs(1);
+    mock.onPost('/application').reply(201, { _id: 'a9', status: 'saved' });
+    mock.onPatch('/application/a9').reply((config) => [200, { _id: 'a9', ...JSON.parse(config.data) }]);
+    const store = useOpportunityStore();
+    await store.toggleSave(job);
+
+    const updated = await store.saveDeadline('2026-11-20T15:59:59.000Z');
+
+    expect(JSON.parse(mock.history.patch[0].data)).toEqual({ deadline: '2026-11-20T15:59:59.000Z' });
+    expect(updated.deadline).toBe('2026-11-20T15:59:59.000Z');
+    expect(store.deadlinePrompt).toBeNull();
+  });
+
+  it('drops the question if the job is untracked before it is answered', async () => {
+    const [job] = jobs(1);
+    mock.onPost('/application').reply(201, { _id: 'a9', status: 'saved' });
+    mock.onDelete('/application/a9').reply(204);
+    const store = useOpportunityStore();
+
+    await store.toggleSave(job);
+    await store.toggleSave(job);
+
+    expect(store.deadlinePrompt).toBeNull();
+  });
 });
+

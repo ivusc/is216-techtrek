@@ -104,7 +104,7 @@ describe('the lead answering a request for a role', () => {
     expect(memberInbox.notifications[0]).toMatchObject({ type: 'request-accepted', role: 'Designer' });
   });
 
-  it('lets the lead accept someone into a different open role', async () => {
+  it('a different role needs their OK: the request becomes an offer they accept on their side', async () => {
     const { leader, member, team } = await setUp();
     const request = await ask(member, team._id, 'Designer');
 
@@ -113,10 +113,52 @@ describe('the lead answering a request for a role', () => {
       .send({ status: 'accepted', role: 'frontend developer' })
       .expect(200);
 
-    expect(body.role).toBe('Frontend developer');
-    const saved = await Team.findById(team._id);
+    // nobody joins yet
+    expect(body).toMatchObject({ status: 'pending', kind: 'invite', role: 'Frontend developer', askedRole: 'Designer' });
+    let saved = await Team.findById(team._id);
+    expect(saved.members).toHaveLength(1);
+    expect(saved.openRoles).toEqual(['Frontend developer', 'Designer']);
+
+    // the lead sees it waiting, and can't answer it again
+    const { body: incoming } = await leader.get('/teams/requests/incoming').expect(200);
+    expect(incoming[0]).toMatchObject({ status: 'pending', kind: 'invite', role: 'Frontend developer', askedRole: 'Designer' });
+    await leader.patch(`/teams/requests/${request._id}`).send({ status: 'accepted' }).expect(409);
+
+    // they're told, and see it with their invites
+    const { body: inbox } = await member.get('/notifications').expect(200);
+    expect(inbox.notifications[0]).toMatchObject({ type: 'role-offered', role: 'Frontend developer' });
+    const { body: invites } = await member.get('/teams/invites').expect(200);
+    expect(invites[0]).toMatchObject({ _id: request._id, role: 'Frontend developer', askedRole: 'Designer' });
+
+    // saying yes puts them in the team in the new role
+    await member.patch(`/teams/invites/${request._id}`).send({ status: 'accepted' }).expect(200);
+    saved = await Team.findById(team._id);
     expect(saved.members[1].role).toBe('Frontend developer');
     expect(saved.openRoles).toEqual(['Designer']);
+    const { body: leadInbox } = await leader.get('/notifications').expect(200);
+    expect(leadInbox.notifications[0]).toMatchObject({ type: 'invite-accepted', role: 'Frontend developer' });
+  });
+
+  it('saying no to the new role leaves them out of the team', async () => {
+    const { leader, member, team } = await setUp();
+    const request = await ask(member, team._id, 'Designer');
+    await leader.patch(`/teams/requests/${request._id}`).send({ status: 'accepted', role: 'Frontend developer' }).expect(200);
+
+    await member.patch(`/teams/invites/${request._id}`).send({ status: 'declined' }).expect(200);
+
+    expect((await Team.findById(team._id)).members).toHaveLength(1);
+    const { body: incoming } = await leader.get('/teams/requests/incoming').expect(200);
+    expect(incoming[0]).toMatchObject({ status: 'declined', askedRole: 'Designer' });
+  });
+
+  it('the role they asked for joins straight away', async () => {
+    const { leader, member, team } = await setUp();
+    const request = await ask(member, team._id, 'Designer');
+
+    const { body } = await leader.patch(`/teams/requests/${request._id}`).send({ status: 'accepted', role: 'designer' }).expect(200);
+
+    expect(body).toEqual({ _id: request._id, status: 'accepted', role: 'Designer' });
+    expect((await Team.findById(team._id)).members).toHaveLength(2);
   });
 
   it('refuses a role that is not open and leaves the request pending', async () => {
@@ -128,6 +170,53 @@ describe('the lead answering a request for a role', () => {
     expect(wrong.body).toEqual({ error: 'Pick one of the open roles: Frontend developer, Designer' });
     const { body: incoming } = await leader.get('/teams/requests/incoming').expect(200);
     expect(incoming[0].status).toBe('pending');
+  });
+});
+
+describe('one-click invites from suggested teammates', () => {
+  it('invites someone by their id, and the matches then show them as invited', async () => {
+    const { leader, member, team } = await setUp({ ...TEAM, skills: ['Vue.js'] });
+    await member.patch('/me').send({ skills: ['Vue.js'] }).expect(200);
+    const { body: before } = await leader.get(`/teams/${team._id}/matches`).expect(200);
+    expect(before[0].pending).toBeNull();
+
+    const sent = await leader.post(`/teams/${team._id}/invites`).send({ userId: before[0]._id, role: 'Designer' }).expect(201);
+    expect(sent.body.status).toBe('pending');
+
+    const { body: after } = await leader.get(`/teams/${team._id}/matches`).expect(200);
+    expect(after[0].pending).toBe('invited');
+    const { body: invites } = await member.get('/teams/invites').expect(200);
+    expect(invites[0]).toMatchObject({ role: 'Designer' });
+  });
+
+  it('shows the invite on the team, still open for requests; only the team sees who it is', async () => {
+    const { leader, member, team } = await setUp();
+    const memberId = String((await member.get('/me')).body.user._id);
+    await leader.post(`/teams/${team._id}/invites`).send({ userId: memberId, role: 'Designer' }).expect(201);
+
+    const { body: mine } = await leader.get('/teams/mine').expect(200);
+    expect(mine[0].pendingInvites).toEqual([{ role: 'Designer', user: expect.objectContaining({ _id: memberId, displayName: expect.any(String) }) }]);
+    expect(mine[0].openRoles).toEqual(['Frontend developer', 'Designer']);
+
+    const outsider = await loginAs(app, { userName: 'outsider@smu.edu.sg' });
+    const { body: browse } = await outsider.get('/teams').expect(200);
+    expect(browse.find((t) => t._id === team._id).pendingInvites).toEqual([{ role: 'Designer', user: null }]);
+    await outsider.post(`/teams/${team._id}/requests`).send({ role: 'Designer' }).expect(201);
+
+    // the lead also sees who asked for each role; nobody else does
+    const { body: after } = await leader.get('/teams/mine').expect(200);
+    expect(after[0].pendingRequests).toEqual([
+      { _id: expect.any(String), role: 'Designer', user: expect.objectContaining({ displayName: expect.any(String) }) },
+    ]);
+    const { body: theirs } = await outsider.get('/teams').expect(200);
+    expect(theirs.find((t) => t._id === team._id).pendingRequests).toEqual([]);
+  });
+
+  it('refuses a bad or unknown id', async () => {
+    const { leader, team } = await setUp();
+    await leader.post(`/teams/${team._id}/invites`).send({ userId: 'nope', role: 'Designer' }).expect(400);
+    const missing = await leader.post(`/teams/${team._id}/invites`).send({ userId: '507f1f77bcf86cd799439011', role: 'Designer' }).expect(404);
+    expect(missing.body.error).toBe('This person is no longer on TechTrek');
   });
 });
 

@@ -47,3 +47,9 @@ export async function removeAvatar() {
   const response = await serverAPI.delete('/me/avatar');
   return response.data.user;
 }
+
+// someone's profile page: their profile and SMU email (never their Telegram)
+export async function fetchProfile(userId) {
+  const response = await serverAPI.get('/users/' + encodeURIComponent(userId));
+  return response.data.user;
+}

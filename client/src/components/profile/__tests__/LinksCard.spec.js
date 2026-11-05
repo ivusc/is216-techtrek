@@ -12,4 +12,14 @@ describe('LinksCard', () => {
 
     expect(hrefs).toEqual(['https://www.linkedin.com/in/kellie']);
   });
+
+  it('shows the Telegram username as a link and edits it', async () => {
+    const wrapper = mount(LinksCard, { props: { telegram: 'kellie_j' } });
+    expect(wrapper.find('a[href="https://t.me/kellie_j"]').text()).toContain('t.me/kellie_j');
+
+    const editing = mount(LinksCard, { props: { editing: true, telegram: '', 'onUpdate:telegram': (value) => editing.setProps({ telegram: value }) } });
+    await editing.find('#profile-telegram').setValue('kellie_j');
+    expect(editing.props('telegram')).toBe('kellie_j');
+  });
 });
+

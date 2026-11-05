@@ -100,7 +100,9 @@ const dueThisWeek = computed(() => applications.value.filter(isDueThisWeek))
 
 const stats = computed(() => {
   const nextDue = upcomingDeadlines.value[0]
-  const requestCount = incoming.value.length + invites.value.length
+  // role offers I sent are waiting on the other person, not me
+  const needAnswer = incoming.value.filter((request) => request.kind !== 'invite').length
+  const requestCount = needAnswer + invites.value.length
   return [
     {
       key: 'saved',
@@ -134,7 +136,7 @@ const stats = computed(() => {
       hint:
         invites.value.length > 0
           ? invites.value.length + (invites.value.length === 1 ? ' invite for you' : ' invites for you')
-          : incoming.value.length > 0
+          : needAnswer > 0
             ? 'Waiting for you'
             : 'All caught up',
       icon: 'bi-person-plus-fill',
@@ -223,8 +225,9 @@ async function respond(request, status, role) {
   busyRequestId.value = request._id
   requestError.value = ''
   try {
-    await answerRequest(request._id, status, role)
-    if (status === 'accepted') {
+    const answered = await answerRequest(request._id, status, role)
+    // a different role than they asked for goes to them to OK first; it shows as waiting
+    if (status === 'accepted' && answered?.status !== 'pending') {
       showRequestAccepted({ ...request, role: role ?? request.role })
     }
     await loadRequests()

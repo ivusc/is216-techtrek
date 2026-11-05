@@ -190,6 +190,28 @@ describe('HomeView', () => {
     expect(wrapper.findComponent(TrekLoader).exists()).toBe(false);
   });
 
+  it('keeps a tracked pick on screen with its button showing Tracked, like the Opportunities page', async () => {
+    const wrapper = await mountView();
+    const firstCard = () => wrapper.findAllComponents(OpportunityCard)[0];
+    const pick = firstCard().props('item');
+    mock.onPost('/application').reply(201, { _id: 'a9' });
+    mock.onDelete('/application/a9').reply(204);
+
+    await firstCard().vm.$emit('toggle-save');
+    await flushPromises();
+
+    // the same card stays, now tracked (it used to vanish and the next pick took its place)
+    expect(firstCard().props('item')).toEqual(pick);
+    expect(firstCard().props('saved')).toBe(true);
+    expect(firstCard().text()).toContain('Tracked');
+
+    // pressing it again untracks it, and it still stays
+    await firstCard().vm.$emit('toggle-save');
+    await flushPromises();
+    expect(firstCard().props('item')).toEqual(pick);
+    expect(firstCard().props('saved')).toBe(false);
+  });
+
   it('says when there are no picks to recommend', async () => {
     mock.onGet('/opportunity/all').reply(200, { jobs: null, hackathons: null });
     const wrapper = await mountView();

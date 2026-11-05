@@ -23,6 +23,8 @@ export function describeNotification(notification) {
       return { text: `${who} left ${team}`, icon: 'bi-box-arrow-left', tone: 'warning', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'team-deleted':
       return { text: `${team} was deleted by its team lead`, icon: 'bi-trash3', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } } }
+    case 'role-offered':
+      return { text: `${who} would take you into ${team} as ${notification.role || 'another role'}. Join in that role?`, icon: 'bi-arrow-left-right', tone: 'primary', to: { path: '/teams', query: { tab: 'browse' } } }
     case 'role-assigned':
       return { text: `${who} made you ${notification.role || 'a new role'} in ${team}`, icon: 'bi-person-badge', tone: 'primary', to: { path: '/teams', query: { tab: 'mine' } } }
     case 'team-full':
@@ -39,6 +41,14 @@ export function describeNotification(notification) {
           : `${team} stopped taking new members, so your request was closed`,
         icon: 'bi-calendar-x', tone: 'muted', to: { path: '/teams', query: { tab: 'browse' } }
       }
+    case 'deadline-reminder': {
+      // e.g. "Frontend Intern at Acme is due in 3 days"; 1 day left means within the next 24 hours
+      const what = notification.title || 'A tracked application'
+      const at = notification.organisation ? ` at ${notification.organisation}` : ''
+      const soon = notification.daysLeft > 1
+      const when = soon ? `in ${notification.daysLeft} days` : 'within 24 hours'
+      return { text: `${what}${at} is due ${when}`, icon: 'bi-alarm', tone: soon ? 'primary' : 'warning', to: { path: '/tracker' } }
+    }
     default:
       return { text: 'Something happened in one of your teams', icon: 'bi-bell', tone: 'muted', to: { path: '/teams' } }
   }

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const applicationService = require('../service/application-service');
+const notificationService = require('../service/notification-service');
 
 function handleError(res, err, fallback) {
   if (err.name === 'ValidationError' || err.name === 'CastError') {
@@ -99,6 +100,9 @@ async function deleteApplication(req, res) {
     if (!deletedApplication) {
       return res.status(404).json({ error: 'Application not found' });
     }
+
+    // its deadline reminders no longer make sense
+    await notificationService.remove({ userId: req.session.user._id, applicationId: deletedApplication._id });
 
     res.status(204).end();
   } catch (err) {

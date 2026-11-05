@@ -447,7 +447,8 @@ const answer = async (request, newStatus, role) => {
   busyRequestId.value = request._id
   try {
     const answered = await answerRequest(request._id, newStatus, role)
-    if (newStatus === 'accepted') {
+    // a different role than they asked for goes to them to OK first; the card then shows it waiting
+    if (newStatus === 'accepted' && answered?.status !== 'pending') {
       showRequestAccepted({ ...request, role: answered?.role ?? role ?? request.role })
     }
     await loadAll(false)
@@ -731,7 +732,8 @@ onUnmounted(() => {
       @close="celebrateTeam = null"
     />
 
-    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null" />
+    <!-- reload quietly on close, so the open-role circles show who was just invited -->
+    <InviteFriendsModal v-if="inviteTeam" :team="inviteTeam" :initial-role="inviteRole" @close="inviteTeam = null; loadAll(false)" />
 
     <DeleteTeamModal
       v-if="deletingTeam"

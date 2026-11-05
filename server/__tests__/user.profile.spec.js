@@ -79,6 +79,21 @@ describe('PATCH /me', () => {
   });
 });
 
+describe('Telegram username', () => {
+  it('saves it without the @, refuses a bad one, and clears it when blank', async () => {
+    const agent = await loginAs(app, { userName: 'kellie.jubela@smu.edu.sg' });
+
+    const saved = await agent.patch('/me').send({ telegram: '@kellie_j' }).expect(200);
+    expect(saved.body.user.telegram).toBe('kellie_j');
+
+    const bad = await agent.patch('/me').send({ telegram: 'a b' }).expect(400);
+    expect(bad.body.error).toContain('Telegram username');
+
+    const cleared = await agent.patch('/me').send({ telegram: '' }).expect(200);
+    expect(cleared.body.user.telegram).toBeUndefined();
+  });
+});
+
 describe('PATCH /me/password', () => {
   it('refuses a wrong current password without ending the session', async () => {
     const agent = await loginAs(app, { userName: 'kellie.jubela@smu.edu.sg' });

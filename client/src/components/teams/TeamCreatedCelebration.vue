@@ -1,26 +1,13 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
 
-// shown after a new team post is published: a flag is planted on a hill and confetti bursts around it
+// shown after a new team post is published: a flag is planted on a hill
 defineProps({
   teamName: { type: String, required: true },
   eventName: { type: String, default: '' },
 })
 
 const emit = defineEmits(['invite', 'close'])
-
-// confetti pieces: angle to fly out at, distance, colour, delay
-const confetti = []
-const colours = ['var(--tt-accent)', 'var(--bs-info)', 'var(--tt-peach)', 'var(--bs-primary)']
-for (let i = 0; i < 18; i++) {
-  confetti.push({
-    angle: (360 / 18) * i + (i % 2) * 8,
-    distance: 70 + (i % 3) * 22,
-    colour: colours[i % colours.length],
-    delay: 0.55 + (i % 4) * 0.04,
-    round: i % 3 === 0,
-  })
-}
 
 function onKeydown(event) {
   if (event.key === 'Escape') emit('close')
@@ -34,18 +21,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   <div class="celebrate-wrap d-flex align-items-center justify-content-center p-3" role="dialog" aria-modal="true" aria-labelledby="celebrate-title" @click.self="emit('close')">
     <div class="celebrate-card card shadow-lg text-center p-4">
       <div class="celebrate-scene position-relative mx-auto" aria-hidden="true">
-        <span
-          v-for="(piece, index) in confetti"
-          :key="index"
-          class="confetti"
-          :class="{ 'rounded-circle': piece.round }"
-          :style="{
-            '--angle': piece.angle + 'deg',
-            '--distance': piece.distance + 'px',
-            background: piece.colour,
-            animationDelay: piece.delay + 's',
-          }"
-        ></span>
         <div class="flag-pole">
           <span class="flag"></span>
         </div>
@@ -127,17 +102,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   animation: flag-out 0.35s ease-out 0.5s forwards, flag-wave 1.2s ease-in-out 0.9s infinite;
 }
 
-/* confetti flies out from the top of the pole */
-.confetti {
-  position: absolute;
-  left: 50%;
-  top: 22px;
-  width: 8px;
-  height: 8px;
-  opacity: 0;
-  animation: confetti-burst 0.9s ease-out forwards;
-}
-
 @keyframes card-pop {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
@@ -152,18 +116,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   0%, 100% { transform: scaleX(1) skewY(0deg); }
   50% { transform: scaleX(0.92) skewY(4deg); }
 }
-@keyframes confetti-burst {
-  0% { opacity: 1; transform: rotate(var(--angle)) translateX(0) rotate(0deg); }
-  80% { opacity: 1; }
-  100% { opacity: 0; transform: rotate(var(--angle)) translateX(var(--distance)) rotate(220deg); }
-}
 
-/* people who turn off motion see the planted flag straight away, no confetti */
+/* people who turn off motion see the planted flag straight away */
 @media (prefers-reduced-motion: reduce) {
   .celebrate-card,
   .flag-pole,
-  .flag,
-  .confetti {
+  .flag {
     animation: none;
   }
   .flag-pole,

@@ -1,13 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { getDisplayName, getInitials, getAvatarStyle, uniqueRoles } from '@/utils/team'
 
-defineProps({
+const props = defineProps({
   incoming: { type: Array, required: true }, // people asking to join my teams
   invites: { type: Array, required: true }, // teams inviting me
   busyId: { type: String, default: '' },
   error: { type: String, default: '' }
 })
+
+// requests I accepted into another role wait for the person's OK; the rest still need my answer
+const offered = computed(() => props.incoming.filter((request) => request.kind === 'invite'))
+const asking = computed(() => props.incoming.filter((request) => request.kind !== 'invite'))
 
 // both emit (requestOrInvite, 'accepted' | 'declined'); accepting a request also sends the picked role
 defineEmits(['answer-request', 'answer-invite'])
@@ -53,17 +57,21 @@ function pickRole(request, role) {
         <div class="flex-grow-1 min-w-0 small lh-sm">
           <p class="mb-1">
             <span class="fw-semibold">{{ getDisplayName(invite.team.leader).split('@')[0] }}</span>
-            invited you to join <span class="fw-semibold">{{ invite.team.name }}</span>
+            <template v-if="invite.askedRole">
+              would take you into <span class="fw-semibold">{{ invite.team.name }}</span> as <span class="fw-semibold text-primary">{{ invite.role }}</span>
+            </template>
+            <template v-else>invited you to join <span class="fw-semibold">{{ invite.team.name }}</span></template>
           </p>
-          <span class="text-caption text-body-tertiary d-block text-truncate">
+          <span v-if="invite.askedRole" class="text-caption text-body-tertiary d-block text-truncate">You asked to be {{ invite.askedRole }}</span>
+          <span v-else class="text-caption text-body-tertiary d-block text-truncate">
             {{ invite.team.event?.name }}<template v-if="invite.message"> · "{{ invite.message }}"</template>
           </span>
         </div>
         <button
           class="btn btn-sm btn-primary"
           :disabled="busyId === invite._id"
-          :aria-label="'Join ' + invite.team.name"
-          title="Join team"
+          :aria-label="invite.askedRole ? 'Join ' + invite.team.name + ' as ' + invite.role : 'Join ' + invite.team.name"
+          :title="invite.askedRole ? 'Join as ' + invite.role : 'Join team'"
           @click="$emit('answer-invite', invite, 'accepted')"
         >
           <i class="bi bi-check-lg"></i>
@@ -78,7 +86,22 @@ function pickRole(request, role) {
           <i class="bi bi-x-lg"></i>
         </button>
       </div>
-      <div v-for="request in incoming" :key="request._id" class="d-flex flex-wrap align-items-center gap-2 py-1">
+      <!-- I offered them a different role: waiting for them to say yes -->
+      <div v-for="request in offered" :key="request._id" class="d-flex align-items-center gap-2 py-1">
+        <span
+          class="request-avatar rounded-circle d-flex align-items-center justify-content-center small fw-semibold flex-shrink-0"
+          :style="getAvatarStyle(getDisplayName(request.user))"
+        >
+          {{ getInitials(getDisplayName(request.user)) }}
+        </span>
+        <p class="flex-grow-1 min-w-0 small lh-sm mb-0">
+          Waiting for <span class="fw-semibold">{{ getDisplayName(request.user).split('@')[0] }}</span> to OK
+          <span class="fw-semibold text-primary">{{ request.role }}</span>
+          <span class="d-block text-caption text-body-tertiary">They asked to be {{ request.askedRole }} · {{ request.team?.name }}</span>
+        </p>
+        <i class="bi bi-hourglass-split text-body-tertiary" aria-hidden="true"></i>
+      </div>
+      <div v-for="request in asking" :key="request._id" class="d-flex flex-wrap align-items-center gap-2 py-1">
         <span
           class="request-avatar rounded-circle d-flex align-items-center justify-content-center small fw-semibold flex-shrink-0"
           :style="getAvatarStyle(getDisplayName(request.user))"

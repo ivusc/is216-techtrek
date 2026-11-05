@@ -7,6 +7,7 @@ import LoginView from '@/views/login/LoginView.vue';
 import HomeView from '@/views/home/HomeView.vue';
 import OnboardingView from '@/views/onboarding/OnboardingView.vue';
 import ProfileView from '@/views/profile/ProfileView.vue';
+import PersonView from '@/views/profile/PersonView.vue';
 import LandingView from '@/views/landing/LandingView.vue';
 import { useUserStore } from '@/store/user';
 import { createRouter, createWebHistory } from 'vue-router';
@@ -25,6 +26,8 @@ const router = createRouter({
     { path: '/teams', component: TeamsView, meta: { requiresAuth: true } },
     { path: '/interview', component: InterviewView, meta: { requiresAuth: true } },
     { path: '/profile', component: ProfileView, meta: { requiresAuth: true } },
+    // someone else's profile, opened from a team, a request or Teammate Finder
+    { path: '/people/:id', component: PersonView, meta: { requiresAuth: true } },
     { path: '/practice/:applicationId', component: PracticeQuizView, meta: { requiresAuth: true } },
     { path: '/practice/question/:applicationId/:questionId', component: PracticeQuizView, meta: { requiresAuth: true } },
   ],

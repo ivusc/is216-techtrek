@@ -130,7 +130,7 @@ function isUrgent() {
       <span v-else-if="team.status === 'closed'" class="badge rounded-pill fw-medium bg-body-secondary text-body-secondary">Team full</span>
     </div>
 
-    <SuggestedTeammates v-if="mode === 'mine' && team.isLeader && matches" :matches="matches" class="mb-3" />
+    <SuggestedTeammates v-if="mode === 'mine' && team.isLeader && matches" :matches="matches" :team="team" class="mb-3" @invited="(invite) => $emit('updated', { ...team, pendingInvites: [...(team.pendingInvites ?? []), invite] })" />
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 mt-auto border-top">
       <div class="d-flex align-items-center gap-2">

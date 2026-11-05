@@ -9,7 +9,11 @@ const applicationService = require('../service/application-service');
 const notificationService = require('../service/notification-service');
 const teamRequestService = require('../service/team-request-service');
 
-const PROFILE_FIELDS = 'displayName faculty year course skills githubUrl linkedinUrl avatar.updatedAt';
+const PROFILE_FIELDS = 'displayName faculty year course about skills githubUrl linkedinUrl avatar.updatedAt';
+// a team also loads how to contact each person (SMU email, Telegram); formatTeam only passes these on
+// to people in that team
+const CONTACT_FIELDS = 'userName telegram';
+const TEAM_PERSON_FIELDS = PROFILE_FIELDS + ' ' + CONTACT_FIELDS;
 const ANSWER_STATUSES = ['accepted', 'declined'];
 const EVENT_FIELDS = ['opportunity', 'opportunityId', 'eventName', 'eventLocation', 'closesAt'];
 const MAX_MATCHES = 20;
@@ -104,11 +108,23 @@ async function resolveEvent(data) {
 
 function populateTeam(query) {
   return query
-    .populate({ path: 'leaderId', select: PROFILE_FIELDS })
-    .populate({ path: 'members.userId', select: PROFILE_FIELDS });
+    .populate({ path: 'leaderId', select: TEAM_PERSON_FIELDS })
+    .populate({ path: 'members.userId', select: TEAM_PERSON_FIELDS });
+}
+
+// a person in a team: their contact details only go to people in the same team
+function teamPerson(user, canContact) {
+  if (!user || typeof user.toObject !== 'function') return user;
+  const person = user.toObject();
+  if (!canContact) {
+    delete person.userName;
+    delete person.telegram;
+  }
+  return person;
 }
 
 function formatTeam(team, userId, requestStatus = null) {
+  const inTeam = Boolean(userId) && (isLeader(team, userId) || isMember(team, userId));
   return {
     _id: team._id,
     name: team.name,
@@ -122,13 +138,38 @@ function formatTeam(team, userId, requestStatus = null) {
     openRoles: team.openRoles ?? [],
     autoAccept: team.autoAccept,
     status: team.status,
-    leader: team.leaderId,
+    leader: teamPerson(team.leaderId, inTeam),
     members: (team.members || [])
       .filter((member) => member.userId)
-      .map((member) => ({ user: member.userId, role: member.role })),
+      .map((member) => ({ user: teamPerson(member.userId, inTeam), role: member.role })),
+    canContact: inTeam, // people in the team can see each other's email and Telegram
     isLeader: userId ? isLeader(team, userId) : false,
     requestStatus,
   };
+}
+
+// invites and requests still waiting for an answer, on each team: the open-role circles show who
+// was invited, and the lead sees who asked for each role. People in the team see who was invited;
+// everyone else only sees that a role has an invite out. Only the lead sees the requests.
+async function withPendingInvites(formatted) {
+  const list = Array.isArray(formatted) ? formatted : [formatted];
+  if (list.length === 0) return formatted;
+  const waiting = await TeamRequest.find({ teamId: { $in: list.map((team) => team._id) }, status: 'pending' })
+    .populate({ path: 'userId', select: 'displayName avatar.updatedAt' })
+    .sort('createdAt')
+    .lean();
+  for (const team of list) {
+    const mine = waiting.filter((entry) => String(entry.teamId) === String(team._id) && entry.userId);
+    team.pendingInvites = mine
+      .filter((entry) => entry.kind === 'invite')
+      .map((invite) => ({ role: invite.role ?? null, user: team.canContact ? invite.userId : null }));
+    team.pendingRequests = team.isLeader
+      ? mine
+          .filter((entry) => entry.kind !== 'invite')
+          .map((request) => ({ _id: request._id, role: request.role ?? null, user: request.userId }))
+      : [];
+  }
+  return formatted;
 }
 
 function formatRequest(request) {
@@ -148,6 +189,9 @@ function formatRequest(request) {
     _id: request._id,
     status: request.status,
     role: request.role,
+    // a request the lead accepted into another role is waiting for the person to OK it
+    kind: request.kind,
+    askedRole: request.askedRole,
     message: request.message,
     shareProfile: request.shareProfile,
     closedReason: request.closedReason ?? null,
@@ -188,7 +232,7 @@ async function getTeams(req, res) {
         return { ...formatTeam(t, userId, live?.status ?? null), requestId: live?._id ?? null };
       });
 
-    res.json(result);
+    res.json(await withPendingInvites(result));
   } catch (err) {
     handleError(res, err, 'Failed to fetch teams');
   }
@@ -202,7 +246,7 @@ async function getMyTeams(req, res) {
       Team.find({ $or: [{ leaderId: userId }, { 'members.userId': userId }] }).sort('-updatedAt')
     );
     const result = teams.filter((t) => t.leaderId).map((t) => formatTeam(t, userId));
-    res.json(result);
+    res.json(await withPendingInvites(result));
   } catch (err) {
     handleError(res, err, 'Failed to fetch your teams');
   }
@@ -319,7 +363,7 @@ async function updateTeam(req, res) {
     await teamRequestService.closeIfFull(team);
 
     const updated = await populateTeam(Team.findById(team._id));
-    res.json(formatTeam(updated, userId));
+    res.json(await withPendingInvites(formatTeam(updated, userId)));
   } catch (err) {
     handleError(res, err, 'Failed to update team');
   }
@@ -357,7 +401,7 @@ async function assignRole(req, res) {
     }
 
     const updated = await populateTeam(Team.findById(team._id));
-    res.json(formatTeam(updated, userId));
+    res.json(await withPendingInvites(formatTeam(updated, userId)));
   } catch (err) {
     handleError(res, err, 'Failed to update the role');
   }
@@ -454,6 +498,9 @@ async function respondToRequest(req, res) {
   try {
     const request = await TeamRequest.findById(requestId);
     if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (request.kind === 'invite') {
+      return res.status(409).json({ error: 'You offered them another role, so it is their turn to answer' });
+    }
 
     // only the team itself is needed here, not everyone's profile
     const team = await Team.findById(request.teamId);
@@ -469,6 +516,20 @@ async function respondToRequest(req, res) {
       if (!joinedAs) {
         return res.status(400).json({ error: 'Pick one of the open roles: ' + team.openRoles.join(', ') });
       }
+    }
+
+    // accepted into a different role than they asked for: they have to OK the new role first, so the
+    // request becomes an invite for that role (shown with their other invites)
+    const askedFor = String(request.role ?? '').trim();
+    if (status === 'accepted' && askedFor && joinedAs && joinedAs.toLowerCase() !== askedFor.toLowerCase()) {
+      const offered = await TeamRequest.findOneAndUpdate(
+        { _id: requestId, status: 'pending', kind: 'request' },
+        { kind: 'invite', role: joinedAs, askedRole: askedFor },
+        { returnDocument: 'after' },
+      );
+      if (!offered) return res.status(409).json({ error: 'This request has already been answered' });
+      await notificationService.notify({ userId: offered.userId, type: 'role-offered', actorId: userId, team, role: joinedAs });
+      return res.json({ _id: offered._id, status: offered.status, kind: offered.kind, role: offered.role, askedRole: offered.askedRole });
     }
 
     const answered = await TeamRequest.findOneAndUpdate(
@@ -545,10 +606,15 @@ async function getMatches(req, res) {
       .select(PROFILE_FIELDS)
       .lean();
 
+    // people already invited, or who already asked to join, get a note instead of an Invite button
+    const waiting = await TeamRequest.find({ teamId: team._id, status: 'pending' }).select('userId kind').lean();
+    const waitingFor = new Map(waiting.map((entry) => [String(entry.userId), entry.kind === 'invite' ? 'invited' : 'requested']));
+
     const matches = candidates
       .map(({ skills, ...candidate }) => ({
         ...candidate,
         matchedSkills: matchedTeamSkills(skills, team.skills),
+        pending: waitingFor.get(String(candidate._id)) ?? null,
       }))
       .filter((candidate) => candidate.matchedSkills.length > 0)
       .sort((a, b) => b.matchedSkills.length - a.matchedSkills.length)
@@ -565,7 +631,11 @@ async function getIncomingRequests(req, res) {
   try {
     await teamRequestService.closeExpired();
     const teamIds = await Team.find({ leaderId: userId }).distinct('_id');
-    const requests = await TeamRequest.find({ teamId: { $in: teamIds }, kind: { $ne: 'invite' } })
+    // requests, and requests the lead turned into a role offer (they still belong here, waiting for an OK)
+    const requests = await TeamRequest.find({
+      teamId: { $in: teamIds },
+      $or: [{ kind: { $ne: 'invite' } }, { askedRole: { $exists: true } }],
+    })
       .populate({ path: 'userId', select: PROFILE_FIELDS })
       .populate({ path: 'teamId', select: 'name event openRoles', options: { lean: true } })
       .sort('-createdAt');
@@ -599,6 +669,7 @@ function formatInvite(invite) {
     _id: invite._id,
     status: invite.status,
     role: invite.role,
+    askedRole: invite.askedRole, // set when this was their request, offered back in another role
     message: invite.message,
     createdAt: invite.createdAt,
     user: invite.userId, // the invited person
@@ -619,10 +690,15 @@ function formatInvite(invite) {
 async function createInvite(req, res) {
   const { id: teamId } = req.params;
   const userId = req.session.user._id;
-  const { userName, role, message } = req.body ?? {};
+  // who: their SMU email (typed by the lead), or their id (one-click invite from suggested teammates)
+  const { userName, userId: invitedId, role, message } = req.body ?? {};
   const email = String(userName ?? '').trim().toLowerCase();
+  const byId = invitedId !== undefined && invitedId !== null && invitedId !== '';
 
-  if (!/^[^@\s]+@smu\.edu\.sg$/.test(email)) {
+  if (byId && !mongoose.isValidObjectId(invitedId)) {
+    return res.status(400).json({ error: 'Invalid ID' });
+  }
+  if (!byId && !/^[^@\s]+@smu\.edu\.sg$/.test(email)) {
     return res.status(400).json({ error: 'Type your friend\'s @smu.edu.sg email.' });
   }
 
@@ -641,8 +717,9 @@ async function createInvite(req, res) {
       }
     }
 
-    const friend = await User.findOne({ userName: email }).select('_id displayName userName');
+    const friend = await (byId ? User.findById(invitedId) : User.findOne({ userName: email })).select('_id displayName userName');
     if (!friend) {
+      if (byId) return res.status(404).json({ error: 'This person is no longer on TechTrek' });
       return res.status(404).json({ error: 'No TechTrek account uses that email yet. Send them your invite link instead!' });
     }
     if (String(friend._id) === String(userId)) return res.status(400).json({ error: 'You are already in this team' });

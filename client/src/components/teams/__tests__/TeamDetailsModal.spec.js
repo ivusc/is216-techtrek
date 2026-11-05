@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { useUserStore } from '@/store/user';
 import { mount } from '@vue/test-utils';
@@ -52,7 +52,8 @@ describe('TeamDetailsModal', () => {
     await wrapper.find('[aria-label="See Ezekiel Ng\'s profile"]').trigger('click');
 
     const panel = wrapper.find('.people-panel');
-    expect(panel.text()).toContain('Designer · Y1 Information Systems');
+    expect(panel.find('.member-role').text()).toBe('Designer');
+    expect(panel.text()).toContain('Y1 Information Systems');
     expect(panel.text()).toContain('Figma');
     expect(panel.find('a[href="https://github.com/ezekiel"]').exists()).toBe(true);
 
@@ -109,4 +110,48 @@ describe('TeamDetailsModal', () => {
     expect(JSON.parse(mock.history.post[1].data)).toEqual({ role: 'Frontend developer', message: 'Keen!', shareProfile: true });
     expect(wrapper.emitted('sent')).toEqual([[{ _id: 'r9', status: 'pending' }]]);
   });
+
+  it('lets people in the team email everyone and message on Telegram', () => {
+    const wrapper = mountDetails({
+      canContact: true,
+      members: [
+        { user: { ...LEADER, userName: 'ivus.chua@smu.edu.sg', telegram: 'ivus_c' }, role: 'Team lead' },
+        { user: { ...REQUESTER, userName: 'ezekiel.ng@smu.edu.sg' }, role: 'Designer' },
+      ],
+    });
+    const box = wrapper.find('.contact-box');
+
+    // a new Outlook message (SMU email) to everyone, in a new tab
+    const email = box.find('a.btn-primary');
+    expect(email.attributes('href')).toBe(
+      'https://outlook.office.com/mail/deeplink/compose?to=ivus.chua%40smu.edu.sg;ezekiel.ng%40smu.edu.sg&subject=' +
+        encodeURIComponent(wrapper.props('team').name),
+    );
+    expect(email.attributes('target')).toBe('_blank');
+    expect(box.text()).toContain('To: ivus.chua@smu.edu.sg, ezekiel.ng@smu.edu.sg');
+    expect(box.findAll('a[href^="https://t.me/"]').map((a) => a.attributes('href'))).toEqual(['https://t.me/ivus_c']);
+  });
+
+  it('copies everyone\'s email', async () => {
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const wrapper = mountDetails({
+      canContact: true,
+      members: [
+        { user: { ...LEADER, userName: 'ivus.chua@smu.edu.sg' }, role: 'Team lead' },
+        { user: { ...REQUESTER, userName: 'ezekiel.ng@smu.edu.sg' }, role: 'Designer' },
+      ],
+    });
+    const copy = wrapper.findAll('.contact-box button').find((b) => b.text().includes('Copy emails'));
+    await copy.trigger('click');
+    await flushPromises();
+
+    expect(writeText).toHaveBeenCalledWith('ivus.chua@smu.edu.sg; ezekiel.ng@smu.edu.sg');
+    expect(wrapper.find('.contact-box').text()).toContain('Copied!');
+  });
+
+  it('shows no contacts to people outside the team', () => {
+    expect(mountDetails().find('.contact-box').exists()).toBe(false);
+  });
 });
+
