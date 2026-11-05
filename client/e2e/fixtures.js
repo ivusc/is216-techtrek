@@ -58,6 +58,17 @@ export async function expectGutters(dialog, width, gutter) {
   expect(width - (box.x + box.width)).toBeGreaterThanOrEqual(gutter);
 }
 
+// a card's "..." menu can still be settling into place just after it opens, so a click on one
+// of its items may miss; keep opening it and clicking until `done` (an assertion) passes
+export async function chooseFromCardMenu(page, title, itemName, done) {
+  const item = page.locator('.dropdown-menu.show').getByRole('button', { name: itemName });
+  await expect(async () => {
+    if (!(await item.isVisible())) await page.getByRole('button', { name: `Move ${title}` }).click();
+    await item.click({ timeout: 2000 });
+    await done();
+  }).toPass();
+}
+
 export function screenshot(target, testInfo, name) {
   return target.screenshot({
     path: `e2e/__screenshots__/${testInfo.project.name}/${name}.png`,

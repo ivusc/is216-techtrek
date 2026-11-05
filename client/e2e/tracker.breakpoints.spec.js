@@ -248,3 +248,62 @@ test.describe('tracker modals', () => {
     });
   }
 });
+
+test.describe('tracker toolbar on phones', () => {
+  for (const width of WIDTHS.filter((candidate) => candidate < MD)) {
+    test(`${width} stretches the view toggle and the add button across the row`, async ({
+      loggedIn: page,
+      account,
+    }) => {
+      await openTracker(page, account, width);
+      const toggle = page.locator('.tracker-views');
+      const views = toggle.locator(':scope > .btn');
+      const add = page.getByRole('button', { name: /Add application$/ });
+      const row = await toggle.locator('..').boundingBox();
+
+      const toggleBox = await toggle.boundingBox();
+      const addBox = await add.boundingBox();
+      expect(Math.abs(toggleBox.width - row.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(addBox.width - row.width)).toBeLessThanOrEqual(1);
+
+      const widths = await views.evaluateAll((buttons) =>
+        buttons.map((button) => ({
+          width: button.getBoundingClientRect().width,
+          clipped: button.scrollWidth > button.clientWidth,
+        })),
+      );
+      expect(widths).toHaveLength(3);
+      for (const view of widths) {
+        // at 320 "History" and its count need a little more than a third of the row
+        if (width >= 375) expect(Math.abs(view.width - widths[0].width)).toBeLessThanOrEqual(1);
+        expect(view.clipped).toBe(false);
+      }
+      await expect(views.locator('.bi').first()).toBeVisible({ visible: width >= 400 });
+      await expectTrackerFits(page);
+    });
+  }
+});
+
+test.describe('tracker history', () => {
+  for (const width of WIDTHS) {
+    test(`${width} fits the history list`, async ({ loggedIn: page, account }, testInfo) => {
+      await seedTracker(account);
+      const applications = await (await account.api.get('/application')).json();
+      for (const application of applications.filter((item) => item.status === 'rejected')) {
+        const response = await account.api.patch(`/application/${application._id}`, {
+          data: { archivedAt: new Date().toISOString() },
+        });
+        expect(response.status()).toBe(200);
+      }
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/tracker?view=history');
+
+      const row = page.locator('.tracker-history li', { hasText: 'Backend Engineer' });
+      await expect(row).toBeVisible();
+      await screenshot(page, testInfo, `tracker-history-${width}`);
+      await expectTrackerFits(page);
+      await expectInside(row.getByRole('button', { name: 'Back to board' }), page.locator('main'));
+      await expectInside(row.locator('.history-outcome'), page.locator('main'));
+    });
+  }
+});

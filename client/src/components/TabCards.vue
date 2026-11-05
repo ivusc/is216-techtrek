@@ -23,7 +23,7 @@ defineEmits(['action'])
   <component
     :is="isNav ? 'nav' : 'div'"
     class="tab-cards"
-    :class="{ 'with-action': action }"
+    :class="{ 'with-action': action, 'many-tabs': tabs.length > 3 }"
     :style="{ '--tabs': tabs.length }"
     :role="isNav ? undefined : 'tablist'"
     :aria-label="label"
@@ -240,6 +240,24 @@ defineEmits(['action'])
   .news-dot {
     top: 8px;
     right: 8px;
+  }
+}
+
+/* phones: the label and count say enough, so the icon goes and the cards stay short */
+@container (max-width: 479.98px) {
+  .tab-card:not(.create-card) {
+    gap: 4px;
+    padding: 10px 6px;
+  }
+  .tab-card:not(.create-card) .tab-icon {
+    display: none !important;
+  }
+}
+
+/* very narrow (320px phones): four cards don't fit their labels in one row, so they go 2 × 2 */
+@container (max-width: 359.98px) {
+  .tab-cards.many-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -69,7 +69,7 @@ const summary = computed(() => {
 <template>
   <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
     <!-- board / calendar toggle -->
-    <div class="btn-group bg-body-secondary rounded p-1">
+    <div class="btn-group tracker-views bg-body-secondary rounded p-1">
       <button
         class="btn btn-sm border-0 rounded-1"
         :class="viewMode === 'board' ? 'bg-white shadow-sm fw-semibold' : 'text-body-secondary'"
@@ -90,7 +90,7 @@ const summary = computed(() => {
         @click="viewMode = 'history'"
       >
         <i class="bi bi-clock-history me-1"></i> History
-        <span class="badge rounded-pill bg-body-secondary text-body-secondary fw-medium">{{ historyCount }}</span>
+        <span class="badge ms-1 rounded-pill bg-body-secondary text-body-secondary fw-medium">{{ historyCount }}</span>
       </button>
     </div>
 
@@ -175,3 +175,16 @@ const summary = computed(() => {
     </button>
   </div>
 </template>
+
+<style scoped>
+/* phones: the view toggle spans the row with equal buttons, and the add button is full width */
+@media (max-width: 767.98px) {
+  .tracker-views { width: 100%; }
+  .tracker-views > .btn { flex: 1 1 0; white-space: nowrap; }
+  .btn-cta { width: 100%; }
+}
+/* 320px phones: the labels alone fill the toggle, so the icons go */
+@media (max-width: 399.98px) {
+  .tracker-views .bi { display: none; }
+}
+</style>

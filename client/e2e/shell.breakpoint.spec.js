@@ -1,4 +1,4 @@
-import { PHONE, expect, test } from './fixtures.js';
+import { PHONE, WIDTHS, expect, test } from './fixtures.js';
 
 const TABLET = { width: 768, height: 1024 };
 
@@ -88,4 +88,35 @@ test.describe('sidebar profile footer', () => {
       await sidebarRightEdge(page),
     );
   });
+});
+
+test.describe('bottom tab bar', () => {
+  for (const width of WIDTHS.filter((candidate) => candidate < 768)) {
+    test(`${width} fits five equal tabs with one-line labels`, async ({ loggedIn: page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto('/home');
+      const links = page.locator('.bottom-nav .bottom-nav-link');
+      await expect(links).toHaveCount(5);
+
+      const tabs = await links.evaluateAll((elements) =>
+        elements.map((element) => {
+          const box = element.getBoundingClientRect();
+          return {
+            left: box.left,
+            right: box.right,
+            width: box.width,
+            height: box.height,
+            clipped: element.scrollWidth > element.clientWidth,
+          };
+        }),
+      );
+      for (const tab of tabs) {
+        expect(tab.left).toBeGreaterThanOrEqual(0);
+        expect(tab.right).toBeLessThanOrEqual(width + 0.5);
+        expect(tab.clipped).toBe(false);
+        expect(Math.abs(tab.width - tabs[0].width)).toBeLessThanOrEqual(1);
+        expect(tab.height).toBe(tabs[0].height);
+      }
+    });
+  }
 });

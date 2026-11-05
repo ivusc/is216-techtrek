@@ -309,8 +309,9 @@ $danger-text-emphasis-dark:    #ff9fb3;
 .modal-content { box-shadow: $box-shadow-lg; }
 
 // Type scale details: heading weights, line heights, tracking
-h1, .h1 { line-height: 38px; letter-spacing: -1px; }
-h2, .h2 { line-height: 30px; letter-spacing: -.5px; }
+// relative line heights (same 38px / 30px on desktop), so a heading that shrinks and wraps on a phone stays tight
+h1, .h1 { line-height: 1.25; letter-spacing: -1px; }
+h2, .h2 { line-height: 1.35; letter-spacing: -.5px; }
 h3, .h3 { line-height: 26px; letter-spacing: -.25px; font-weight: 600; }
 h4, .h4 { line-height: 22px; font-weight: 600; }
 .display-1 { letter-spacing: -1.5px; }
@@ -380,4 +381,19 @@ a { text-underline-offset: .18em; }
 ::placeholder {
   color: var(--tt-placeholder) !important;
   opacity: 1 !important; // Firefox fades placeholders by default
+}
+
+// ─── 6. Touch screens ─────────────────────────────────────────────────────
+// small buttons and selects are 32px tall, too small for a thumb: 40px on touch screens.
+// Buttons with .p-0 (text links) keep their size, the !important utility wins.
+@media (pointer: coarse) {
+  .btn-sm { --bs-btn-padding-y: .5rem; }
+  .form-select-sm,
+  .form-control-sm { padding-top: .5rem; padding-bottom: .5rem; }
+}
+// iOS Safari zooms the page into any field under 16px when it gets focus
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox'], [type='radio'], [type='range']),
+  select,
+  textarea { font-size: max(16px, 1em); }
 }

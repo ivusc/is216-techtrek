@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { DESKTOP, PHONE, expect, test } from './fixtures.js';
+import { DESKTOP, PHONE, chooseFromCardMenu, expect, test } from './fixtures.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -42,12 +42,20 @@ for (const [device, size] of Object.entries({ phone: PHONE, desktop: DESKTOP }))
     }) => {
       await track(account, { title: 'Frontend Intern', organisation: 'Acme' });
       await page.goto('/tracker');
+      // the card moves straight away and saves in the background, so wait for the save before reloading
+      const saved = page.waitForResponse(
+        (response) => response.request().method() === 'PATCH' && response.url().includes('/application/'),
+      );
 
-      await page.getByRole('button', { name: 'Move Frontend Intern' }).click();
-      await page.locator('.dropdown-menu.show').getByRole('button', { name: 'Applied' }).click();
+      await chooseFromCardMenu(page, 'Frontend Intern', 'Applied', () =>
+        expect(stage(page, 'Applied').locator('.kanban-card')).toContainText('Frontend Intern', {
+          timeout: 5000,
+        }),
+      );
 
       await expect(stage(page, 'Applied').locator('.kanban-card')).toContainText('Frontend Intern');
       await expect(stage(page, 'Saved').locator('.kanban-card')).toHaveCount(0);
+      expect((await saved).ok()).toBe(true);
       await page.reload();
       await expect(stage(page, 'Applied').locator('.kanban-card')).toContainText('Frontend Intern');
     });

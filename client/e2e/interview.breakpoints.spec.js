@@ -151,14 +151,24 @@ test.describe('interview prep page', () => {
       await page.screenshot({ path: `e2e/__screenshots__/interview/applied-${width}.png` });
 
       expect(await horizontalOverflow(page)).toBe(0);
-      const filters = await page
-        .locator('.card', { has: page.getByRole('heading', { name: 'Filters' }) })
-        .boundingBox();
+      const filterPanel = page.locator('#interview-filters');
+      const filters = await page.locator('.card', { has: filterPanel }).boundingBox();
       const bank = await page.getByRole('heading', { name: 'Question bank' }).boundingBox();
       expect(bank.x >= filters.x + filters.width).toBe(width >= XL);
       await expectInsideMain(page, page.locator('.interview-stat'));
       await expectInsideMain(page, page.getByRole('link', { name: 'Retry' }));
       await expectInsideMain(page, page.getByRole('link', { name: /Start .*session/ }));
+
+      // below xl the filters fold away behind a toggle
+      await expect(filterPanel).toBeVisible({ visible: width >= XL });
+      if (width < XL) {
+        const toggle = page.getByRole('button', { name: 'Filters' });
+        await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        await toggle.click();
+        await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        await expect(filterPanel).toBeVisible();
+        expect(await horizontalOverflow(page)).toBe(0);
+      }
     });
 
     test(`${width} gives the practice question its full width and stacks feedback below lg`, async ({

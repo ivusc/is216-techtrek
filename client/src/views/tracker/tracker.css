@@ -18,6 +18,17 @@
   overflow-y: hidden;
 }
 
+/* phones: one column fills most of the screen and the next one peeks in; swipes snap to a column */
+@media (max-width: 767.98px) {
+  .kanban-board {
+    scroll-snap-type: x mandatory;
+  }
+  .kanban-column {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+}
+
 .status-dot {
   width: 10px;
   height: 10px;
