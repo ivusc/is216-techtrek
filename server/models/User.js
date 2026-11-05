@@ -53,6 +53,10 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // "new opportunities match your skills" alerts: when they were last checked, and the listings
+    // already counted (source:externalId), so the same listing is never announced twice
+    matchAlertsCheckedAt: { type: Date },
+    matchAlertsSeen: { type: [String], default: undefined, select: false },
     openToTeams: {
       type: Boolean,
       required: [true, 'Choose whether to show you in Teammate Finder.'],

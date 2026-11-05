@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
 import TeamModal from './TeamModal.vue'
+import CopyLinkButton from '@/components/CopyLinkButton.vue'
 import TeamPeople from './TeamPeople.vue'
 import JoinRequestFields from './JoinRequestFields.vue'
 import { useUserStore } from '@/store/user'
@@ -100,6 +101,11 @@ async function sendJoinRequest() {
 if (props.startRequesting && props.canRequest) startRequest()
 function isMine(skill) {
   return auth.skills.some((mine) => sameSkill(mine, skill))
+}
+
+// a link to send a friend: /teams/<id> opens this team on their Teams page
+function teamLink() {
+  return `${window.location.origin}/teams/${props.team._id}`
 }
 </script>
 
@@ -206,6 +212,7 @@ function isMine(skill) {
         </button>
       </template>
       <template v-else>
+        <CopyLinkButton class="me-auto" :get-link="teamLink" />
         <button type="button" class="btn btn-light fw-semibold" @click="$emit('close')">Close</button>
         <button v-if="canRequest" type="button" class="btn btn-primary fw-semibold" @click="startRequest()">Request to join</button>
       </template>

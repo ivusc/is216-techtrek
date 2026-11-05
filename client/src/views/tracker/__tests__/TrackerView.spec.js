@@ -11,9 +11,11 @@ import { NOW, applications } from '@/__tests__/fixtures/applications';
 process.env.TZ = 'Asia/Singapore';
 
 const route = vi.hoisted(() => ({ query: {} }));
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
 
 vi.mock('vue-router', () => ({
   useRoute: () => route,
+  useRouter: () => router,
 }));
 
 const mock = new MockAdapter(serverAPI);
@@ -121,6 +123,25 @@ describe('TrackerView', () => {
 
     expect(boardTab(wrapper, 'Hackathons').attributes('aria-selected')).toBe('true');
     expect(cardTitles(wrapper)).toEqual(['Hack&Roll']);
+  });
+
+  it('opens a card from a link, on the board it belongs to, and forgets the link when closed', async () => {
+    route.query = { open: 'a2' };
+
+    const wrapper = await mountTracker();
+
+    expect(boardTab(wrapper, 'Hackathons').attributes('aria-selected')).toBe('true');
+    expect(detailModal(wrapper).text()).toContain('Hack&Roll');
+    await detailModal(wrapper).find('[aria-label="Close"]').trigger('click');
+    expect(router.replace).toHaveBeenCalledWith({ query: {} });
+  });
+
+  it("says so when a link's application is gone", async () => {
+    route.query = { open: 'deleted-one' };
+
+    const wrapper = await mountTracker();
+
+    expect(wrapper.text()).toContain("That application isn't in your tracker any more.");
   });
 
   it('shows a failed load as an alert', async () => {

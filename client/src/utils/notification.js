@@ -47,7 +47,22 @@ export function describeNotification(notification) {
       const at = withOrganisation(notification.title, notification.organisation)
       const soon = notification.daysLeft > 1
       const when = soon ? `in ${notification.daysLeft} days` : 'within 24 hours'
-      return { text: `${what}${at} is due ${when}`, icon: 'bi-alarm', tone: soon ? 'primary' : 'warning', to: { path: '/tracker' } }
+      const to = notification.applicationId ? { path: '/tracker', query: { open: String(notification.applicationId) } } : { path: '/tracker' }
+      return { text: `${what}${at} is due ${when}`, icon: 'bi-alarm', tone: soon ? 'primary' : 'warning', to }
+    }
+    case 'new-matches': {
+      // e.g. "3 new hackathons and 1 new job mention your skills: Vue.js, Python"
+      const parts = []
+      const hackathons = notification.hackathonCount ?? 0
+      const jobs = notification.jobCount ?? 0
+      if (hackathons > 0) parts.push(`${hackathons} new ${hackathons === 1 ? 'hackathon' : 'hackathons'}`)
+      if (jobs > 0) parts.push(`${jobs} new ${jobs === 1 ? 'job' : 'jobs'}`)
+      const what = parts.join(' and ') || 'New listings'
+      const skills = notification.skills?.length ? `: ${notification.skills.join(', ')}` : ''
+      const verb = hackathons + jobs === 1 ? 'mentions' : 'mention'
+      // open the tab with the new ones (both kinds: the overview)
+      const tab = jobs === 0 ? 'hackathons' : hackathons === 0 ? 'jobs' : 'overview'
+      return { text: `${what} ${verb} your skills${skills}`, icon: 'bi-stars', tone: 'primary', to: { path: '/opportunities', query: { tab } } }
     }
     default:
       return { text: 'Something happened in one of your teams', icon: 'bi-bell', tone: 'muted', to: { path: '/teams' } }

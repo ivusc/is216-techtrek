@@ -49,4 +49,21 @@ function cleanSkills(skills) {
   return cleaned.slice(0, MAX_SKILLS);
 }
 
-module.exports = { MAX_SKILLS, SKILL_ALIASES, cleanSkills, canonicalSkill, sameSkill };
+// does this text mention the skill (any of its spellings) as a whole word?
+// same as mentions() in client/src/utils/skills.js
+function mentionsSkill(text, skill) {
+  const canonical = canonicalSkill(skill);
+  const spellings = [canonical, ...Object.keys(SKILL_ALIASES).filter((key) => SKILL_ALIASES[key] === canonical)];
+  return spellings.some((spelling) => {
+    const escaped = spelling.toLowerCase().replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+    return new RegExp('(^|[^a-z0-9])' + escaped + '($|[^a-z0-9])').test(text);
+  });
+}
+
+// which of my skills a listing mentions in its title, description or themes (like the Match meter)
+function listingSkillsMatched(listing, mySkills) {
+  const text = [listing.title, listing.description, ...(listing.themes ?? [])].join(' ').toLowerCase();
+  return mySkills.filter((skill) => mentionsSkill(text, skill));
+}
+
+module.exports = { MAX_SKILLS, SKILL_ALIASES, cleanSkills, canonicalSkill, sameSkill, mentionsSkill, listingSkillsMatched };

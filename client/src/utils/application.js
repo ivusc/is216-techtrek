@@ -44,3 +44,8 @@ export function getFollowUpNudge(application, now = new Date()) {
   const days = Math.floor((now - new Date(since)) / 86400000)
   return days >= FOLLOW_UP_AFTER_DAYS ? { days, followedUp } : null
 }
+
+// a link that opens the Tracker with this application's details already open, e.g. /tracker?open=a1
+export function trackerLink(applicationId) {
+  return applicationId ? { path: '/tracker', query: { open: String(applicationId) } } : { path: '/tracker' }
+}

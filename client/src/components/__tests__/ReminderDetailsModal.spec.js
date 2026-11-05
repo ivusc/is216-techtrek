@@ -6,7 +6,7 @@ vi.mock('@/services/trackerService', () => ({ fetchApplicationService: vi.fn() }
 import { fetchApplicationService } from '@/services/trackerService';
 import ReminderDetailsModal from '@/components/ReminderDetailsModal.vue';
 
-const RouterLink = { props: ['to'], emits: ['click'], template: '<a :data-to="to" @click="$emit(\'click\')"><slot /></a>' };
+const RouterLink = { props: ['to'], emits: ['click'], template: '<a :data-to="JSON.stringify(to)" @click="$emit(\'click\')"><slot /></a>' };
 
 const inHours = (hours) => new Date(Date.now() + hours * 3600000).toISOString();
 
@@ -52,7 +52,8 @@ describe('ReminderDetailsModal', () => {
     expect(details).toContain('Ask Wei about the take-home');
     expect(details).toContain('1 day before');
     expect(wrapper.find('a[href="https://acme.test/jobs/1"]').exists()).toBe(true);
-    expect(wrapper.find('[data-to="/tracker"]').text()).toBe('Open in Tracker');
+    const trackerButton = wrapper.findAll('a').find((link) => link.text() === 'Open in Tracker');
+    expect(JSON.parse(trackerButton.attributes('data-to'))).toEqual({ path: '/tracker', query: { open: 'a1' } });
   });
 
   it('uses the latest deadline from the tracker if it moved since the reminder', async () => {

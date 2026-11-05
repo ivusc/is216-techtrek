@@ -3,6 +3,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatDate, formatDateTime } from '@/utils/date'
 import { typeBadge } from '@/constants'
 import OpportunityTips from './OpportunityTips.vue'
+import CopyLinkButton from '@/components/CopyLinkButton.vue'
+import { shareOpportunity } from '@/services/opportunityService'
 import { flyFromTracker, flyToTracker } from '@/utils/flyToTracker'
 import {
   getMonthlySalary,
@@ -92,6 +94,13 @@ const infoBoxes = computed(() => {
     }
   ]
 })
+
+// "Copy link to share": a listing opened from a shared link already has its id; anything else is
+// saved first so the link keeps working after it leaves Adzuna or Devpost's results
+async function shareLink() {
+  const id = props.item._id ?? (await shareOpportunity(props.item))
+  return `${window.location.origin}/opportunities/${id}`
+}
 </script>
 
 <template>
@@ -104,6 +113,7 @@ const infoBoxes = computed(() => {
       <!-- header: label + open listing + close -->
       <div class="d-flex align-items-center gap-2">
         <span class="text-overline text-body-tertiary flex-grow-1">Details</span>
+        <CopyLinkButton compact label="Copy link to share" :get-link="shareLink" />
         <a
           :href="item.url"
           target="_blank"

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { fetchApplicationService } from '@/services/trackerService'
-import { getApplicationDeadline, getStageLabel } from '@/utils/application'
+import { getApplicationDeadline, getStageLabel, trackerLink } from '@/utils/application'
 import { formatDateTime } from '@/utils/date'
 import { timeLeftText } from '@/utils/notification'
 import { timeAgo } from '@/utils/team'
@@ -132,7 +132,7 @@ onMounted(() => {
           >
             View listing <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
           </a>
-          <RouterLink to="/tracker" class="btn btn-primary fw-semibold" @click="emit('close')">Open in Tracker</RouterLink>
+          <RouterLink :to="trackerLink(application?._id)" class="btn btn-primary fw-semibold" @click="emit('close')">Open in Tracker</RouterLink>
         </div>
       </div>
     </div>

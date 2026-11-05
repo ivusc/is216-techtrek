@@ -41,6 +41,7 @@ describe('describeNotification', () => {
     expect(reminder(3)).toEqual({ text: 'Frontend Intern at Acme is due in 3 days', icon: 'bi-alarm', tone: 'primary', to: { path: '/tracker' } });
     expect(reminder(1)).toMatchObject({ text: 'Frontend Intern at Acme is due within 24 hours', tone: 'warning' });
     expect(describeNotification({ type: 'deadline-reminder', daysLeft: 2 }).text).toBe('A tracked application is due in 2 days');
+    expect(describeNotification({ type: 'deadline-reminder', daysLeft: 2, applicationId: 'a9' }).to).toEqual({ path: '/tracker', query: { open: 'a9' } });
   });
 
   it("doesn't repeat the organisation when the title already names it", () => {
@@ -61,6 +62,22 @@ describe('describeNotification', () => {
     expect(timeLeftText(at(20), now)).toBe('in 20 hours');
     expect(timeLeftText(at(30), now)).toBe('in 1 day');
     expect(timeLeftText(at(72), now)).toBe('in 3 days');
+  });
+
+  it('sums up new matching listings and opens the right Opportunities tab', () => {
+    const matches = (fields) => describeNotification({ type: 'new-matches', ...fields });
+
+    expect(matches({ hackathonCount: 3, jobCount: 1, skills: ['Vue.js', 'Python'] })).toEqual({
+      text: '3 new hackathons and 1 new job mention your skills: Vue.js, Python',
+      icon: 'bi-stars',
+      tone: 'primary',
+      to: { path: '/opportunities', query: { tab: 'overview' } },
+    });
+    expect(matches({ hackathonCount: 1, jobCount: 0, skills: ['UI/UX'] })).toMatchObject({
+      text: '1 new hackathon mentions your skills: UI/UX',
+      to: { path: '/opportunities', query: { tab: 'hackathons' } },
+    });
+    expect(matches({ hackathonCount: 0, jobCount: 2 }).to.query.tab).toBe('jobs');
   });
 
   it('says which role the lead gave me', () => {

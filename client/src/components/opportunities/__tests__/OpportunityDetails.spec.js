@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 
-vi.mock('@/services/opportunityService', () => ({ fetchTipsForOpportunity: vi.fn(async () => []) }));
+vi.mock('@/services/opportunityService', () => ({
+  fetchTipsForOpportunity: vi.fn(async () => []),
+  shareOpportunity: vi.fn(async () => '64b000000000000000000009'),
+}));
 
-import { fetchTipsForOpportunity } from '@/services/opportunityService';
+import { fetchTipsForOpportunity, shareOpportunity } from '@/services/opportunityService';
 import OpportunityDetails from '@/components/opportunities/OpportunityDetails.vue';
 import { HACKATHONS, jobs } from '@/__tests__/fixtures/opportunities';
 
@@ -96,5 +99,24 @@ describe('OpportunityDetails', () => {
     await flushPromises();
 
     expect(wrapper.find('[aria-labelledby="opportunity-tips-title"]').text()).toContain(`No tips for ${job.organisation} yet`);
+  });
+
+  it('copies a link to the listing, saving it first unless it already has an id', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const [job] = jobs(1);
+
+    const wrapper = mountDetails(job);
+    await wrapper.find('button[aria-label="Copy link to share"]').trigger('click');
+    await flushPromises();
+    expect(shareOpportunity).toHaveBeenCalledWith(job);
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/opportunities/64b000000000000000000009`);
+
+    shareOpportunity.mockClear();
+    const shared = mountDetails({ ...job, _id: 'abc123' });
+    await shared.find('button[aria-label="Copy link to share"]').trigger('click');
+    await flushPromises();
+    expect(shareOpportunity).not.toHaveBeenCalled();
+    expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/opportunities/abc123`);
   });
 });

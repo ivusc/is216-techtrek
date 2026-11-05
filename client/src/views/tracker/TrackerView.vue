@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import './tracker.css';
 import TrackerToolbar from '@/components/tracker/TrackerToolbar.vue';
 import KanbanColumn from '@/components/tracker/board/KanbanColumn.vue';
@@ -37,14 +37,36 @@ const deadlineFilter = ref(''); // '' | 'week' | 'overdue'
 const hideRejected = ref(false);
 // which board: jobs & internships, or hackathons & competitions (they have different steps).
 // /tracker?board=hackathons opens the hackathon board
-const board = ref(useRoute().query.board === 'hackathons' ? 'hackathons' : 'jobs');
+const route = useRoute();
+const router = useRouter();
+const board = ref(route.query.board === 'hackathons' ? 'hackathons' : 'jobs');
 
 // a type filter from the other board would hide everything, so clear it when switching
 watch(board, () => {
   typeFilter.value = '';
 });
 
-onMounted(fetchApplications);
+// /tracker?open=<applicationId> (from a reminder, Home's deadlines or the calendar) opens that card's
+// details once the applications have loaded, on the board it belongs to
+const linkNotFound = ref(false);
+function openFromLink() {
+  const id = route.query.open;
+  if (!id) return;
+  const application = applications.value.find((item) => item._id === id);
+  if (application) {
+    board.value = isEventType(application.opportunityId.type) ? 'hackathons' : 'jobs';
+    openDetails(application);
+  } else {
+    linkNotFound.value = true;
+  }
+}
+
+onMounted(async () => {
+  await fetchApplications();
+  openFromLink();
+});
+// a link clicked while already on the Tracker (e.g. from the bell)
+watch(() => route.query.open, openFromLink);
 onUnmounted(dismissCelebration);
 
 function clearFilters() {
@@ -167,6 +189,12 @@ function openDetails(application) {
 
 function closeDetails() {
   selectedApplication.value = null;
+  // drop ?open= so a refresh doesn't open it again
+  if (route.query.open) {
+    const rest = { ...route.query };
+    delete rest.open;
+    router.replace({ query: rest });
+  }
 }
 
 // UPDATE changes = { status, notes, interviewAt, deadline }
@@ -228,6 +256,10 @@ async function deleteTips() {
       : 'Every deadline, interview and hackathon in one month view.'" type="applications" />
 
     <div v-if="status" class="alert alert-danger" role="alert">{{ status }}</div>
+    <div v-if="linkNotFound" class="alert alert-warning d-flex align-items-center gap-2" role="status">
+      <span class="flex-grow-1">That application isn't in your tracker any more.</span>
+      <button type="button" class="btn-close" aria-label="Dismiss" @click="linkNotFound = false"></button>
+    </div>
 
     <TrekLoader
       v-if="isLoading"

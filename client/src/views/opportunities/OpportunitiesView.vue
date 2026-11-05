@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { fetchOpportunity } from '@/services/opportunityService'
 import { storeToRefs } from 'pinia'
 import './opportunities.css'
 import TabCards from '@/components/TabCards.vue'
@@ -29,12 +30,16 @@ const { jobs, hackathons, isLoading, status, lastUpdated, hasMoreJobs, jobType, 
 
 const userStore = useUserStore()
 
-const activeTab = ref('overview')
+// /opportunities?tab=hackathons (e.g. from a "new matches" notification) opens that tab
+const TABS = ['overview', 'jobs', 'hackathons']
+const activeTab = ref(TABS.includes(useRoute().query.tab) ? useRoute().query.tab : 'overview')
 // Quick pick: go through the results one big card at a time instead of the grid
 const quickPick = ref(false)
 
 // the home page search sends people here with ?search=...
-const search = ref(useRoute().query.search ?? '')
+const route = useRoute()
+const router = useRouter()
+const search = ref(route.query.search ?? '')
 const locationFilter = ref('')
 const paidOnly = ref(false)
 // hackathon filters, done here because all hackathons are loaded at once
@@ -62,9 +67,25 @@ const selectedItem = ref(null)
 // the hackathon whose teams are shown in the "Find team" panel (null = closed)
 const findTeamItem = ref(null)
 
+// a shared link (/opportunities/<id>): open that listing's details on top of the page
+const linkError = ref('')
+async function openFromLink() {
+  const id = route.params.id
+  if (!id) return
+  try {
+    selectedItem.value = await fetchOpportunity(id)
+  } catch (error) {
+    console.error(error)
+    linkError.value = error.response?.status === 404
+      ? "That shared listing couldn't be found. It may have been removed."
+      : "Couldn't open the shared listing. Try the link again."
+  }
+}
+
 onMounted(() => {
   opportunityStore.fetchOpportunities()
   opportunityStore.loadRoleOptions()
+  openFromLink()
 })
 
 // displayedItems: the items of the tab that is selected (same as before)
@@ -148,6 +169,8 @@ function openDetails(item) {
 
 function closeDetails() {
   selectedItem.value = null
+  // back to the plain page, so a refresh doesn't open the shared listing again
+  if (route.params.id) router.replace({ path: '/opportunities' })
 }
 
 // takes displayedItems, keeps only the ones that pass the search + filters, then sorts them
@@ -275,6 +298,11 @@ const loadMore = async () => {
 <template>
   <div class="p-2">
     <PageHeader v-model="search" />
+
+    <div v-if="linkError" class="alert alert-warning d-flex align-items-center gap-2 py-2" role="status">
+      <span class="flex-grow-1">{{ linkError }}</span>
+      <button type="button" class="btn-close" aria-label="Dismiss" @click="linkError = ''"></button>
+    </div>
 
     <TabCards v-model:tab="activeTab" :tabs="tabs" label="Opportunity types" id-prefix="opportunities-tab-" />
 

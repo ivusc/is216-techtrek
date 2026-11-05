@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+const Opportunity = require('../models/Opportunity');
 const opportunityService = require('../service/opportunity-service');
 
 function handleError(res, err, fallback) {
@@ -90,9 +92,40 @@ async function fetchAll(req, res) {
   res.json({ jobs, hackathons });
 }
 
+// POST /opportunity/share  body: { opportunity } - the listing being shared, as the Opportunities page has it.
+// Jobs and hackathons come live from Adzuna and Devpost and can't be looked up by id later, so a copy is
+// saved (the same copy tracking uses) and its id makes the link: /opportunities/<id>
+async function shareOpportunity(req, res) {
+  const { opportunity } = req.body ?? {};
+  if (!opportunity || typeof opportunity !== 'object') {
+    return res.status(400).json({ error: 'opportunity is required' });
+  }
+  try {
+    const saved = await opportunityService.findOrCreateOpportunity(opportunity);
+    res.status(201).json({ _id: saved._id });
+  } catch (err) {
+    if (err.name === 'ValidationError') return res.status(400).json({ error: err.message });
+    handleError(res, err, 'Failed to share opportunity.');
+  }
+}
+
+// GET /opportunity/item/:id - one saved listing, for a shared link
+async function fetchOpportunity(req, res) {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Opportunity not found' });
+  try {
+    const opportunity = await Opportunity.findById(req.params.id);
+    if (!opportunity) return res.status(404).json({ error: 'Opportunity not found' });
+    res.json(opportunity);
+  } catch (err) {
+    handleError(res, err, 'Failed to fetch opportunity.');
+  }
+}
+
 module.exports = {
   fetchJobs,
   fetchJobFilterOptions,
   fetchHackathons,
   fetchAll,
+  shareOpportunity,
+  fetchOpportunity,
 };

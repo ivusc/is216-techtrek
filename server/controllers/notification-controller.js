@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification');
 const teamRequestService = require('../service/team-request-service');
 const deadlineReminders = require('../service/deadline-reminders');
+const opportunityAlerts = require('../service/opportunity-alerts');
 
 const MAX_NOTIFICATIONS = 30;
 
@@ -18,6 +19,9 @@ function formatNotification(notification) {
     organisation: notification.organisation ?? null,
     deadline: notification.deadline ?? null,
     daysLeft: notification.daysLeft ?? null,
+    jobCount: notification.jobCount ?? null,
+    hackathonCount: notification.hackathonCount ?? null,
+    skills: notification.skills ?? null,
     read: notification.read,
     createdAt: notification.createdAt,
   };
@@ -31,6 +35,8 @@ async function getNotifications(req, res) {
     await teamRequestService.closeExpired();
     // add reminders for my tracked deadlines that are 3 days or 1 day away
     await deadlineReminders.sendDeadlineReminders(userId);
+    // and tell me about new listings that mention my skills (checked every few hours at most)
+    await opportunityAlerts.sendMatchAlerts(userId);
     const [notifications, unreadCount] = await Promise.all([
       Notification.find({ userId }).sort('-createdAt').limit(MAX_NOTIFICATIONS),
       Notification.countDocuments({ userId, read: false }),
