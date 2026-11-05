@@ -344,3 +344,25 @@ h4, .h4 { line-height: 22px; font-weight: 600; }
 html { accent-color: $tt-primary; scrollbar-color: var(--bs-border-color-translucent) transparent; }
 a { text-underline-offset: .18em; }
 .text-stat, .tabular { font-variant-numeric: tabular-nums; }
+
+// "Add to cart" for the tracker (utils/flyToTracker.js): the copy of an opportunity that flies to the
+// Tracker icon, and the "+1" that pops out of the icon when it lands
+.tracker-flight {
+  position: fixed;
+  margin: 0;
+  z-index: 1080;
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow: $box-shadow-lg;
+}
+.tracker-plus-one {
+  position: fixed;
+  z-index: 1081;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: var(--tt-accent);
+  pointer-events: none;
+}

@@ -61,4 +61,11 @@ describe('OpportunityDetails', () => {
     await details.setProps({ saved: true });
     expect(save.text()).toBe('Tracked');
   });
+
+  it('shows the job roles as tags', () => {
+    const [job] = jobs(1);
+    const wrapper = mountDetails({ ...job, roles: [{ key: 'data', label: 'Data' }] });
+
+    expect(wrapper.findAll('.role-tag').map((tag) => tag.text())).toEqual(['Data']);
+  });
 });

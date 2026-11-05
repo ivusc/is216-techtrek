@@ -1,11 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue'
 import { useOpportunityStore } from '@/store/opportunity'
 import { useApplicationsStore } from '@/store/applications'
-import { isClosed } from '@/utils/opportunity'
+import { getKey, isClosed } from '@/utils/opportunity'
 
 const props = defineProps({
   skills: { type: Array, required: true }
@@ -26,6 +26,10 @@ function matchCount(item) {
   return props.skills.filter((skill) => skillWord(skill) !== '' && text.includes(skillWord(skill))).length
 }
 
+// picks tracked (or untracked) here stay on screen, so their button turns into "Tracked" like on the
+// Opportunities page, instead of the card vanishing and the next pick taking its place
+const keptKeys = ref([])
+
 // best matching open job and best matching open hackathon that are not tracked yet
 const recommended = computed(() => {
   const picks = []
@@ -33,7 +37,7 @@ const recommended = computed(() => {
     let best = null
     let bestScore = -1
     for (const item of list) {
-      if (isClosed(item) || opportunityStore.isSaved(item)) continue
+      if (isClosed(item) || (opportunityStore.isSaved(item) && !keptKeys.value.includes(getKey(item)))) continue
       const score = matchCount(item)
       if (score > bestScore) {
         best = item
@@ -47,6 +51,7 @@ const recommended = computed(() => {
 
 // tracking a pick creates an application, so reload them to update the stat cards and deadlines
 async function trackPick(item) {
+  if (!keptKeys.value.includes(getKey(item))) keptKeys.value.push(getKey(item))
   await opportunityStore.toggleSave(item)
   applicationStore.fetchApplications()
 }

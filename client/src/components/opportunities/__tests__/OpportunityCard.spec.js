@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue';
+import { flyToTracker } from '@/utils/flyToTracker';
+
+vi.mock('@/utils/flyToTracker', () => ({ flyToTracker: vi.fn() }));
 import { HACKATHONS, jobs } from '@/__tests__/fixtures/opportunities';
 import { NOW } from '@/__tests__/fixtures/applications';
 
@@ -89,5 +92,28 @@ describe('OpportunityCard', () => {
 
     expect(card.emitted('find-team')).toHaveLength(1);
     expect(card.emitted('details')).toBeUndefined();
+  });
+
+  it('tags a job with its roles, using the Role filter names', () => {
+    const [job] = jobs(1);
+    const card = mountCard({ ...job, roles: [{ key: 'frontend', label: 'Frontend' }, { key: 'fullstack', label: 'Full-stack' }] });
+
+    expect(card.findAll('.role-tag').map((tag) => tag.text())).toEqual(['Frontend', 'Full-stack']);
+    expect(mountCard(job).findAll('.role-tag')).toHaveLength(0);
+  });
+
+  it('flies the card to the Tracker when it is tracked, but not when it is untracked', async () => {
+    const [job] = jobs(1);
+    flyToTracker.mockClear();
+
+    const card = mountCard(job, false);
+    await button(card, 'Track').trigger('click');
+    expect(flyToTracker).toHaveBeenCalledWith(card.find('.opp-card').element);
+    expect(card.emitted('toggle-save')).toHaveLength(1);
+
+    const tracked = mountCard(job, true);
+    await button(tracked, 'Tracked').trigger('click');
+    expect(flyToTracker).toHaveBeenCalledTimes(1);
+    expect(tracked.emitted('toggle-save')).toHaveLength(1);
   });
 });

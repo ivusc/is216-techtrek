@@ -98,16 +98,20 @@ const activeFilterCount = computed(() => {
 
     <!-- jobs tab only -->
     <template v-if="showJobFilters">
-      <select
-        v-if="roles.length > 0"
-        v-model="jobField"
-        class="form-select form-select-sm rounded-pill w-auto"
-        :class="{ 'bg-primary-subtle border-primary text-primary-emphasis': jobField !== '' }"
-        aria-label="Role"
-      >
-        <option value="">Role: Any</option>
-        <option v-for="option in roles" :key="option.key" :value="option.key">Role: {{ option.label }}</option>
-      </select>
+      <!-- "Role" sits outside the dropdown; the dropdown lists the same role names as the tags on the cards -->
+      <div v-if="roles.length > 0" class="role-filter d-flex align-items-center gap-2">
+        <label for="opportunity-role" class="small fw-semibold text-body-secondary mb-0">Role</label>
+        <select
+          id="opportunity-role"
+          v-model="jobField"
+          class="form-select form-select-sm rounded-pill w-auto"
+          :class="{ 'bg-primary-subtle border-primary text-primary-emphasis': jobField !== '' }"
+          aria-label="Role"
+        >
+          <option value="">Any</option>
+          <option v-for="option in roles" :key="option.key" :value="option.key">{{ option.label }}</option>
+        </select>
+      </div>
 
       <select
         v-model="jobType"

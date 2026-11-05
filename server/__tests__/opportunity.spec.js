@@ -8,7 +8,7 @@ import { failAdzuna, failDevpost, stubAdzuna, stubDevpost } from './helpers/upst
 const require = createRequire(import.meta.url);
 const app = require('../app');
 const Opportunity = require('../models/Opportunity');
-const { findOrCreateOpportunity } = require('../service/opportunity-service');
+const { findOrCreateOpportunity, normaliseJob } = require('../service/opportunity-service');
 
 const BASE_PARAMS = { app_id: 'app', app_key: 'key', results_per_page: 20, category: 'it-jobs' };
 const HACKATHON_CACHE_MS = 10 * 60 * 1000;
@@ -118,6 +118,36 @@ describe('GET /opportunity/jobs', () => {
     const response = await request(app).get('/opportunity/jobs').expect(500);
 
     expect(response.body).toEqual({ error: 'Failed to fetch jobs.' });
+  });
+});
+
+describe('role tags on job listings', () => {
+  const roles = (job, field) => normaliseJob({ company: {}, location: {}, ...job }, field).roles.map((role) => role.label);
+
+  it('tags a listing with the roles its title names, using the Role filter names', () => {
+    expect(roles({ title: 'Senior Frontend Developer - Angular' })).toEqual(['Frontend']);
+    expect(roles({ title: 'Secure iOS Engineer – FinTech Mobile Security' })).toEqual(['Cybersecurity', 'Mobile']);
+    // listings use all kinds of dashes
+    expect(roles({ title: 'Geospatial Full\u2011Stack Engineer' })).toEqual(['Full-stack']);
+  });
+
+  it('puts the role picked in the filter first', () => {
+    expect(roles({ title: 'Software Engineer' }, 'backend')).toEqual(['Backend']);
+    expect(roles({ title: 'Full Stack Engineer (React)' }, 'frontend')).toEqual(['Frontend', 'Full-stack']);
+  });
+
+  it('only uses the description when the title names no role, and then just its main role', () => {
+    const description = 'You will build Android and iOS apps in Kotlin and Swift, with some SQL.';
+    expect(roles({ title: 'Software Engineer', description })).toEqual(['Mobile']);
+    expect(roles({ title: 'Product Delivery Lead', description: 'Lead delivery across teams.' })).toEqual([]);
+  });
+
+  it('comes back on every job from /opportunity/jobs', async () => {
+    stubAdzuna(adzuna);
+
+    const response = await request(app).get('/opportunity/jobs').expect(200);
+
+    expect(response.body.jobs[0].roles).toEqual([{ key: 'frontend', label: 'Frontend' }]);
   });
 });
 
