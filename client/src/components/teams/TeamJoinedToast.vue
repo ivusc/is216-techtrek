@@ -3,7 +3,7 @@ import { onMounted, onUnmounted } from 'vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 
 // pops up when someone joins a team (you accept their request, or you accept an invite):
-// two avatars slide together, a heart pops up between them with a little confetti burst.
+// two avatars slide together and a heart pops up between them.
 // It closes by itself after a few seconds.
 defineProps({
   title: { type: String, default: 'Welcome aboard!' },
@@ -14,12 +14,6 @@ defineProps({
 })
 
 const emit = defineEmits(['close'])
-
-// 8 confetti pieces, spread evenly around the heart
-const confetti = Array.from({ length: 8 }, (_, index) => ({
-  angle: index * 45 + 22,
-  colour: ['var(--bs-primary)', 'var(--tt-sky)', 'var(--tt-accent)', 'var(--tt-status-interview)'][index % 4]
-}))
 
 let timer = null
 onMounted(() => {
@@ -41,12 +35,6 @@ onUnmounted(() => clearTimeout(timer))
       <span class="meet-heart d-flex align-items-center justify-content-center rounded-circle bg-white">
         <i class="bi bi-heart-fill"></i>
       </span>
-      <span
-        v-for="(piece, index) in confetti"
-        :key="index"
-        class="meet-confetti"
-        :style="{ '--angle': piece.angle + 'deg', background: piece.colour }"
-      ></span>
     </div>
 
     <div class="joined-text flex-grow-1 min-w-0">
@@ -117,20 +105,6 @@ onUnmounted(() => clearTimeout(timer))
     heart-bob 1.6s ease-in-out 1.2s infinite;
 }
 
-/* confetti bursts out from the heart and fades */
-.meet-confetti {
-  position: absolute;
-  left: 50%;
-  top: 7px;
-  z-index: 1;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
-  border-radius: 2px;
-  opacity: 0;
-  animation: confetti-burst 0.8s cubic-bezier(0.1, 0.7, 0.3, 1) 0.65s forwards;
-}
-
 /* the text fades in once the two have met */
 .joined-text {
   animation: text-in 0.35s ease-out 0.45s backwards;
@@ -153,15 +127,11 @@ onUnmounted(() => clearTimeout(timer))
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-3px) scale(1.08); }
 }
-@keyframes confetti-burst {
-  0% { opacity: 1; transform: rotate(var(--angle)) translateY(0) scale(1); }
-  100% { opacity: 0; transform: rotate(var(--angle)) translateY(-30px) scale(0.4); }
-}
 @keyframes text-in {
   from { opacity: 0; transform: translateY(4px); }
 }
 
-/* people who turn off motion see the finished picture straight away, no confetti */
+/* people who turn off motion see the finished picture straight away */
 @media (prefers-reduced-motion: reduce) {
   .joined-toast,
   .meet-left,
@@ -169,9 +139,6 @@ onUnmounted(() => clearTimeout(timer))
   .meet-heart,
   .joined-text {
     animation: none;
-  }
-  .meet-confetti {
-    display: none;
   }
 }
 </style>

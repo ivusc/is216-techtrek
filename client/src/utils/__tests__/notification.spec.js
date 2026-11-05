@@ -35,6 +35,14 @@ describe('describeNotification', () => {
     });
   });
 
+  it('reminds me about a tracked deadline 3 days and 1 day before, and opens the tracker', () => {
+    const reminder = (daysLeft) => describeNotification({ type: 'deadline-reminder', title: 'Frontend Intern', organisation: 'Acme', daysLeft });
+
+    expect(reminder(3)).toEqual({ text: 'Frontend Intern at Acme is due in 3 days', icon: 'bi-alarm', tone: 'primary', to: { path: '/tracker' } });
+    expect(reminder(1)).toMatchObject({ text: 'Frontend Intern at Acme is due within 24 hours', tone: 'warning' });
+    expect(describeNotification({ type: 'deadline-reminder', daysLeft: 2 }).text).toBe('A tracked application is due in 2 days');
+  });
+
   it('says which role the lead gave me', () => {
     const text = describeNotification({ type: 'role-assigned', actorName: 'Alicia', teamName: 'Pixel Pushers', role: 'Designer' });
 

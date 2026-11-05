@@ -2,19 +2,13 @@
 import { onMounted, onUnmounted } from 'vue'
 
 // pops up after interview tips are shared or edited: a little envelope hops in, its heart
-// pops out, and a few hearts float up with a sparkle burst. It closes by itself after a few seconds.
+// pops out, and a few hearts float up. It closes by itself after a few seconds.
 defineProps({
   edited: { type: Boolean, default: false }, // true after an edit, false after first sharing
   organisation: { type: String, default: '' }
 })
 
 const emit = defineEmits(['close'])
-
-// sparkles spread evenly around the envelope
-const sparkles = Array.from({ length: 8 }, (_, index) => ({
-  angle: index * 45 + 20,
-  colour: ['var(--bs-primary)', 'var(--tt-sky)', 'var(--tt-accent)', 'var(--tt-status-interview)'][index % 4]
-}))
 
 // three hearts drift up at slightly different spots and times
 const hearts = [
@@ -44,12 +38,6 @@ onUnmounted(() => clearTimeout(timer))
       >
         <i class="bi bi-heart-fill"></i>
       </span>
-      <span
-        v-for="(sparkle, index) in sparkles"
-        :key="'sparkle' + index"
-        class="thanks-sparkle"
-        :style="{ '--angle': sparkle.angle + 'deg', background: sparkle.colour }"
-      ></span>
     </div>
 
     <div class="thanks-text flex-grow-1 min-w-0">
@@ -107,19 +95,6 @@ onUnmounted(() => clearTimeout(timer))
   animation: heart-float 1.4s ease-out forwards;
 }
 
-/* a quick sparkle burst behind the envelope */
-.thanks-sparkle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: 2px;
-  opacity: 0;
-  animation: sparkle-burst 0.8s cubic-bezier(0.1, 0.7, 0.3, 1) 0.55s forwards;
-}
-
 .thanks-text {
   animation: text-in 0.35s ease-out 0.4s backwards;
 }
@@ -143,10 +118,6 @@ onUnmounted(() => clearTimeout(timer))
   20% { opacity: 1; transform: translate(calc(var(--x) * 0.4), -10px) scale(1); }
   100% { opacity: 0; transform: translate(var(--x), -38px) scale(0.8); }
 }
-@keyframes sparkle-burst {
-  0% { opacity: 1; transform: rotate(var(--angle)) translateY(0) scale(1); }
-  100% { opacity: 0; transform: rotate(var(--angle)) translateY(-32px) scale(0.4); }
-}
 @keyframes text-in {
   from { opacity: 0; transform: translateY(4px); }
 }
@@ -158,8 +129,7 @@ onUnmounted(() => clearTimeout(timer))
   .thanks-text {
     animation: none;
   }
-  .thanks-heart,
-  .thanks-sparkle {
+  .thanks-heart {
     display: none;
   }
 }
