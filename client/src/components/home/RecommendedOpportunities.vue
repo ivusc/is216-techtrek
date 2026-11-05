@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import OpportunityCard from '@/components/opportunities/OpportunityCard.vue'
+import TrekLoader from '@/components/TrekLoader.vue'
 import { useOpportunityStore } from '@/store/opportunity'
 import { useApplicationsStore } from '@/store/applications'
 import { getKey, isClosed } from '@/utils/opportunity'
@@ -69,7 +70,14 @@ async function trackPick(item) {
     <p v-if="skills.length === 0" class="small text-body-secondary mb-2">
       Add your skills on the <RouterLink to="/teams">Teams</RouterLink> page to get better matches.
     </p>
-    <p v-if="!opportunityStore.isLoading && recommended.length === 0" class="small text-body-secondary mb-0">
+    <!-- listings take a couple of seconds to arrive: say so, instead of an empty section that suddenly fills -->
+    <TrekLoader
+      v-if="opportunityStore.isLoading && recommended.length === 0"
+      compact
+      title="Finding picks for you"
+      :captions="['Matching listings to your skills…', 'Checking what is still open…']"
+    />
+    <p v-else-if="recommended.length === 0" class="small text-body-secondary mb-0">
       No open picks right now. Browse everything on <RouterLink to="/opportunities">Opportunities</RouterLink>.
     </p>
     <div class="row g-3">
