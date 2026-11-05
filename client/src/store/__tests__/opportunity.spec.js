@@ -216,5 +216,88 @@ describe('useOpportunityStore', () => {
 
     expect(store.deadlinePrompt).toBeNull();
   });
+
+  it('does not ask for a deadline when the job already has one', async () => {
+    const job = { ...jobs(1)[0], deadline: '2026-12-01T00:00:00.000Z' };
+    mock.onPost('/application').reply(201, { _id: 'a9', status: 'saved' });
+    const store = useOpportunityStore();
+
+    await store.toggleSave(job);
+
+    expect(store.isSaved(job)).toBe(true);
+    expect(store.deadlinePrompt).toBeNull();
+  });
+
+  it('keeps the question open and explains when saving the deadline fails', async () => {
+    const [job] = jobs(1);
+    mock.onPost('/application').reply(201, { _id: 'a9', status: 'saved' });
+    mock.onPatch('/application/a9').reply(500);
+    const store = useOpportunityStore();
+    await store.toggleSave(job);
+
+    const updated = await store.saveDeadline('2026-11-20T15:59:59.000Z');
+
+    expect(updated).toBeNull();
+    expect(store.deadlinePrompt).toEqual({ applicationId: 'a9', item: job });
+    expect(store.status).toBe('Could not save the deadline: Request failed with status code 500');
+  });
+
+  it('saveDeadline does nothing when no question is open', async () => {
+    const store = useOpportunityStore();
+
+    expect(await store.saveDeadline('2026-11-20T15:59:59.000Z')).toBeNull();
+    expect(mock.history.patch).toHaveLength(0);
+  });
+
+  it('counts teams with open slots per hackathon by event name', async () => {
+    mock.onGet('/teams').reply(200, [
+      { event: { name: 'Hack&Roll' }, slotsOpen: 2 },
+      { event: { name: 'Hack&Roll' }, slotsOpen: 1 },
+      { event: { name: 'Hack&Roll' }, slotsOpen: 0 },
+      { event: { name: 'NUS Fintech' }, slotsOpen: 3 },
+    ]);
+    const store = useOpportunityStore();
+
+    await store.fetchTeamCounts();
+
+    expect(store.teamCounts).toEqual({ 'Hack&Roll': 2, 'NUS Fintech': 1 });
+    expect(store.teamCountFor({ title: 'Hack&Roll' })).toBe(2);
+    expect(store.teamCountFor({ title: 'No teams yet' })).toBe(0);
+  });
+
+  it('keeps the previous team counts when they fail to load', async () => {
+    mock.onGet('/teams').replyOnce(200, [{ event: { name: 'Hack&Roll' }, slotsOpen: 1 }]);
+    mock.onGet('/teams').replyOnce(500);
+    const store = useOpportunityStore();
+
+    await store.fetchTeamCounts();
+    await store.fetchTeamCounts();
+
+    expect(store.teamCounts).toEqual({ 'Hack&Roll': 1 });
+  });
+
+  it('loads the role options once', async () => {
+    const roles = [{ key: 'frontend', label: 'Frontend' }];
+    mock.onGet('/opportunity/job-filters').reply(200, { roles });
+    const store = useOpportunityStore();
+
+    await store.loadRoleOptions();
+    await store.loadRoleOptions();
+
+    expect(store.roleOptions).toEqual(roles);
+    expect(mock.history.get).toHaveLength(1);
+  });
+
+  it('sends the job filters with the first load', async () => {
+    mock.onGet('/opportunity/all').reply(200, BOTH_SOURCES);
+    mock.onGet('/application').reply(200, []);
+    const store = useOpportunityStore();
+    store.jobType = 'fulltime';
+    store.jobField = 'data';
+
+    await store.fetchOpportunities();
+
+    expect(mock.history.get[0].params).toEqual({ type: 'fulltime', field: 'data' });
+  });
 });
 

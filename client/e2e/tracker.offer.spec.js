@@ -3,6 +3,7 @@ import {
   DESKTOP,
   PHONE,
   WIDTHS,
+  chooseFromCardMenu,
   test as base,
   expect,
   expectGutters,
@@ -64,9 +65,10 @@ function tipsForm(page) {
   return page.getByRole('dialog', { name: 'Share your interview tips' });
 }
 
-async function moveToOffer(page, title) {
-  await page.getByRole('button', { name: `Move ${title}` }).click();
-  await page.locator('.dropdown-menu.show').getByRole('button', { name: 'Offer' }).click();
+function moveToOffer(page, title) {
+  return chooseFromCardMenu(page, title, 'Offer', () =>
+    expect(congratulations(page)).toBeVisible({ timeout: 5000 }),
+  );
 }
 
 async function fillTips(form, tips) {
@@ -136,7 +138,7 @@ test.describe('sharing interview tips after an offer', () => {
     await junior.page.setViewportSize(PHONE);
     await junior.page.goto('/interview');
     await junior.page.getByRole('tab', { name: /Senior tips/ }).click();
-    const section = junior.page.getByRole('region', { name: 'Senior tips' });
+    const section = junior.page.getByRole('tabpanel', { name: 'Senior tips' });
     const tip = section.getByRole('listitem').filter({ hasText: tips });
     await expect(tip).toContainText('Grab · Software Engineer Intern');
     await expect(tip).toContainText('Difficulty 4/5 · Hard');
@@ -209,7 +211,7 @@ test.describe('senior tips on interview prep', () => {
       await page.goto('/interview');
       await page.getByRole('tab', { name: /Senior tips/ }).click();
 
-      const section = page.getByRole('region', { name: 'Senior tips' });
+      const section = page.getByRole('tabpanel', { name: 'Senior tips' });
       const tip = section.getByRole('listitem').filter({ hasText: longTips }).first();
       await expect(tip).toBeVisible();
       await expect(
